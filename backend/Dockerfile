@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-# Instalar dependencias do sistema necessarias
+# Instalar dependencias do sistema
 RUN apk add --no-cache \
     python3 \
     make \
@@ -17,9 +17,10 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    netcat-openbsd
+    netcat-openbsd \
+    bash
 
-# Configurar Puppeteer para usar Chromium instalado
+# Configurar Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV CHROME_BIN=/usr/bin/chromium-browser
@@ -27,13 +28,14 @@ ENV CHROME_BIN=/usr/bin/chromium-browser
 # Criar diretorio da aplicacao
 WORKDIR /app
 
-# Copiar arquivos de dependencias
+# Copiar arquivos de dependencias primeiro (para cache)
 COPY package*.json ./
+COPY .sequelizerc ./
 
-# Instalar dependencias (inclui devDependencies para migrations)
+# Instalar TODAS as dependencias (incluindo dev para sequelize-cli)
 RUN npm install
 
-# Copiar codigo fonte
+# Copiar todo o codigo fonte
 COPY . .
 
 # Criar diretorios necessarios
@@ -49,14 +51,14 @@ RUN mkdir -p uploads/clientes \
     uploads/usuario \
     whatsapp_sessions
 
-# Dar permissao ao entrypoint
-RUN chmod +x docker-entrypoint.sh
+# Converter line endings e dar permissao ao entrypoint
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
 # Expor porta
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8000/api/health || exit 1
 
 # Usar entrypoint customizado

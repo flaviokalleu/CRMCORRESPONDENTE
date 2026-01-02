@@ -1,7 +1,6 @@
-const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const defaultConfig = {
+const config = {
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'crm',
@@ -21,34 +20,12 @@ const defaultConfig = {
   }
 };
 
-// Config for Sequelize CLI and application
+// Exportar para sequelize-cli e aplicação
 module.exports = {
-  development: defaultConfig,
+  development: config,
   test: {
-    ...defaultConfig,
-    database: process.env.DB_TEST_NAME || 'crm_test',
-    logging: false
+    ...config,
+    database: process.env.DB_TEST_NAME || 'crm_test'
   },
-  production: {
-    ...defaultConfig,
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    logging: false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
-  },
-  // For application use
-  sequelize: new Sequelize(
-    defaultConfig.database,
-    defaultConfig.username, 
-    defaultConfig.password,
-    defaultConfig
-  )
+  production: config
 };
