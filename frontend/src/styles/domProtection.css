@@ -1,0 +1,107 @@
+/* 
+ * Proteções CSS contra erros de tradução automática
+ * Adiciona estilos que ajudam a prevenir conflitos de DOM
+ */
+
+/* Classe global para elementos que não devem ser traduzidos */
+.notranslate {
+  /* Força o navegador a não traduzir */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Proteção específica para elementos críticos */
+.dom-protected {
+  /* Previne modificações automáticas do DOM */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Proteção para listas e tabelas */
+.safe-list,
+.safe-table {
+  /* Força rendering isolado */
+  contain: layout style;
+  isolation: isolate;
+}
+
+/* Proteção para elementos que usam framer-motion */
+.motion-safe {
+  /* Garante que animações não conflitem com modificações do DOM */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Estilos específicos para Google Translate */
+body .goog-te-banner-frame {
+  /* Esconde completamente a barra do Google Translate se aparecer */
+  display: none !important;
+}
+
+body .goog-te-menu-frame {
+  /* Esconde menu de tradução */
+  display: none !important;
+}
+
+/* Estilos para elementos que foram modificados pelo tradutor */
+font[style*="background-color"] {
+  /* Remove modificações de background que o tradutor adiciona */
+  background-color: transparent !important;
+}
+
+/* Proteção para inputs e formulários */
+input.notranslate,
+textarea.notranslate,
+select.notranslate {
+  /* Garante que campos de formulário não sejam traduzidos */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Proteção para modais e overlays */
+.modal-overlay {
+  /* Força layer de composição separado */
+  will-change: opacity;
+  contain: layout style paint;
+}
+
+/* Classe utilitária para debugging de problemas de tradução */
+.debug-translation {
+  /* Adiciona borda vermelha para elementos problemáticos */
+  border: 1px solid red !important;
+  background-color: rgba(255, 0, 0, 0.1) !important;
+}
+
+/* Proteção para elementos com animações do Framer Motion */
+[data-framer-name] {
+  /* Força composição em GPU */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Correção para elementos que perderam referência */
+[data-stable-key] {
+  /* Adiciona identificação estável */
+  position: relative;
+}
+
+/* Proteção para elementos de React */
+[data-reactroot] {
+  /* Isolamento de contexto de renderização */
+  contain: layout style;
+}
+
+/* Media query para dispositivos móveis onde o problema é mais comum */
+@media (max-width: 768px) {
+  .notranslate {
+    /* Proteção adicional em mobile */
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}

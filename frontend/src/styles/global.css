@@ -1,0 +1,14 @@
+/* src/styles/global.css */
+@keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  .loading-screen {
+    animation: slideUp 1s ease-out forwards;
+  }
+  

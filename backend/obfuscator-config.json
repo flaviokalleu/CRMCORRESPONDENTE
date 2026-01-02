@@ -1,0 +1,25 @@
+{
+    "compact": true,
+    "controlFlowFlattening": true,
+    "controlFlowFlatteningThreshold": 0.75,
+    "deadCodeInjection": true,
+    "deadCodeInjectionThreshold": 0.4,
+    "debugProtection": true,
+    "forceConsistentCasingInFileNames": true,
+    "debugProtectionInterval": 1000,
+    "disableConsoleOutput": true,
+    "identifierNamesGenerator": "hexadecimal",
+    "inputFileName": "input.js",
+    "outputFileName": "output.js",
+    "renameGlobals": false,
+    "selfDefending": true,
+    "sourceMap": false,
+    "splitStrings": true,
+    "splitStringsChunkSize": 6,
+    "stringArray": true,
+    "stringArrayEncoding": ["base64"],
+    "stringArrayThreshold": 0.75,
+    "transformObjectKeys": true,
+    "unicodeEscapeSequence": false
+  }
+  

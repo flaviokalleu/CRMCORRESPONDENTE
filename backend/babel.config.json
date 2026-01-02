@@ -1,0 +1,19 @@
+{
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": "current" // Define a versão do Node.js que você está usando
+          },
+          "useBuiltIns": "usage", // Adiciona polyfills conforme necessário
+          "corejs": 3 // Especifica a versão do core-js a ser usada
+        }
+      ]
+    ],
+    "plugins": [
+      // Adicione plugins adicionais aqui, se necessário
+      "@babel/plugin-transform-runtime" // Ajuda a otimizar o uso de helpers do Babel
+    ]
+  }
+  
