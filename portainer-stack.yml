@@ -3,6 +3,7 @@ version: '3.8'
 # ============================================
 # PORTAINER STACK - CRM WEBBA
 # ============================================
+# Tudo automatico: banco, migrations, seeds, .env
 # Dominio: crm.webba.site
 # Portas: 8847 (backend), 3847 (frontend), 5847 (postgres), 6847 (redis)
 
@@ -15,6 +16,7 @@ services:
       POSTGRES_DB: crm
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 99480231a
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - crm_postgres_data:/var/lib/postgresql/data
     ports:
@@ -31,6 +33,7 @@ services:
     image: redis:7-alpine
     container_name: crm_redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
       - "6847:6379"
     volumes:
@@ -48,22 +51,30 @@ services:
     container_name: crm_backend
     restart: unless-stopped
     environment:
+      # Servidor
       - NODE_ENV=production
       - PORT=8000
+      # Banco de Dados
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=crm
       - DB_USERNAME=postgres
       - DB_PASSWORD=99480231a
-      - JWT_SECRET_KEY=your_super_secret_jwt_key_change_me_in_production_123456
-      - GEMINI_API_KEY=AIzaSyCwVs-Zf-Re2Nmzw-VG0dNnsJs6as7oxXE
-      - MERCADO_PAGO_ACCESS_TOKEN=APP_USR-4684735263326629-061917-6b7dc5ab0cd595e7dea701bce8d92532-1488073343
-      - MERCADO_PAGO_PUBLIC_KEY=APP_USR-caf75070-7670-47e2-a376-64f810d2f026
+      # URLs
       - BASE_URL=https://crm.webba.site
       - BACKEND_URL=https://crm.webba.site
       - FRONTEND_URL=https://crm.webba.site
       - WHATSAPP_BASE_URL=https://crm.webba.site/api/whatsapp
+      # Seguranca
+      - JWT_SECRET_KEY=crm_webba_jwt_secret_key_super_seguro_2024
+      # APIs Externas
+      - GEMINI_API_KEY=AIzaSyCwVs-Zf-Re2Nmzw-VG0dNnsJs6as7oxXE
+      - MERCADO_PAGO_ACCESS_TOKEN=APP_USR-4684735263326629-061917-6b7dc5ab0cd595e7dea701bce8d92532-1488073343
+      - MERCADO_PAGO_PUBLIC_KEY=APP_USR-caf75070-7670-47e2-a376-64f810d2f026
+      # Redis
       - REDIS_URL=redis://redis:6379
+      # Seeds (true para primeira execucao, depois mude para false)
+      - RUN_SEEDS=true
     volumes:
       - crm_backend_uploads:/app/uploads
       - crm_backend_sessions:/app/whatsapp_sessions

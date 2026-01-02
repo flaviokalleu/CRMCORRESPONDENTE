@@ -16,7 +16,8 @@ RUN apk add --no-cache \
     freetype-dev \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    netcat-openbsd
 
 # Configurar Puppeteer para usar Chromium instalado
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
@@ -29,8 +30,8 @@ WORKDIR /app
 # Copiar arquivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install --production
+# Instalar dependencias (inclui devDependencies para migrations)
+RUN npm install
 
 # Copiar codigo fonte
 COPY . .
@@ -41,9 +42,15 @@ RUN mkdir -p uploads/clientes \
     uploads/formularios_caixa \
     uploads/temp \
     uploads/imagem_administrador \
+    uploads/imagem_correspondente \
     uploads/imoveis \
     uploads/laudos \
+    uploads/corretor \
+    uploads/usuario \
     whatsapp_sessions
+
+# Dar permissao ao entrypoint
+RUN chmod +x docker-entrypoint.sh
 
 # Expor porta
 EXPOSE 8000
@@ -51,6 +58,9 @@ EXPOSE 8000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8000/api/health || exit 1
+
+# Usar entrypoint customizado
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # Comando para iniciar
 CMD ["node", "src/server.js"]

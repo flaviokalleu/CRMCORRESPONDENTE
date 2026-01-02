@@ -7,17 +7,19 @@ services:
     container_name: crm_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-crm}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-99480231a}
+      POSTGRES_DB: crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 99480231a
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     ports:
       - "5847:5432"
     networks:
       - crm_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-crm}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crm"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,22 +49,30 @@ services:
     container_name: crm_backend
     restart: unless-stopped
     environment:
+      # Servidor
       - NODE_ENV=production
       - PORT=8000
+      # Banco de Dados
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-crm}
-      - DB_USERNAME=${DB_USERNAME:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-99480231a}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your_super_secret_jwt_key_change_me}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - MERCADO_PAGO_ACCESS_TOKEN=${MERCADO_PAGO_ACCESS_TOKEN:-}
-      - MERCADO_PAGO_PUBLIC_KEY=${MERCADO_PAGO_PUBLIC_KEY:-}
-      - BASE_URL=${BASE_URL:-https://crm.webba.site}
-      - BACKEND_URL=${BACKEND_URL:-https://crm.webba.site}
-      - FRONTEND_URL=${FRONTEND_URL:-https://crm.webba.site}
-      - WHATSAPP_BASE_URL=${WHATSAPP_BASE_URL:-https://crm.webba.site/api/whatsapp}
+      - DB_NAME=crm
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=99480231a
+      # URLs
+      - BASE_URL=https://crm.webba.site
+      - BACKEND_URL=https://crm.webba.site
+      - FRONTEND_URL=https://crm.webba.site
+      - WHATSAPP_BASE_URL=https://crm.webba.site/api/whatsapp
+      # Seguranca
+      - JWT_SECRET_KEY=crm_webba_jwt_secret_key_super_seguro_2024
+      # APIs Externas
+      - GEMINI_API_KEY=AIzaSyCwVs-Zf-Re2Nmzw-VG0dNnsJs6as7oxXE
+      - MERCADO_PAGO_ACCESS_TOKEN=APP_USR-4684735263326629-061917-6b7dc5ab0cd595e7dea701bce8d92532-1488073343
+      - MERCADO_PAGO_PUBLIC_KEY=APP_USR-caf75070-7670-47e2-a376-64f810d2f026
+      # Redis
       - REDIS_URL=redis://redis:6379
+      # Seeds (true para primeira execucao)
+      - RUN_SEEDS=true
     volumes:
       - backend_uploads:/app/uploads
       - backend_sessions:/app/whatsapp_sessions
@@ -79,7 +89,7 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 10s
-      start_period: 40s
+      start_period: 60s
       retries: 3
 
   # Frontend
@@ -88,9 +98,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_API_URL=${REACT_APP_API_URL:-https://crm.webba.site/api}
-        - REACT_APP_WS_URL=${REACT_APP_WS_URL:-wss://crm.webba.site}
-        - REACT_APP_NOME_SISTEMA=${REACT_APP_NOME_SISTEMA:-B2M}
+        - REACT_APP_API_URL=https://crm.webba.site/api
+        - REACT_APP_WS_URL=wss://crm.webba.site
+        - REACT_APP_NOME_SISTEMA=B2M
     container_name: crm_frontend
     restart: unless-stopped
     ports:
