@@ -1,0 +1,99 @@
+version: '3.8'
+
+# ============================================
+# PORTAINER STACK - CRM WEBBA
+# ============================================
+# Dominio: crm.webba.site
+# Portas: 8847 (backend), 3847 (frontend), 5847 (postgres), 6847 (redis)
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: crm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 99480231a
+    volumes:
+      - crm_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5847:5432"
+    networks:
+      - crm_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: crm_redis
+    restart: unless-stopped
+    ports:
+      - "6847:6379"
+    volumes:
+      - crm_redis_data:/data
+    networks:
+      - crm_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/webba/crm-backend:latest
+    container_name: crm_backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=crm
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=99480231a
+      - JWT_SECRET_KEY=your_super_secret_jwt_key_change_me_in_production_123456
+      - GEMINI_API_KEY=AIzaSyCwVs-Zf-Re2Nmzw-VG0dNnsJs6as7oxXE
+      - MERCADO_PAGO_ACCESS_TOKEN=APP_USR-4684735263326629-061917-6b7dc5ab0cd595e7dea701bce8d92532-1488073343
+      - MERCADO_PAGO_PUBLIC_KEY=APP_USR-caf75070-7670-47e2-a376-64f810d2f026
+      - BASE_URL=https://crm.webba.site
+      - BACKEND_URL=https://crm.webba.site
+      - FRONTEND_URL=https://crm.webba.site
+      - WHATSAPP_BASE_URL=https://crm.webba.site/api/whatsapp
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - crm_backend_uploads:/app/uploads
+      - crm_backend_sessions:/app/whatsapp_sessions
+    ports:
+      - "8847:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crm_network
+
+  frontend:
+    image: ghcr.io/webba/crm-frontend:latest
+    container_name: crm_frontend
+    restart: unless-stopped
+    ports:
+      - "3847:80"
+    depends_on:
+      - backend
+    networks:
+      - crm_network
+
+networks:
+  crm_network:
+    driver: bridge
+
+volumes:
+  crm_postgres_data:
+  crm_redis_data:
+  crm_backend_uploads:
+  crm_backend_sessions:

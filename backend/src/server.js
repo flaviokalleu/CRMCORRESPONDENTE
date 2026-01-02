@@ -406,6 +406,15 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: 0
 }));
 
+// ===== HEALTH CHECK =====
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // ===== TODAS AS ROTAS DA APLICAÇÃO =====
 app.use('/api/auth', authRoutes);
 app.use('/api/protected', protectedRoutes);
