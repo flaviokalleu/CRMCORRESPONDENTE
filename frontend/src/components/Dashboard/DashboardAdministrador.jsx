@@ -1,816 +1,584 @@
-import React, { useEffect, useState } from "react";
-import generateStableKey from 'utils/generateStableKey';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
-  Users,
-  UserCheck,
-  UserPlus,
-  ClipboardList,
-  Loader2,
-  AlertTriangle,
-  TrendingUp,
-  Clock,
-  Eye,
-  Edit,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
-  MoreHorizontal,
-  Activity,
-  Calendar,
-  Zap,
-  Target,
-  Database,
-  Signal,
-  Globe,
-  Server,
-  Monitor,
-  Cpu,
-  BarChart3,
-  PieChart as PieChartIcon,
-  LineChart as LineChartIcon,
-  Filter,
-  Search,
-  Bell,
-  Settings,
-  Menu,
-  X
+  Users, UserCheck, UserPlus, Clock, AlertTriangle,
+  TrendingUp, TrendingDown, Activity, Target, BarChart3, Signal,
+  CheckCircle, XCircle, Trophy, Zap, RefreshCw, Bell,
+  ArrowUpRight, ArrowDownRight, DollarSign, ClipboardList,
+  Database, Calendar, Star, AlertCircle, Gauge, Eye,
+  Server, Cpu, Globe, Monitor, Award, PieChart as PieChartIcon,
+  Wallet, CreditCard
 } from "lucide-react";
-import { motion } from "framer-motion";
-import LineChart from "./Charts/LineChart";
-import PieChart from "./Charts/PieChart";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip,
+  BarChart, Bar, PieChart, Pie, Cell, CartesianGrid, Legend,
+  RadialBarChart, RadialBar,
+} from "recharts";
+import {
+  KPICard, MiniStat, EffRing, ChartCard, SectionHeader, RankingCard,
+  CustomTooltip, DashboardLoading, DashboardError,
+  CARD, BORDER, ACCENT_GRADIENT, PALETTE, TICK,
+  fadeUp, stagger, fmtNum, fmtPct, fmtR$,
+  getStatusDisplay, getStatusColors,
+} from "./shared/DashboardUI";
 
 const DashboardAdministrador = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [systemStats, setSystemStats] = useState(null);
-  const [activeChart, setActiveChart] = useState("monthly");
+  const [activityMetrics, setActivityMetrics] = useState(null);
+  const [notifications, setNotifications] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isVisibleRef = useRef(true);
+  const intervalRef = useRef(null);
 
-  // Nome do sistema do .env
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CAIXA CRM";
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-  // Função para buscar dados do dashboard
-  const fetchDashboardData = async (signal) => {
+  const fetchAll = useCallback(async (signal) => {
+    if (!isVisibleRef.current) return;
     try {
       const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        signal
-      });
+      const headers = { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+      const opts = { headers, signal };
 
-      if (!response.ok) {
-        throw new Error('Erro ao carregar dados do dashboard');
-      }
+      const [dashRes, monthlyRes, weeklyRes, sysRes, actRes, notifRes] = await Promise.all([
+        fetch(`${API_URL}/dashboard`, opts),
+        fetch(`${API_URL}/dashboard/monthly`, opts),
+        fetch(`${API_URL}/dashboard/weekly`, opts),
+        fetch(`${API_URL}/dashboard/system-stats`, opts).catch(() => null),
+        fetch(`${API_URL}/dashboard/activity-metrics`, opts).catch(() => null),
+        fetch(`${API_URL}/dashboard/notifications`, opts).catch(() => null),
+      ]);
 
-      const data = await response.json();
+      if (!dashRes.ok) throw new Error('Erro ao carregar dados');
+      const data = await dashRes.json();
       setDashboardData(data);
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error('Erro ao buscar dados do dashboard:', error);
-      setError(error.message);
-    }
-  };
 
-  // Função para buscar dados dos gráficos
-  const fetchChartData = async (signal) => {
-    try {
-      const authToken = localStorage.getItem('authToken');
+      // Monthly + Weekly charts
+      if (monthlyRes.ok && weeklyRes.ok) {
+        const monthly = await monthlyRes.json();
+        const weekly = await weeklyRes.json();
 
-      // Buscar dados mensais
-      const monthlyResponse = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/monthly`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        signal
-      });
+        const labels = monthly.labels || ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+        let monthlyArr = monthly.monthlyData || Array(12).fill(0);
+        const monthlyGrowth = monthly.monthlyGrowth || Array(12).fill(0);
 
-      // Buscar dados semanais
-      const weeklyResponse = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/weekly`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        signal
-      });
-
-      if (monthlyResponse.ok && weeklyResponse.ok) {
-        const monthlyData = await monthlyResponse.json();
-        const weeklyData = await weeklyResponse.json();
-
-        // Se dashboardData.userPermissions.canViewAll e dashboardData.totalCount existem, forçar o gráfico mensal a mostrar o total correto
-        let monthlyDataArray = monthlyData.monthlyData || Array(12).fill(0);
-        if (dashboardData && dashboardData.userPermissions && dashboardData.userPermissions.canViewAll && dashboardData.totalCount) {
-          // Ajusta o último mês para garantir que o total do gráfico seja igual ao totalCount
-          const somaAtual = monthlyDataArray.reduce((a, b) => a + b, 0);
-          if (somaAtual !== dashboardData.totalCount) {
-            // Corrige o último mês para bater o total
-            const diff = dashboardData.totalCount - somaAtual;
-            monthlyDataArray[monthlyDataArray.length - 1] += diff;
-          }
+        if (data.userPermissions?.canViewAll && data.totalCount) {
+          const sum = monthlyArr.reduce((a, b) => a + b, 0);
+          if (sum !== data.totalCount) monthlyArr[monthlyArr.length - 1] += data.totalCount - sum;
         }
 
+        const weekLabels = weekly.labels || ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+        const weeklyArr = weekly.weeklyData || Array(7).fill(0);
+        const prevWeekArr = weekly.previousWeekData || Array(7).fill(0);
+
         setChartData({
-          monthly: {
-            labels: monthlyData.labels || [
-              "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-              "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-            ],
-            datasets: [
-              {
-                label: "Clientes Cadastrados",
-                data: monthlyDataArray,
-                backgroundColor: "rgba(27, 79, 114, 0.1)",
-                borderColor: "#1B4F72",
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: "#FF8C00",
-                pointBorderColor: "#fff",
-                pointBorderWidth: 2,
-                pointRadius: 6
-              },
-            ],
-          },
-          weekly: {
-            labels: weeklyData.labels || ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-            datasets: [
-              {
-                label: "Clientes por Dia",
-                data: weeklyData.weeklyData || Array(7).fill(0),
-                backgroundColor: [
-                  "#1B4F72",  "#2980B9",  "#5DADE2",  "#AED6F1",
-                  "#FF8C00",  "#FFB347",  "#FF7F00"
-                ],
-                borderColor: "#1B4F72",
-                borderWidth: 2
-              },
-            ],
-          }
+          monthly: labels.map((l, i) => ({
+            name: l, clientes: monthlyArr[i] || 0, crescimento: monthlyGrowth[i] || 0,
+          })),
+          weekly: weekLabels.map((l, i) => ({
+            name: l, atual: weeklyArr[i] || 0, anterior: prevWeekArr[i] || 0,
+          })),
+          totalYear: monthly.totalYear || 0,
+          averageMonth: monthly.averageMonth || 0,
+          totalWeek: weekly.totalWeek || 0,
+          weeklyGrowth: weekly.weeklyGrowth || 0,
         });
       } else {
-        // Definir dados padrão se a API falhar
         setChartData({
-          monthly: {
-            labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
-            datasets: [{
-              label: "Clientes Cadastrados",
-              data: Array(12).fill(0),
-              backgroundColor: "rgba(27, 79, 114, 0.1)",
-              borderColor: "#1B4F72",
-              borderWidth: 3,
-              tension: 0.4,
-              fill: true,
-              pointBackgroundColor: "#FF8C00",
-              pointBorderColor: "#fff",
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }]
-          },
-          weekly: {
-            labels: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-            datasets: [{
-              label: "Clientes por Dia",
-              data: Array(7).fill(0),
-              backgroundColor: [
-                "#1B4F72", "#2980B9", "#5DADE2", "#AED6F1",
-                "#FF8C00", "#FFB347", "#FF7F00"
-              ],
-              borderColor: "#1B4F72",
-              borderWidth: 2
-            }]
-          }
+          monthly: ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map(l => ({ name: l, clientes: 0, crescimento: 0 })),
+          weekly: ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(l => ({ name: l, atual: 0, anterior: 0 })),
+          totalYear: 0, averageMonth: 0, totalWeek: 0, weeklyGrowth: 0,
         });
       }
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error('Erro ao buscar dados dos gráficos:', error);
-      
-      // Definir dados padrão em caso de erro
-      setChartData({
-        monthly: {
-          labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
-          datasets: [{
-            label: "Clientes Cadastrados",
-            data: Array(12).fill(0),
-            backgroundColor: "rgba(27, 79, 114, 0.1)",
-            borderColor: "#1B4F72",
-            borderWidth: 3,
-            tension: 0.4,
-            fill: true,
-            pointBackgroundColor: "#FF8C00",
-            pointBorderColor: "#fff",
-            pointBorderWidth: 2,
-            pointRadius: 6
-          }]
-        },
-        weekly: {
-          labels: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
-          datasets: [{
-            label: "Clientes por Dia",
-            data: Array(7).fill(0),
-            backgroundColor: [
-              "#1B4F72", "#2980B9", "#5DADE2", "#AED6F1",
-              "#FF8C00", "#FFB347", "#FF7F00"
-            ],
-            borderColor: "#1B4F72",
-            borderWidth: 2
-          }]
-        }
-      });
+
+      if (sysRes?.ok) setSystemStats(await sysRes.json());
+      else setSystemStats({ totalRegistros: 0, totalUsuarios: 0, atividadeRecente: 0, usuariosRecentes: 0 });
+
+      if (actRes?.ok) setActivityMetrics(await actRes.json());
+      if (notifRes?.ok) setNotifications(await notifRes.json());
+
+      setError(null);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [API_URL]);
 
-  // Função para buscar estatísticas do sistema
-  const fetchSystemStats = async (signal) => {
-    try {
-      const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/system-stats`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        signal
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSystemStats(data);
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error('Erro ao buscar estatísticas do sistema:', error);
-    }
-  };
-
-  // Carregar todos os dados
   useEffect(() => {
     const controller = new AbortController();
-    const { signal } = controller;
+    fetchAll(controller.signal);
+    intervalRef.current = setInterval(() => fetchAll(controller.signal), 30000);
+    const vis = () => { isVisibleRef.current = document.visibilityState === 'visible'; if (isVisibleRef.current) fetchAll(controller.signal); };
+    document.addEventListener('visibilitychange', vis);
+    return () => { controller.abort(); clearInterval(intervalRef.current); document.removeEventListener('visibilitychange', vis); };
+  }, [fetchAll]);
 
-    const loadAllData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([
-          fetchDashboardData(signal),
-          fetchChartData(signal),
-          fetchSystemStats(signal)
-        ]);
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-        setError(error.message);
-      } finally {
-        if (!signal.aborted) {
-          setLoading(false);
-        }
-      }
+  const derived = useMemo(() => {
+    if (!dashboardData) return null;
+    const {
+      totalCorretores = 0, totalClientes = 0, totalCount = 0, totalCorrespondentes = 0,
+      clientesAguardandoAprovacao = [], top5Usuarios = [],
+      crescimentoSemanal = 0, crescimentoMensal = 0,
+      usuariosAtivosHoje = 0, clientesHoje = 0, clientesSemana = 0,
+      clientesEsteMes = 0, clientesMesAnterior = 0,
+      performance = {}, clientesAprovados = 0, clientesReprovados = 0,
+      clientesPendentes = 0, rendaAnalysis = {},
+    } = dashboardData;
+
+    const aguardando = clientesAguardandoAprovacao.filter(c => c.status === 'aguardando_aprovacao');
+    const total3 = (clientesAprovados || 0) + (clientesReprovados || 0) + aguardando.length;
+    const pctAprov = total3 > 0 ? Math.round((clientesAprovados / total3) * 100) : 0;
+    const pctRejeit = total3 > 0 ? Math.round((clientesReprovados / total3) * 100) : 0;
+    const pctAguar = total3 > 0 ? Math.round((aguardando.length / total3) * 100) : 0;
+
+    const rankingItems = (top5Usuarios || []).map(item => {
+      const u = item.user || {};
+      return {
+        id: u.id,
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Usuário',
+        value: item.clientes || 0,
+      };
+    });
+
+    const pieData = [
+      { name: 'Aprovados', value: clientesAprovados || 0 },
+      { name: 'Aguardando', value: aguardando.length },
+      { name: 'Reprovados', value: clientesReprovados || 0 },
+      { name: 'Pendentes', value: clientesPendentes || 0 },
+    ].filter(d => d.value > 0);
+
+    // Radial data for gauge
+    const radialData = [
+      { name: 'Aprovação', value: pctAprov, fill: '#10b981' },
+      { name: 'Rejeição', value: pctRejeit, fill: '#ef4444' },
+      { name: 'Pendência', value: pctAguar, fill: '#eab308' },
+    ];
+
+    return {
+      totalCorretores, totalClientes: totalCount || totalClientes,
+      totalCorrespondentes, aguardando, rankingItems,
+      crescimentoSemanal, crescimentoMensal, usuariosAtivosHoje,
+      clientesHoje, clientesSemana, clientesEsteMes, clientesMesAnterior,
+      performance, clientesAprovados, clientesReprovados, clientesPendentes,
+      rendaAnalysis, pctAprov, pctRejeit, pctAguar,
+      pieData, radialData,
     };
+  }, [dashboardData]);
 
-    loadAllData();
+  if (loading) return <DashboardLoading title="Dashboard Administrador" />;
+  if (error || !derived) return <DashboardError error={error} onRetry={() => { setLoading(true); fetchAll(); }} />;
+  if (!chartData || !systemStats) return <DashboardLoading title="dados" />;
 
-    // Atualizar dados a cada 30 segundos
-    const interval = setInterval(loadAllData, 30000);
-    return () => {
-      controller.abort();
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center px-4">
-        <div className="text-center max-w-md w-full">
-          <div className="relative">
-            <Loader2 className="animate-spin h-16 w-16 sm:h-20 sm:w-20 mx-auto text-caixa-orange mb-6 sm:mb-8" />
-            <div className="absolute inset-0 h-16 w-16 sm:h-20 sm:w-20 mx-auto border-4 border-caixa-primary/30 border-t-caixa-orange rounded-full animate-pulse"></div>
-          </div>
-          <p className="text-xl sm:text-3xl font-bold text-white mb-2">Carregando Dashboard {nomeSistema}...</p>
-          <p className="text-caixa-extra-light mb-6 text-sm sm:text-base">Processando dados em tempo real</p>
-          <div className="w-full max-w-xs mx-auto bg-caixa-primary/50 rounded-full h-2 sm:h-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-caixa-orange via-caixa-orange-light to-caixa-orange h-2 sm:h-3 rounded-full animate-pulse shadow-lg shadow-caixa-orange/25" style={{width: "75%"}}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center px-4">
-        <div className="backdrop-blur-xl bg-white/10 p-6 sm:p-10 rounded-3xl shadow-2xl max-w-lg w-full border border-caixa-primary/30">
-          <AlertTriangle className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-caixa-orange mb-6 sm:mb-8 animate-pulse" />
-          <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-4 sm:mb-6">Sistema Indisponível</h2>
-          <p className="text-slate-300 text-center text-base sm:text-lg mb-6 sm:mb-8">{error}</p>
-          <div className="text-center">
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-6 sm:px-8 py-3 bg-gradient-to-r from-caixa-orange to-caixa-red hover:from-caixa-red hover:to-caixa-orange text-white rounded-xl transition-all duration-300 font-semibold shadow-lg shadow-caixa-orange/25 text-sm sm:text-base"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não há dados ainda, mostrar loading com dados padrão
-  if (!dashboardData || !chartData || !systemStats) {
-    return (
-      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center px-4">
-        <div className="text-center">
-          <Loader2 className="animate-spin h-12 w-12 sm:h-16 sm:w-16 text-caixa-orange mb-4" />
-          <p className="text-white text-base sm:text-lg">Carregando dados do dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Dados seguros com fallbacks
-  const {
-    totalCorretores = 0,
-    totalClientes = 0,
-    totalCount = 0, // ✅ ADICIONAR totalCount do backend
-    totalCorrespondentes = 0,
-    totalClientesAguardandoAprovacao = 0,
-    clientesAguardandoAprovacao = [],
-    top5Usuarios = [],
-    crescimentoSemanal = 0,
-    crescimentoMensal = 0,
-    usuariosAtivosHoje = 0,
-    clientesHoje = 0,
-    clientesSemana = 0,
-    performance = {},
-    clientesAprovados = 0,
-    clientesReprovados = 0,
-    clientesPendentes = 0,
-    rendaAnalysis = {},
-    userPermissions = {} // ✅ ADICIONAR userPermissions
-  } = dashboardData || {};
-
-  // ✅ FILTRAR APENAS CLIENTES COM STATUS "aguardando_aprovacao"
-  const clientesRealmenteAguardando = clientesAguardandoAprovacao.filter(
-    cliente => cliente.status === 'aguardando_aprovacao'
-  );
-
-  // ✅ RECALCULAR TOTAL CONSIDERANDO APENAS OS 3 GRUPOS PRINCIPAIS
-  const totalClientesParaCirculos = (clientesAprovados || 0) + (clientesReprovados || 0) + clientesRealmenteAguardando.length;
-  
-  // ✅ RECALCULAR PORCENTAGENS
-  const porcentagemAprovados = totalClientesParaCirculos > 0 ? Math.round((clientesAprovados / totalClientesParaCirculos) * 100) : 0;
-  const porcentagemRejeitados = totalClientesParaCirculos > 0 ? Math.round((clientesReprovados / totalClientesParaCirculos) * 100) : 0;
-  const porcentagemAguardandoAprovacao = totalClientesParaCirculos > 0 ? Math.round((clientesRealmenteAguardando.length / totalClientesParaCirculos) * 100) : 0;
-
-  // ✅ FUNÇÃO PARA OBTER NOME DO STATUS EM PORTUGUÊS
-  const getStatusDisplay = (status) => {
-    const statusMap = {
-      'aguardando_aprovacao': 'Aguardando Aprovação',
-      'proposta_apresentada': 'Proposta Apresentada',
-      'documentacao_pendente': 'Documentação Pendente',
-      'visita_efetuada': 'Visita Efetuada',
-      'aguardando_cancelamento_qv': 'Aguardando Cancelamento/QV',
-      'condicionado': 'Condicionado',
-      'cliente_aprovado': 'Aprovado',
-      'reprovado': 'Reprovado',
-      'reserva': 'Reserva',
-      'conferencia_documento': 'Conferência de Documento',
-      'nao_descondiciona': 'Não Descondiciona',
-      'conformidade': 'Conformidade',
-      'concluido': 'Venda Concluída',
-      'nao_deu_continuidade': 'Não Deu Continuidade',
-      'aguardando_reserva_orcamentaria': 'Aguardando Reserva Orçamentária',
-      'fechamento_proposta': 'Fechamento Proposta',
-      'processo_em_aberto': 'Processo Aberto',
-      'aprovado': 'Aprovado',
-      'em_andamento': 'Em Andamento',
-      'finalizado': 'Finalizado',
-      'cancelado': 'Cancelado'
-    };
-    return statusMap[status] || status;
-  };
-
-  // ✅ FUNÇÃO PARA OBTER COR DO STATUS
-  const getStatusColor = (status) => {
-    if (status === 'aguardando_aprovacao') {
-      return 'bg-yellow-500 text-yellow-900 border-yellow-400';
-    }
-    return 'bg-caixa-orange text-white border-caixa-orange';
-  };
-
-  // ✅ Defina o statsCards ANTES do return
-  const statsCards = [
-    {
-      title: "Correspondentes",
-      value: totalCorretores || 0,
-      icon: ClipboardList,
-    },
-    {
-      title: "Aguardando",
-      value: clientesRealmenteAguardando.length,
-      icon: Clock,
-    },
-    {
-      title: "Total de Clientes",
-      // ✅ USAR totalCount do backend (que já considera as permissões do usuário)
-      value: totalCount || totalClientes || 0,
-      icon: UserCheck,
-    },
-    {
-      title: "Online",
-      value: systemStats?.usuariosRecentes || 0,
-      icon: Signal,
-    }
-  ];
+  const d = derived;
+  const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const notifCount = notifications?.unreadCount || 0;
 
   return (
-    <div className="min-h-screen bg-caixa-gradient p-2 sm:p-4">
-      <div className="max-w-8xl mx-auto space-y-4 sm:space-y-6">
+    <div className="h-full flex flex-col overflow-hidden bg-caixa-gradient min-h-screen">
 
-        {/* System Status Bar - Cards pequenos - RESPONSIVO */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
-        >
-          {statsCards.map((card, index) => (
-            <motion.div 
-              key={generateStableKey(card, index)} 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              className="backdrop-blur-xl bg-white/10 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-caixa-primary/30 hover:bg-white/15 transition-all duration-300"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <card.icon className="w-3 h-3 sm:w-4 sm:h-4 text-caixa-light" />
-                  <span className="text-white/90 text-xs sm:text-sm font-medium truncate">{card.title}</span>
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-caixa-orange">{card.value}</span>
-              </div>
-              <div className="w-full bg-caixa-primary/30 rounded-full h-1 sm:h-2">
-                <div 
-                  className="bg-white  h-1 sm:h-2 rounded-full transition-all duration-1000 shadow-sm shadow-caixa-orange/30"
-                  style={{width: card.value > 0 ? "75%" : "0%"}}
-                ></div>
-              </div>
-            </motion.div>
-          ))}
+      {/* ── Header ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-5 py-3 border-b backdrop-blur-md"
+        style={{ borderColor: BORDER, backgroundColor: CARD }}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
+            <BarChart3 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-white">Dashboard</h1>
+            <p className="text-[11px] text-white/50">{today}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          {notifCount > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold"
+              style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
+              <Bell className="w-3.5 h-3.5" />
+              <span>{notifCount}</span>
+            </div>
+          )}
+          <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold"
+            style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+            <Signal className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Ao vivo</span>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <motion.div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4"
+        initial="hidden" animate="show" variants={stagger}>
+
+        {/* ═══ VISÃO GERAL — 6 KPIs ═══ */}
+        <SectionHeader icon={<BarChart3 className="w-3.5 h-3.5" />} title="Visão Geral"
+          subtitle={new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} />
+
+        <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <KPICard index={0} title="Total Clientes" value={fmtNum(d.totalClientes)}
+            sub={`${d.clientesHoje} hoje`} icon={<Users className="w-4 h-4" />} accent="#3b82f6" trend={d.crescimentoMensal} />
+          <KPICard index={1} title="Correspondentes" value={fmtNum(d.totalCorretores)}
+            sub="cadastrados" icon={<ClipboardList className="w-4 h-4" />} accent="#F97316" />
+          <KPICard index={2} title="Aguardando" value={fmtNum(d.aguardando.length)}
+            sub="aprovação" icon={<Clock className="w-4 h-4" />} accent="#eab308" />
+          <KPICard index={3} title="Aprovados" value={fmtNum(d.clientesAprovados)}
+            sub={`${d.pctAprov}%`} icon={<CheckCircle className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={4} title="Reprovados" value={fmtNum(d.clientesReprovados)}
+            sub={`${d.pctRejeit}%`} icon={<XCircle className="w-4 h-4" />} accent="#ef4444" />
+          <KPICard index={5} title="Online" value={fmtNum(systemStats?.usuariosRecentes || d.usuariosAtivosHoje)}
+            sub="ativos agora" icon={<Signal className="w-4 h-4" />} accent="#06b6d4" />
         </motion.div>
 
-        {/* Advanced Analytics Grid - RESPONSIVO */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6">
-          
-          {/* Main Chart - RESPONSIVO */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="xl:col-span-8 backdrop-blur-xl bg-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-caixa-primary/30 shadow-xl shadow-caixa-primary/20"
-          >
-            {/* Header do gráfico - RESPONSIVO */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 gap-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-caixa-orange rounded-xl sm:rounded-2xl shadow-lg">
-                  <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg sm:text-2xl font-bold text-white">
-                    {activeChart === "monthly" ? "Análise Mensal" : "Distribuição Semanal"}
-                  </h2>
-                  <p className="text-caixa-extra-light mt-1 text-xs sm:text-sm">Dados em tempo real</p>
-                </div>
+        {/* ═══ CONTROLE DETALHADO — 8 KPIs ═══ */}
+        <SectionHeader icon={<Activity className="w-3.5 h-3.5" />} title="Controle Detalhado"
+          subtitle="Métricas de crescimento e performance" />
+
+        <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+          <KPICard index={0} title="Hoje" value={fmtNum(d.clientesHoje)}
+            sub="cadastros" icon={<UserPlus className="w-4 h-4" />} accent="#3b82f6" />
+          <KPICard index={1} title="Semana" value={fmtNum(d.clientesSemana)}
+            icon={<Calendar className="w-4 h-4" />} accent="#8b5cf6" trend={d.crescimentoSemanal} />
+          <KPICard index={2} title="Este Mês" value={fmtNum(d.clientesEsteMes)}
+            sub={`ant: ${d.clientesMesAnterior}`} icon={<Activity className="w-4 h-4" />} accent="#06b6d4" trend={d.crescimentoMensal} />
+          <KPICard index={3} title="No Ano" value={fmtNum(chartData.totalYear)}
+            sub={`média: ${chartData.averageMonth}/mês`} icon={<Globe className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={4} title="Aprovação" value={fmtPct(d.performance?.taxaAprovacao || d.pctAprov)}
+            icon={<Target className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={5} title="Rejeição" value={fmtPct(d.performance?.taxaRejeicao || d.pctRejeit)}
+            icon={<TrendingDown className="w-4 h-4" />} accent="#ef4444" />
+          <KPICard index={6} title="Eficiência" value={`${d.performance?.eficienciaMedia || 0}`}
+            icon={<Zap className="w-4 h-4" />} accent="#F97316" />
+          <KPICard index={7} title="Usuários" value={fmtNum(d.performance?.totalUsuarios || systemStats?.totalUsuarios || 0)}
+            sub="no sistema" icon={<UserCheck className="w-4 h-4" />} accent="#ec4899" />
+        </motion.div>
+
+        {/* ═══ ANÁLISE DE RENDA — 4 mini cards ═══ */}
+        <SectionHeader icon={<DollarSign className="w-3.5 h-3.5" />} title="Análise Financeira"
+          subtitle="Perfil de renda dos clientes" />
+
+        <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <KPICard index={0} title="Renda Média" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMedia || 0))}
+            icon={<DollarSign className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={1} title="Renda Máxima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMaxima || 0))}
+            icon={<TrendingUp className="w-4 h-4" />} accent="#3b82f6" />
+          <KPICard index={2} title="Renda Mínima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMinima || 0))}
+            icon={<TrendingDown className="w-4 h-4" />} accent="#eab308" />
+          <KPICard index={3} title="Com Renda" value={fmtNum(d.rendaAnalysis?.clientesComRenda || 0)}
+            sub="clientes informaram" icon={<Wallet className="w-4 h-4" />} accent="#8b5cf6" />
+        </motion.div>
+
+        {/* ═══ PERFORMANCE RINGS + RESUMO — 2 cols ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+
+          {/* Performance rings */}
+          <motion.div variants={fadeUp} className="rounded-xl p-3 backdrop-blur-md"
+            style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
+                <Gauge className="w-3 h-3 text-white" />
               </div>
-              
-              {/* Botões de seleção - RESPONSIVO */}
-              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                <div className="flex gap-1 bg-caixa-primary/50 rounded-lg sm:rounded-xl p-1 border border-caixa-secondary/30 flex-1 sm:flex-none">
-                  <button
-                    onClick={() => setActiveChart("monthly")}
-                    className={`px-3 sm:px-6 py-2 sm:py-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none justify-center ${
-                      activeChart === "monthly"
-                        ? "bg-caixa-orange text-white shadow-lg shadow-caixa-orange/30"
-                        : "text-white/70 hover:text-white hover:bg-caixa-secondary/30"
-                    }`}
-                  >
-                    <LineChartIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Mensal</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveChart("weekly")}
-                    className={`px-3 sm:px-6 py-2 sm:py-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none justify-center ${
-                      activeChart === "weekly"
-                        ? "bg-caixa-orange text-white shadow-lg shadow-caixa-orange/30"
-                        : "text-white/70 hover:text-white hover:bg-caixa-secondary/30"
-                    }`}
-                  >
-                    <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Semanal</span>
-                  </button>
-                </div>
-              </div>
+              <p className="text-xs font-bold text-white">Performance</p>
             </div>
-            
-            {/* Container do gráfico - RESPONSIVO */}
-            <div className="h-[250px] sm:h-[350px] relative">
-              {activeChart === "monthly" ? (
-                <LineChart data={chartData.monthly} />
-              ) : (
-                <PieChart data={chartData.weekly} />
-              )}
-            </div>
+            <motion.div variants={stagger} className="grid grid-cols-3 gap-2">
+              <EffRing index={0} title="Aprovação" value={fmtPct(d.pctAprov)} pct={d.pctAprov} accent="#10b981" />
+              <EffRing index={1} title="Rejeição" value={fmtPct(d.pctRejeit)} pct={d.pctRejeit} accent="#ef4444" />
+              <EffRing index={2} title="Aguardando" value={fmtPct(d.pctAguar)} pct={d.pctAguar} accent="#eab308" />
+              <EffRing index={3} title="Cresc. Semanal" value={`${d.crescimentoSemanal}%`} pct={Math.min(100, Math.abs(d.crescimentoSemanal))} accent="#3b82f6" />
+              <EffRing index={4} title="Cresc. Mensal" value={`${d.crescimentoMensal}%`} pct={Math.min(100, Math.abs(d.crescimentoMensal))} accent="#8b5cf6" />
+              <EffRing index={5} title="Eficiência" value={`${d.performance?.eficienciaMedia || 0}`} pct={(d.performance?.eficienciaMedia || 0) * 10} accent="#F97316" />
+            </motion.div>
           </motion.div>
 
-          {/* Right Panel - Elite Corretores - RESPONSIVO */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="xl:col-span-4 backdrop-blur-xl bg-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-caixa-primary/30 shadow-xl shadow-caixa-primary/20"
-          >
-            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <div className="p-2 sm:p-3 bg-caixa-orange rounded-lg sm:rounded-xl shadow-lg">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          {/* System Health */}
+          <motion.div variants={fadeUp} className="rounded-xl p-3 backdrop-blur-md"
+            style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #06b6d4, #22d3ee)' }}>
+                <Server className="w-3 h-3 text-white" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-white">Ranking do Mês</h3>
+              <p className="text-xs font-bold text-white">Sistema</p>
             </div>
-            
-            {/* Lista do ranking - RESPONSIVO */}
-            <div className="space-y-2 sm:space-y-4 max-h-[300px] sm:max-h-[400px] overflow-y-auto">
-              {top5Usuarios && top5Usuarios.length > 0 ? (
-                top5Usuarios.slice(0, 5).map((item, index) => {
-                  const user = item.user || {};
-                  const firstName = user.first_name || "";
-                  const lastName = user.last_name || "";
-                  const nomeCompleto = firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || "Usuário";
-                  const maxClientes = Math.max(...top5Usuarios.map(u => u.clientes || 0)) || 1;
-                  
-                  return (
-                    <motion.div 
-                      key={user.id || index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-caixa-primary/30 rounded-lg sm:rounded-xl hover:bg-caixa-secondary/20 transition-all duration-300 border border-caixa-light/20"
-                    >
-                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg bg-caixa-orange text-xs sm:text-base">
-                        {nomeCompleto.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm sm:text-base truncate">{nomeCompleto}</p>
-                        <div className="flex items-center gap-2 sm:gap-3 mt-1">
-                          <p className="text-caixa-extra-light text-xs sm:text-sm">{item.clientes || 0} clientes</p>
-                          <div className="w-12 sm:w-20 bg-caixa-primary/30 rounded-full h-1 sm:h-2">
-                            <div 
-                              className="bg-caixa-orange h-1 sm:h-2 rounded-full shadow-sm shadow-caixa-orange/30" 
-                              style={{width: `${Math.min(100, ((item.clientes || 0) / maxClientes) * 100)}%`}}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold border-2 bg-caixa-orange/20 text-white border-caixa-orange">
-                        #{index + 1}
-                      </div>
-                    </motion.div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-6 sm:py-8">
-                  <Users className="w-12 h-12 sm:w-16 sm:h-16 text-caixa-primary/50 mx-auto mb-4" />
-                  <p className="text-caixa-extra-light text-sm sm:text-base">Nenhum corretor com clientes ainda</p>
-                </div>
-              )}
+            <div className="grid grid-cols-3 gap-2">
+              <MiniStat icon={<Database className="w-3 h-3" />} label="Total Registros" value={fmtNum(systemStats?.totalRegistros || 0)} accent="#3b82f6" />
+              <MiniStat icon={<Users className="w-3 h-3" />} label="Total Usuários" value={fmtNum(systemStats?.totalUsuarios || 0)} accent="#F97316" />
+              <MiniStat icon={<Activity className="w-3 h-3" />} label="Atividade 24h" value={fmtNum(systemStats?.atividadeRecente || 0)} accent="#10b981" />
+              <MiniStat icon={<Signal className="w-3 h-3" />} label="Online 24h" value={fmtNum(systemStats?.usuariosRecentes || 0)} accent="#06b6d4" />
+              <MiniStat icon={<Zap className="w-3 h-3" />} label="Efic. Geral" value={activityMetrics?.eficienciaGeral?.toFixed(1) || '0'} accent="#8b5cf6" />
+              <MiniStat icon={<Monitor className="w-3 h-3" />} label="Online Agora" value={fmtNum(activityMetrics?.usuariosOnline || 0)} accent="#ec4899" />
             </div>
           </motion.div>
         </div>
 
-        {/* Circular Progress Charts - RESPONSIVO */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6"
-        >
-          {/* Chart Verde - Aprovados */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-8 border border-caixa-primary/30 text-center">
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4">
-              <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="rgba(27, 79, 114, 0.3)"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="url(#greenGradient)"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeDasharray="339.29"
-                  strokeDashoffset={339.29 - (339.29 * porcentagemAprovados) / 100}
-                  className="transition-all duration-1000 ease-out"
-                />
-                <defs>
-                  <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#10B981" />
-                    <stop offset="100%" stopColor="#34D399" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div>
-                  <div className="text-xl sm:text-3xl font-bold text-white">{porcentagemAprovados}%</div>
-                  <div className="text-green-400 text-xs sm:text-sm font-medium">Aprovados</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-white font-semibold text-sm sm:text-lg mb-2">Taxa de Aprovação</h3>
-              <p className="text-caixa-extra-light text-xs sm:text-sm">{clientesAprovados || 0} clientes aprovados</p>
-            </div>
-          </div>
+        {/* ═══ GRÁFICOS — 4 cards ═══ */}
+        <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Gráficos"
+          subtitle="Tendências, comparativos e distribuição" />
 
-          {/* Chart Amarelo - Aguardando Aprovação */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-8 border border-caixa-primary/30 text-center">
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4">
-              <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="rgba(27, 79, 114, 0.3)"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="url(#yellowGradient)"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeDasharray="339.29"
-                  // ✅ USAR NOVA PORCENTAGEM
-                  strokeDashoffset={339.29 - (339.29 * porcentagemAguardandoAprovacao) / 100}
-                  className="transition-all duration-1000 ease-out"
-                />
-                <defs>
-                  <linearGradient id="yellowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#F59E0B" />
-                    <stop offset="100%" stopColor="#FCD34D" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div>
-                  {/* ✅ MOSTRAR NOVA PORCENTAGEM */}
-                  <div className="text-xl sm:text-3xl font-bold text-white">{porcentagemAguardandoAprovacao}%</div>
-                  <div className="text-yellow-400 text-xs sm:text-sm font-medium">Em Análise</div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-white font-semibold text-sm sm:text-lg mb-2">Aguardando Aprovação</h3>
-              {/* ✅ MOSTRAR APENAS COUNT DE AGUARDANDO APROVAÇÃO */}
-              <p className="text-caixa-extra-light text-xs sm:text-sm">{clientesRealmenteAguardando.length} aguardando aprovação</p>
-            </div>
-          </div>
+        <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-          {/* Chart Vermelho - Rejeitados */}
-          <div className="backdrop-blur-xl bg-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-8 border border-caixa-primary/30 text-center">
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4">
-              <svg className="w-24 h-24 sm:w-32 sm:h-32 transform -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="rgba(27, 79, 114, 0.3)"
-                  strokeWidth="12"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  fill="transparent"
-                  stroke="url(#redGradient)"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeDasharray="339.29"
-                  strokeDashoffset={339.29 - (339.29 * porcentagemRejeitados) / 100}
-                  className="transition-all duration-1000 ease-out"
-                />
-                <defs>
-                  <linearGradient id="redGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#EF4444" />
-                    <stop offset="100%" stopColor="#F87171" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div>
-                  <div className="text-xl sm:text-3xl font-bold text-white">{porcentagemRejeitados}%</div>
-                  <div className="text-red-400 text-xs sm:text-sm font-medium">Rejeitados</div>
-                </div>
+          {/* Monthly trend area */}
+          <ChartCard index={0} title="Evolução Mensal" sub={`Total no ano: ${fmtNum(chartData.totalYear)} · Média: ${chartData.averageMonth}/mês`}
+            icon={<TrendingUp className="w-3 h-3" />}>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData.monthly} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                  <defs>
+                    <linearGradient id="adMonthGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F97316" stopOpacity={0.35} />
+                      <stop offset="60%" stopColor="#F97316" stopOpacity={0.05} />
+                      <stop offset="100%" stopColor="#F97316" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="adGrowthGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="name" tick={TICK} stroke="transparent" tickLine={false} />
+                  <YAxis tick={TICK} stroke="transparent" tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', paddingTop: 4 }} />
+                  <Area type="monotone" dataKey="clientes" name="Clientes" stroke="#F97316" fill="url(#adMonthGrad)"
+                    strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#F97316', stroke: '#fff', strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          {/* Weekly comparison bar */}
+          <ChartCard index={1} title="Comparativo Semanal" sub={`Total semana: ${fmtNum(chartData.totalWeek)} · Cresc: ${chartData.weeklyGrowth}%`}
+            icon={<BarChart3 className="w-3 h-3" />}>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.weekly} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                  <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="name" tick={TICK} stroke="transparent" tickLine={false} />
+                  <YAxis tick={TICK} stroke="transparent" tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)', rx: 4 }} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', paddingTop: 4 }} />
+                  <Bar dataKey="atual" name="Esta Semana" fill="#F97316" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                  <Bar dataKey="anterior" name="Semana Anterior" fill="rgba(59,130,246,0.5)" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          {/* Approval donut */}
+          <ChartCard index={2} title="Status dos Clientes" sub="Distribuição por status de aprovação"
+            icon={<PieChartIcon className="w-3 h-3" />}>
+            <div className="h-52 flex items-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    {['#10b981', '#eab308', '#ef4444', '#8b5cf6'].map((c, i) => (
+                      <linearGradient key={i} id={`adPie-${i}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={c} stopOpacity={1} />
+                        <stop offset="100%" stopColor={c} stopOpacity={0.7} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <Pie data={d.pieData} dataKey="value" nameKey="name"
+                    cx="50%" cy="50%" outerRadius={80} innerRadius={45} paddingAngle={3}
+                    cornerRadius={4} strokeWidth={0}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    labelLine={false}>
+                    {d.pieData.map((_, i) => (
+                      <Cell key={i} fill={`url(#adPie-${i})`} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+
+          {/* Clients by day mini bars */}
+          <ChartCard index={3} title="Atividade por Dia" sub="Clientes cadastrados por dia da semana"
+            icon={<Calendar className="w-3 h-3" />}>
+            <div className="h-52 px-1">
+              <div className="flex items-end gap-2 h-40 pt-2">
+                {chartData.weekly.map((day, i) => {
+                  const max = Math.max(...chartData.weekly.map(x => x.atual), 1);
+                  const isToday = new Date().getDay() === i;
+                  return (
+                    <div key={day.name} className="flex-1 flex flex-col items-center gap-1">
+                      <span className="text-[9px] font-bold text-white/70">{day.atual}</span>
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${Math.max(4, (day.atual / max) * 100)}%` }}
+                        transition={{ duration: 0.8, delay: i * 0.06 }}
+                        className="w-full rounded-t-md"
+                        style={{ backgroundColor: isToday ? '#F97316' : 'rgba(59,130,246,0.35)', minHeight: 4 }}
+                      />
+                      <span className="text-[9px] font-bold" style={{ color: isToday ? '#F97316' : 'rgba(255,255,255,0.5)' }}>
+                        {day.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 pt-2 border-t flex items-center justify-between" style={{ borderColor: BORDER }}>
+                <span className="text-[9px] text-white/40">Dia mais ativo</span>
+                <span className="text-[10px] font-bold text-white/70">
+                  {chartData.weekly.reduce((best, d, i) => d.atual > chartData.weekly[best].atual ? i : best, 0) >= 0
+                    ? chartData.weekly[chartData.weekly.reduce((best, d, i) => d.atual > chartData.weekly[best].atual ? i : best, 0)].name
+                    : '-'}
+                </span>
               </div>
             </div>
-            <div className="mt-4">
-              <h3 className="text-white font-semibold text-sm sm:text-lg mb-2">Taxa de Rejeição</h3>
-              <p className="text-caixa-extra-light text-xs sm:text-sm">{clientesReprovados || 0} clientes não aprovados</p>
-            </div>
-          </div>
+          </ChartCard>
         </motion.div>
 
-        {/* Advanced Data Table - RESPONSIVO */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="backdrop-blur-xl bg-white/10 rounded-2xl sm:rounded-3xl border border-caixa-primary/30 overflow-hidden shadow-xl shadow-caixa-primary/20"
-        >
-          {/* Header da tabela - RESPONSIVO */}
-          <div className="p-4 sm:p-8 border-b border-caixa-primary/30 bg-gradient-to-r from-caixa-primary/30 to-caixa-secondary/20">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-caixa-orange rounded-lg sm:rounded-xl shadow-lg">
-                  <Database className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg sm:text-2xl font-bold text-white">Clientes Aguardando Aprovação</h2>
-                  <p className="text-caixa-extra-light mt-1 text-xs sm:text-sm">
-                    {/* ✅ MOSTRAR APENAS COUNT DOS QUE REALMENTE ESTÃO AGUARDANDO */}
-                    {clientesRealmenteAguardando.length} aguardando aprovação
-                  </p>
-                </div>
+        {/* ═══ RANKING + ALERTAS + ATIVIDADE — 3 cols ═══ */}
+        <SectionHeader icon={<Trophy className="w-3.5 h-3.5" />} title="Ranking & Alertas"
+          subtitle="Top performers e notificações" />
+
+        <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+          {/* Ranking */}
+          <RankingCard index={0} title="Ranking do Mês" icon={<Trophy className="w-3.5 h-3.5" />}
+            items={d.rankingItems} formatValue={v => `${v} clientes`} accent="#F97316" />
+
+          {/* Alertas */}
+          <motion.div variants={fadeUp} className="rounded-xl p-4 space-y-3 backdrop-blur-md"
+            style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #ef4444, #f87171)' }}>
+                <AlertTriangle className="w-3.5 h-3.5 text-white" />
               </div>
-              
-              {/* Controles - RESPONSIVO */}
-              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                <div className="relative flex-1 sm:flex-none">
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-caixa-light absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2" />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar..."
-                    className="bg-caixa-primary/50 border border-caixa-light/30 rounded-lg sm:rounded-xl pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 text-white placeholder-caixa-extra-light/50 focus:outline-none focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange text-sm sm:text-base w-full sm:w-auto"
-                  />
-                </div>
-                <button className="px-4 sm:px-6 py-2 sm:py-3 bg-caixa-orange hover:bg-caixa-orange-dark text-white rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-caixa-orange/25 text-sm sm:text-base whitespace-nowrap">
-                  Exportar
-                </button>
-              </div>
+              <p className="text-xs font-bold text-white">Atenção</p>
             </div>
-          </div>
-          
-          {/* Tabela - RESPONSIVO */}
+            <div className="space-y-2">
+              {d.aguardando.length > 0 && (
+                <div className="flex items-center justify-between px-2.5 py-2 rounded-lg" style={{ backgroundColor: 'rgba(234,179,8,0.08)' }}>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" style={{ color: '#eab308' }} />
+                    <p className="text-[10px] font-medium text-white/70">Aguardando aprovação</p>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#eab308' }}>{d.aguardando.length}</span>
+                </div>
+              )}
+              {d.clientesReprovados > 0 && (
+                <div className="flex items-center justify-between px-2.5 py-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.08)' }}>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5" style={{ color: '#ef4444' }} />
+                    <p className="text-[10px] font-medium text-white/70">Clientes reprovados</p>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>{d.clientesReprovados}</span>
+                </div>
+              )}
+              {(notifications?.notifications || []).slice(0, 3).map((n, i) => (
+                <div key={i} className="flex items-center justify-between px-2.5 py-2 rounded-lg" style={{ backgroundColor: 'rgba(249,115,22,0.06)' }}>
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-3.5 h-3.5" style={{ color: '#F97316' }} />
+                    <p className="text-[10px] font-medium text-white/70 truncate max-w-[140px]">{n.title}</p>
+                  </div>
+                  {n.count > 0 && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: 'rgba(249,115,22,0.15)', color: '#F97316' }}>{n.count}</span>
+                  )}
+                </div>
+              ))}
+              {d.aguardando.length === 0 && d.clientesReprovados === 0 && !(notifications?.notifications?.length) && (
+                <div className="flex items-center gap-2 px-2.5 py-3 rounded-lg" style={{ backgroundColor: 'rgba(16,185,129,0.08)' }}>
+                  <CheckCircle className="w-4 h-4" style={{ color: '#10b981' }} />
+                  <p className="text-[10px] font-medium" style={{ color: '#10b981' }}>Tudo em dia!</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Resumo rápido */}
+          <motion.div variants={fadeUp} className="rounded-xl p-4 space-y-3 backdrop-blur-md"
+            style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}>
+                <Activity className="w-3.5 h-3.5 text-white" />
+              </div>
+              <p className="text-xs font-bold text-white">Resumo do Período</p>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                { label: 'Cadastros hoje', value: d.clientesHoje, accent: '#3b82f6' },
+                { label: 'Cadastros na semana', value: d.clientesSemana, accent: '#8b5cf6' },
+                { label: 'Cadastros no mês', value: d.clientesEsteMes, accent: '#F97316' },
+                { label: 'Mês anterior', value: d.clientesMesAnterior, accent: '#06b6d4' },
+                { label: 'Total no ano', value: chartData.totalYear, accent: '#10b981' },
+                { label: 'Média mensal', value: chartData.averageMonth, accent: '#eab308' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-md"
+                  style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                  <span className="text-[10px] font-medium text-white/50">{item.label}</span>
+                  <span className="text-[11px] font-bold" style={{ color: item.accent }}>{fmtNum(item.value)}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* ═══ TABELA AGUARDANDO ═══ */}
+        <SectionHeader icon={<Database className="w-3.5 h-3.5" />} title="Clientes Aguardando Aprovação"
+          subtitle={`${d.aguardando.length} pendentes`} />
+
+        <motion.div variants={fadeUp} className="rounded-2xl overflow-hidden backdrop-blur-md"
+          style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-caixa-primary/60">
-                <tr>
-                  <th className="text-left py-4 sm:py-6 px-4 sm:px-8 text-caixa-extra-light font-bold text-xs sm:text-sm">CLIENTE</th>
-                  <th className="text-left py-4 sm:py-6 px-4 sm:px-8 text-caixa-extra-light font-bold text-xs sm:text-sm">STATUS</th>
-                  <th className="text-left py-4 sm:py-6 px-4 sm:px-8 text-caixa-extra-light font-bold text-xs sm:text-sm">DATA</th>
+            <table className="w-full text-xs text-white/70">
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  {['#', 'Cliente', 'Status', 'Data Cadastro', 'Dias'].map(h => (
+                    <th key={h} className="py-2.5 px-4 text-left font-semibold text-[11px] text-white/50">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {/* ✅ USAR APENAS CLIENTES QUE REALMENTE ESTÃO AGUARDANDO */}
-                {clientesRealmenteAguardando && clientesRealmenteAguardando.length > 0 ? (
-                  clientesRealmenteAguardando.slice(0, 8).map((cliente, index) => (
-                    <tr key={cliente.id} className="border-b border-caixa-primary/20 hover:bg-caixa-primary/20 transition-colors">
-                      <td className="py-4 sm:py-6 px-4 sm:px-8">
-                        <div className="flex items-center gap-2 sm:gap-4">
-                          <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-caixa-orange flex items-center justify-center text-white font-bold relative shadow-lg text-xs sm:text-base">
-                            {cliente.nome?.charAt(0) || 'C'}
-                            <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-yellow-400 rounded-full border-2 border-caixa-primary animate-pulse"></div>
+                {d.aguardando.length > 0 ? (
+                  d.aguardando.slice(0, 10).map((cliente, idx) => {
+                    const sc = getStatusColors(cliente.status);
+                    const dias = Math.floor((new Date() - new Date(cliente.created_at)) / (1000 * 60 * 60 * 24));
+                    const urgencia = dias > 7 ? '#ef4444' : dias > 3 ? '#eab308' : '#10b981';
+                    return (
+                      <motion.tr key={cliente.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        style={{ borderBottom: `1px solid ${BORDER}` }} className="transition-colors hover:bg-white/[0.03]">
+                        <td className="py-2.5 px-4 text-[11px] text-white/40">{idx + 1}</td>
+                        <td className="py-2.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                              style={{ background: ACCENT_GRADIENT }}>{cliente.nome?.charAt(0) || 'C'}</div>
+                            <div>
+                              <span className="font-medium text-[11px] text-white">{cliente.nome || 'Cliente'}</span>
+                              <p className="text-[9px] text-white/40">ID: {cliente.id}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="text-white font-semibold text-sm sm:text-base truncate block">{cliente.nome || 'Cliente'}</span>
-                            <p className="text-caixa-extra-light text-xs">ID: {cliente.id || '000'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 sm:py-6 px-4 sm:px-8">
-                        {/* ✅ MOSTRAR STATUS CORRETO COM COR ADEQUADA */}
-                        <span className={`inline-block px-3 sm:px-5 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg border-2 transition-all duration-200 hover:scale-105 cursor-pointer ${getStatusColor(cliente.status)}`}>
-                          {getStatusDisplay(cliente.status)}
-                        </span>
-                      </td>
-                      <td className="py-4 sm:py-6 px-4 sm:px-8 text-white/70 text-xs sm:text-sm">
-                        {cliente.created_at ? new Date(cliente.created_at).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ backgroundColor: sc.bg, color: sc.color }}>{getStatusDisplay(cliente.status)}</span>
+                        </td>
+                        <td className="py-2.5 px-4 text-[11px] text-white/50">
+                          {cliente.created_at ? new Date(cliente.created_at).toLocaleDateString('pt-BR') : '-'}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ backgroundColor: `${urgencia}15`, color: urgencia }}>
+                            {dias}d
+                          </span>
+                        </td>
+                      </motion.tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="3" className="py-12 sm:py-16 text-center">
-                      <ClipboardList className="w-12 h-12 sm:w-16 sm:h-16 text-caixa-primary/50 mx-auto mb-4" />
-                      <p className="text-caixa-extra-light text-sm sm:text-lg">Nenhum cliente aguardando aprovação</p>
-                      <p className="text-caixa-extra-light/50 text-xs sm:text-sm mt-2">Todos os clientes foram processados</p>
+                    <td colSpan={5} className="text-center py-8 text-xs text-white/40">
+                      <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(16,185,129,0.3)' }} />
+                      Nenhum cliente aguardando aprovação
                     </td>
                   </tr>
                 )}
@@ -818,7 +586,13 @@ const DashboardAdministrador = () => {
             </table>
           </div>
         </motion.div>
-      </div>
+
+        {/* Footer */}
+        <motion.div variants={fadeUp} className="text-center py-3">
+          <span className="text-[11px] font-medium text-white/40">Atualização automática a cada 30 segundos</span>
+        </motion.div>
+
+      </motion.div>
     </div>
   );
 };

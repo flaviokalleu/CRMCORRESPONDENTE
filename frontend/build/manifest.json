@@ -1,0 +1,15 @@
+{
+  "short_name": "CRM IMOB",
+  "name": "CRM IMOB",
+  "icons": [
+    {
+      "src": "logo-crm-imob.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
