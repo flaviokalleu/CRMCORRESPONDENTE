@@ -52,14 +52,15 @@ const DashboardAdministrador = () => {
   const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CAIXA CRM";
 
   // Função para buscar dados do dashboard
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (signal) => {
     try {
       const authToken = localStorage.getItem('authToken');
       const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal
       });
 
       if (!response.ok) {
@@ -69,22 +70,24 @@ const DashboardAdministrador = () => {
       const data = await response.json();
       setDashboardData(data);
     } catch (error) {
+      if (error.name === 'AbortError') return;
       console.error('Erro ao buscar dados do dashboard:', error);
       setError(error.message);
     }
   };
 
   // Função para buscar dados dos gráficos
-  const fetchChartData = async () => {
+  const fetchChartData = async (signal) => {
     try {
       const authToken = localStorage.getItem('authToken');
-      
+
       // Buscar dados mensais
       const monthlyResponse = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/monthly`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal
       });
 
       // Buscar dados semanais
@@ -92,7 +95,8 @@ const DashboardAdministrador = () => {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal
       });
 
       if (monthlyResponse.ok && weeklyResponse.ok) {
@@ -184,6 +188,7 @@ const DashboardAdministrador = () => {
         });
       }
     } catch (error) {
+      if (error.name === 'AbortError') return;
       console.error('Erro ao buscar dados dos gráficos:', error);
       
       // Definir dados padrão em caso de erro
@@ -222,14 +227,15 @@ const DashboardAdministrador = () => {
   };
 
   // Função para buscar estatísticas do sistema
-  const fetchSystemStats = async () => {
+  const fetchSystemStats = async (signal) => {
     try {
       const authToken = localStorage.getItem('authToken');
       const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/system-stats`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal
       });
 
       if (response.ok) {
@@ -237,32 +243,42 @@ const DashboardAdministrador = () => {
         setSystemStats(data);
       }
     } catch (error) {
+      if (error.name === 'AbortError') return;
       console.error('Erro ao buscar estatísticas do sistema:', error);
     }
   };
 
   // Carregar todos os dados
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const loadAllData = async () => {
       setLoading(true);
       try {
         await Promise.all([
-          fetchDashboardData(),
-          fetchChartData(),
-          fetchSystemStats()
+          fetchDashboardData(signal),
+          fetchChartData(signal),
+          fetchSystemStats(signal)
         ]);
       } catch (error) {
+        if (error.name === 'AbortError') return;
         setError(error.message);
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     loadAllData();
-    
+
     // Atualizar dados a cada 30 segundos
     const interval = setInterval(loadAllData, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {

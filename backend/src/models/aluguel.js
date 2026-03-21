@@ -92,5 +92,12 @@ module.exports = (sequelize, DataTypes) => {
     underscored: false // Importante: false para não converter automaticamente
   });
 
+  Aluguel.associate = function(models) {
+    Aluguel.hasOne(models.ClienteAluguel, {
+      foreignKey: 'aluguel_id',
+      as: 'inquilino',
+    });
+  };
+
   return Aluguel;
 };

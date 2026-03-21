@@ -1,4 +1,4 @@
-const { useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const { useMultiFileAuthState } = require('whaileys');
 const WhatsAppFileSessionManager = require('./whatsappFileSessionManager');
 const path = require('path');
 

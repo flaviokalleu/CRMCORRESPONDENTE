@@ -1,17 +1,14 @@
-// src/components/Footer.js
-
 import React from 'react';
 
 const Footer = () => {
-    return (
-        <footer className="bg-black text-white py-4 mt-auto">
-            <div className=" text-center">
-                <p className="text-sm">
-                    &copy; {new Date().getFullYear()} Flavio Kalleu. Todos os direitos reservados.
-                </p>
-            </div>
-        </footer>
-    );
+  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || 'CRM IMOB';
+  return (
+    <div className="text-center py-3 px-4">
+      <p className="text-xs text-caixa-extra-light/50">
+        &copy; {new Date().getFullYear()} {nomeSistema} — Sistema de Gestão Imobiliária
+      </p>
+    </div>
+  );
 };
 
 export default Footer;

@@ -116,7 +116,7 @@ services:
       args:
         - REACT_APP_API_URL=https://crm.webba.site/api
         - REACT_APP_WS_URL=wss://crm.webba.site
-        - REACT_APP_NOME_SISTEMA=B2M
+        - REACT_APP_NOME_SISTEMA=CRMIMOB
     container_name: crm_frontend
     restart: unless-stopped
     expose:

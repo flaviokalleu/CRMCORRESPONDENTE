@@ -404,7 +404,7 @@ const ListaImoveis = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                    IMÓVEIS B2M
+                    IMÓVEIS CRMIMOB
                   </h1>
                   <p className="text-white/80 text-lg">
                     {filteredImoveis.length} de {imoveis.length} imóveis encontrados

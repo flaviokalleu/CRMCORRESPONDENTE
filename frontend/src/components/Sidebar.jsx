@@ -1,826 +1,396 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { HiMenu, HiChevronRight } from "react-icons/hi";
 import {
-  FaUserPlus,
-  FaUserTie,
-  FaUserShield,
-  FaBuilding,
-  FaListAlt,
-  FaListUl,
-  FaClipboardList,
-  FaUsersCog,
-  FaUserFriends,
-  FaSignOutAlt,
-  FaCog,
-  FaQrcode,
-  FaChartBar,
-  FaTachometerAlt,
-  FaBell,
-  FaCreditCard, // ✅ NOVO ÍCONE PARA PAGAMENTOS
-  FaMoneyBillWave // ✅ NOVO ÍCONE PARA BOLETOS
-} from "react-icons/fa";
+  ChevronRight,
+  LogOut,
+  Settings,
+  LayoutDashboard,
+  UserPlus,
+  UserCog,
+  ShieldCheck,
+  Building2,
+  CreditCard,
+  List,
+  Bell,
+  Users,
+  ClipboardList,
+  Banknote,
+  QrCode,
+  BarChart3,
+  PanelLeftClose,
+  X,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-const Sidebar = ({ open, handleDrawerClose, onToggleVisibility }) => {
+// ─── Componentes FORA do Sidebar (estáveis, não recriam a cada render) ───
+
+const UserAvatar = ({ name, photo, photoUrl, size = 44 }) => {
+  const [imgError, setImgError] = useState(false);
+
+  if (photo && photoUrl && !imgError) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        className="h-full w-full object-cover"
+        onError={() => setImgError(true)}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  const colors = [
+    '#F97316', '#4A8CB8', '#6B8F71', '#8B6B9F', '#B85A4A',
+    '#4AB8A8', '#E67E22', '#5A7EB8', '#9F6B8B', '#6B9F71',
+  ];
+  const charCode = (name || 'U').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const bgColor = colors[charCode % colors.length];
+  const initials = (name || 'U')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+      <rect width="44" height="44" rx="22" fill={bgColor} />
+      <text x="22" y="22" textAnchor="middle" dominantBaseline="central"
+        fill="white" fontSize="16" fontWeight="600" fontFamily="sans-serif">
+        {initials}
+      </text>
+    </svg>
+  );
+};
+
+const NavItem = ({ to, icon: Icon, label, isActive }) => {
+  const active = to && isActive;
+  return (
+    <Link
+      to={to}
+      className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+        active
+          ? "bg-caixa-orange/20 text-caixa-orange"
+          : "text-white/60 hover:bg-white/5 hover:text-white"
+      }`}
+    >
+      <Icon
+        className={`h-[18px] w-[18px] flex-shrink-0 ${
+          active ? "text-caixa-orange" : "text-white/30 group-hover:text-white/60"
+        }`}
+        strokeWidth={1.8}
+      />
+      {label}
+    </Link>
+  );
+};
+
+const DropdownSection = ({ icon: Icon, label, isOpen, onToggle, items, pathname }) => (
+  <>
+    <button
+      onClick={onToggle}
+      className="group flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-white/60 transition-all duration-200 hover:bg-white/5 hover:text-white"
+    >
+      <span className="flex items-center gap-3">
+        <Icon className="h-[18px] w-[18px] text-white/30 group-hover:text-white/60" strokeWidth={1.8} />
+        {label}
+      </span>
+      <motion.span animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
+        <ChevronRight className="h-4 w-4 text-white/20" />
+      </motion.span>
+    </button>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className="overflow-hidden"
+        >
+          <div className="ml-5 space-y-0.5 border-l border-white/10 pl-3 py-1">
+            {items.map((item) => (
+              <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </>
+);
+
+// ─── Sidebar principal ───
+
+const Sidebar = ({ open, onClose, onToggleVisibility }) => {
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [timeRemaining, setTimeRemaining] = useState("Carregando...");
-  const [addDropdownOpen, setAddDropdownOpen] = useState(false);
-  const [listDropdownOpen, setListDropdownOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState("...");
+  const [addOpen, setAddOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
-  // Nome do sistema vindo do .env
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CAIXA CRM";
+  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CRM IMOB";
 
-  // Função para lidar com logout
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  // Refs para evitar recriação do interval
+  const logoutRef = useRef(logout);
+  const navigateRef = useRef(navigate);
+  useEffect(() => { logoutRef.current = logout; }, [logout]);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
 
-  // Memoiza a função para evitar warning do useEffect
-  const calculateTimeRemaining = useCallback(() => {
+  const handleLogout = useCallback(() => {
+    logoutRef.current();
+    navigateRef.current("/login");
+  }, []);
+
+  // Token time — estável, só depende de tokenExpiry
+  const calcTime = useCallback(() => {
     try {
-      // Primeiro tenta pegar do AuthContext se disponível
       if (user?.tokenExpiry) {
-        const expiryTime = new Date(user.tokenExpiry).getTime();
-        const now = Date.now();
-        const timeDiff = expiryTime - now;
-
-        if (timeDiff <= 0) {
-          return "Expirado";
-        }
-
-        const totalSeconds = Math.floor(timeDiff / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        if (hours > 0) {
-          return `${hours}h ${minutes}m ${seconds}s`;
-        } else if (minutes > 0) {
-          return `${minutes}m ${seconds}s`;
-        } else {
-          return `${seconds}s`;
-        }
+        const diff = new Date(user.tokenExpiry).getTime() - Date.now();
+        if (diff <= 0) return "Expirado";
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
       }
-
-      // Fallback: tenta decodificar do token JWT usando a chave correta
-      const token = localStorage.getItem("authToken"); // ✅ CORREÇÃO: usar 'authToken' em vez de 'token'
-      if (!token) {
-        return "Token não encontrado";
-      }
-      // Verifica se o token tem o formato JWT correto
-      const tokenParts = token.split('.');
-      if (tokenParts.length !== 3) {
-        return "Token inválido";
-      }
-      try {
-        // Decodifica o payload do JWT
-        const base64Url = tokenParts[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        // Adiciona padding se necessário
-        const paddedBase64 = base64 + '='.repeat((4 - base64.length % 4) % 4);
-        const jsonPayload = decodeURIComponent(
-          atob(paddedBase64)
-            .split('')
-            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        const decoded = JSON.parse(jsonPayload);
-        if (!decoded.exp) {
-          return "Token sem expiração";
-        }
-        // exp está em segundos Unix, converte para milliseconds
-        const expiryTime = decoded.exp * 1000;
-        const now = Date.now();
-        const timeDiff = expiryTime - now;
-        if (timeDiff <= 0) {
-          return "Expirado";
-        }
-        const totalSeconds = Math.floor(timeDiff / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        // Formata baseado no tempo restante
-        if (hours > 0) {
-          return `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-          return `${minutes}m ${seconds}s`;
-        } else {
-          return `${seconds}s`;
-        }
-      } catch (decodeError) {
-        console.error("Erro ao decodificar token:", decodeError);
-        return "Token corrompido";
-      }
-    } catch (error) {
-      console.error("Erro geral ao calcular tempo:", error);
-      return "Erro no cálculo";
+      const token = localStorage.getItem("authToken");
+      if (!token) return "—";
+      const parts = token.split(".");
+      if (parts.length !== 3) return "—";
+      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+      const payload = JSON.parse(
+        decodeURIComponent(atob(padded).split("").map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""))
+      );
+      if (!payload.exp) return "—";
+      const diff = payload.exp * 1000 - Date.now();
+      if (diff <= 0) return "Expirado";
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+    } catch {
+      return "—";
     }
-  }, [user]);
-
-  // Debug function melhorada
-  const debugTokenInfo = () => {
-    const token = localStorage.getItem("authToken"); // ✅ CORREÇÃO: usar 'authToken'
-    
-    console.group("🔍 Debug Token Info");
-    console.log("Token exists:", !!token);
-    console.log("User exists:", !!user);
-    console.log("User tokenExpiry:", user?.tokenExpiry);
-    
-    if (user?.tokenExpiry) {
-      const expiry = new Date(user.tokenExpiry);
-      const now = new Date();
-      console.log("Expiry from user context:", expiry.toLocaleString());
-      console.log("Current time:", now.toLocaleString());
-      console.log("Time difference (ms):", expiry.getTime() - now.getTime());
-      console.log("Time difference (seconds):", Math.floor((expiry.getTime() - now.getTime()) / 1000));
-    }
-    
-    if (token) {
-      console.log("Token exists in localStorage:", true);
-      console.log("Token key used: 'authToken'");
-      console.log("Token length:", token.length);
-      console.log("Token parts:", token.split('.').length);
-      console.log("Token preview:", token.substring(0, 50) + "...");
-      
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          // Decodificar header
-          const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
-          
-          // Decodificar payload
-          const base64Url = parts[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const paddedBase64 = base64 + '='.repeat((4 - base64.length % 4) % 4);
-          const payload = JSON.parse(atob(paddedBase64));
-          
-          console.log("Header:", header);
-          console.log("Payload:", payload);
-          
-          if (payload.exp) {
-            const expDate = new Date(payload.exp * 1000);
-            const now = new Date();
-            const timeLeft = payload.exp * 1000 - now.getTime();
-            
-            console.log("JWT expires at:", expDate.toLocaleString());
-            console.log("Current time:", now.toLocaleString());
-            console.log("Time left (ms):", timeLeft);
-            console.log("Time left (seconds):", Math.floor(timeLeft / 1000));
-            console.log("Is expired?", timeLeft <= 0);
-          }
-          
-          if (payload.iat) {
-            const issuedDate = new Date(payload.iat * 1000);
-            console.log("JWT issued at:", issuedDate.toLocaleString());
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing JWT token:", e);
-      }
-    } else {
-      console.log("❌ No token found in localStorage");
-      console.log("Available keys:", Object.keys(localStorage));
-    }
-    console.groupEnd();
-  };
+  }, [user?.tokenExpiry]);
 
   useEffect(() => {
-    // Calcula imediatamente quando o componente monta ou user muda
-    const remaining = calculateTimeRemaining();
-    setTimeRemaining(remaining);
-    
-    // Configura o intervalo para atualizar a cada segundo
-    const interval = setInterval(() => {
-      const newRemaining = calculateTimeRemaining();
-      setTimeRemaining(newRemaining);
-      
-      // Se expirou, faz logout automático
-      if (newRemaining === "Expirado") {
-        console.log("Token expirado, fazendo logout...");
-        clearInterval(interval);
-        logout();
-        navigate("/login");
+    setTimeRemaining(calcTime());
+    const id = setInterval(() => {
+      const t = calcTime();
+      setTimeRemaining(t);
+      if (t === "Expirado") {
+        clearInterval(id);
+        logoutRef.current();
+        navigateRef.current("/login");
       }
     }, 1000);
+    return () => clearInterval(id);
+  }, [calcTime]);
 
-    return () => clearInterval(interval);
-  }, [user, logout, navigate, calculateTimeRemaining]);
+  const displayRole = useMemo(() => {
+    if (hasRole("administrador")) return "Administrador";
+    if (hasRole("correspondente")) return "Correspondente";
+    if (hasRole("corretor")) return "Corretor";
+    return "Usuário";
+  }, [hasRole]);
 
-  // Função para determinar o papel principal do usuário para exibição
-  const getUserDisplayRole = () => {
-    if (hasRole('administrador')) return 'Administrador';
-    if (hasRole('correspondente')) return 'Correspondente';
-    if (hasRole('corretor')) return 'Corretor';
-    return 'Usuário';
-  };
+  const photoUrl = useMemo(() => {
+    if (!user?.photo) return null;
+    const dir = hasRole("administrador")
+      ? "imagem_administrador"
+      : hasRole("correspondente")
+      ? "imagem_correspondente"
+      : hasRole("corretor")
+      ? "corretor"
+      : "imagem_user";
+    return `${process.env.REACT_APP_API_URL}/uploads/${dir}/${user.photo}`;
+  }, [user?.photo, hasRole]);
 
-  const getUserPhotoDirectory = () => {
-    // Prioridade: Administrador > Correspondente > Corretor > Default
-    if (hasRole('administrador')) {
-      return 'imagem_administrador';
-    }
-    if (hasRole('correspondente')) {
-      return 'imagem_correspondente';
-    }
-    if (hasRole('corretor')) {
-      return 'corretor';
-    }
-    return 'imagem_user';
-  };
+  const fullName = useMemo(
+    () => `${user?.first_name || "Usuário"} ${user?.last_name || ""}`.trim(),
+    [user?.first_name, user?.last_name]
+  );
 
-  // Função para gerar a URL da foto do usuário
-  const getUserPhotoUrl = () => {
-    if (!user?.photo) {
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.first_name || 'default'}&backgroundColor=1B4F72`;
-    }
+  // Menu items memoizados — só recriam se roles mudarem
+  const menu = useMemo(() => {
+    const items = { add: [], list: [], extra: [] };
 
-    const photoDirectory = getUserPhotoDirectory();
-    return `${process.env.REACT_APP_API_URL}/uploads/${photoDirectory}/${user.photo}`;
-  };
+    items.extra.push({ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
 
-  // Função de fallback para erro de carregamento da imagem
-  const handleImageError = (e) => {
-    e.target.onerror = null; // Previne loop infinito
-    
-    // Lista de diretórios para tentar como fallback
-    const fallbackDirectories = ['imagem_user', 'corretor', 'correspondente'];
-    const currentSrc = e.target.src;
-    
-    // Encontrar o próximo diretório para testar
-    for (let i = 0; i < fallbackDirectories.length; i++) {
-      const dir = fallbackDirectories[i];
-      const testUrl = `${process.env.REACT_APP_API_URL}/uploads/${dir}/${user.photo}`;
-      
-      if (!currentSrc.includes(dir)) {
-        e.target.src = testUrl;
-        return;
-      }
-    }
-    
-    // Se todos falharam, usar avatar gerado
-    e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.first_name || 'default'}&backgroundColor=1B4F72`;
-  };
-
-  // Configuração de itens do menu baseada nos papéis
-  const getMenuItems = () => {
-    const items = {
-      addItems: [],
-      listItems: [],
-      extraItems: []
-    };
-
-    // Dashboard disponível para todos
-    items.extraItems.push({
-      to: "/dashboard",
-      icon: <FaTachometerAlt size={18} />,
-      label: "Dashboard",
-    });
-
-    // Itens para Corretor
-    if (hasRole('corretor')) {
-      items.addItems.push(
-        {
-          to: "/clientes/adicionar",
-          icon: <FaUserPlus size={18} />,
-          label: "Adicionar Cliente",
-        }
-        // ...não adicionar aluguel...
-      );
-
-      items.listItems.push(
-        {
-          to: "/clientes/lista",
-          icon: <FaListUl size={18} />,
-          label: "Lista Clientes",
-        },
-        {
-          to: "/imoveis/lista",
-          icon: <FaClipboardList size={18} />,
-          label: "Lista Imóveis",
-        }
-        // ...não adicionar lista de aluguéis...
+    if (hasRole("corretor")) {
+      items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
+      items.list.push(
+        { to: "/clientes/lista", icon: List, label: "Clientes" },
+        { to: "/imoveis/lista", icon: ClipboardList, label: "Imóveis" }
       );
     }
 
-    // Itens para Correspondente - ACESSO LIMITADO
-    if (hasRole('correspondente')) {
-      items.addItems.push({
-        to: "/clientes/adicionar",
-        icon: <FaUserPlus size={18} />,
-        label: "Adicionar Cliente",
-      });
-
-      items.listItems.push({
-        to: "/clientes/lista",
-        icon: <FaListUl size={18} />,
-        label: "Lista Clientes",
-      });
-      // ...não adicionar laudos...
+    if (hasRole("correspondente")) {
+      if (!items.add.some((i) => i.to === "/clientes/adicionar"))
+        items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
+      if (!items.list.some((i) => i.to === "/clientes/lista"))
+        items.list.push({ to: "/clientes/lista", icon: List, label: "Clientes" });
     }
 
-    // Itens para Administrador e Correspondente
-    if (hasRole('administrador') || hasRole('correspondente')) {
-      // Adicionar todos os itens de adição
-      const adminAddItems = [
-        {
-          to: "/clientes/adicionar",
-          icon: <FaUserPlus size={18} />,
-          label: "Adicionar Cliente",
-        },
-        {
-          to: "/corretores/adicionar",
-          icon: <FaUserTie size={18} />,
-          label: "Adicionar Corretor",
-        },
-        {
-          to: "/correspondentes/adicionar",
-          icon: <FaUserShield size={18} />,
-          label: "Adicionar Correspondente",
-        },
-        {
-          to: "/imoveis/adicionar",
-          icon: <FaBuilding size={18} />,
-          label: "Adicionar Imóvel",
-        },
-        {
-          to: "/pagamentos/criar",
-          icon: <FaCreditCard size={18} />,
-          label: "Criar Pagamento",
-        }
-      ];
+    if (hasRole("administrador") || hasRole("correspondente")) {
+      [
+        { to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" },
+        { to: "/corretores/adicionar", icon: UserCog, label: "Adicionar Corretor" },
+        { to: "/correspondentes/adicionar", icon: ShieldCheck, label: "Adicionar Correspondente" },
+        { to: "/imoveis/adicionar", icon: Building2, label: "Adicionar Imóvel" },
+        { to: "/pagamentos/criar", icon: CreditCard, label: "Criar Pagamento" },
+      ].forEach((i) => { if (!items.add.some((e) => e.to === i.to)) items.add.push(i); });
 
-      adminAddItems.forEach(item => {
-        if (!items.addItems.some(existing => existing.to === item.to)) {
-          items.addItems.push(item);
-        }
-      });
+      [
+        { to: "/proprietarios/lista", icon: Users, label: "Proprietários" },
+        { to: "/lembretes", icon: Bell, label: "Lembretes" },
+        { to: "/clientes/lista", icon: List, label: "Clientes" },
+        { to: "/imoveis/lista", icon: ClipboardList, label: "Imóveis" },
+        { to: "/corretores/lista", icon: UserCog, label: "Corretores" },
+        { to: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
+        { to: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" },
+      ].forEach((i) => { if (!items.list.some((e) => e.to === i.to)) items.list.push(i); });
 
-      // Adicionar todas as listas
-      const adminListItems = [
-        {
-          to: "/proprietarios/lista",
-          icon: <FaListAlt size={18} />,
-          label: "Lista Proprietários",
-        },
-        {
-          to: "/lembretes",
-          icon: <FaBell size={18} />,
-          label: "Lembretes",
-        },
-        {
-          to: "/clientes/lista",
-          icon: <FaListUl size={18} />,
-          label: "Lista Clientes",
-        },
-        {
-          to: "/imoveis/lista",
-          icon: <FaClipboardList size={18} />,
-          label: "Lista Imóveis",
-        },
-        {
-          to: "/corretores/lista",
-          icon: <FaUsersCog size={18} />,
-          label: "Lista Corretores",
-        },
-        {
-          to: "/correspondentes/lista",
-          icon: <FaUserFriends size={18} />,
-          label: "Lista Correspondentes",
-        },
-        {
-          to: "/pagamentos/lista",
-          icon: <FaMoneyBillWave size={18} />,
-          label: "Lista de Pagamentos",
-        }
-      ];
+      [
+        { to: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" },
+        { to: "/dashboard/alugueis", icon: LayoutDashboard, label: "Dashboard Alugueis" },
+      ].forEach((i) => { if (!items.extra.some((e) => e.to === i.to)) items.extra.push(i); });
 
-      adminListItems.forEach(item => {
-        if (!items.listItems.some(existing => existing.to === item.to)) {
-          items.listItems.push(item);
-        }
-      });
-
-      // Itens extras para administrador e correspondente
-      const adminExtraItems = [
-        {
-          to: "/whatsapp-qr",
-          icon: <FaQrcode size={18} />,
-          label: "Escanear QR Code",
-        },
-        {
-          to: "/relatorio",
-          icon: <FaChartBar size={18} />,
-          label: "Relatório",
-        },
-        {
-          to: "/acessos",
-          icon: <FaUsersCog size={18} />,
-          label: "Acessos List",
-        }
-      ];
-
-      adminExtraItems.forEach(item => {
-        if (!items.extraItems.some(existing => existing.to === item.to)) {
-          items.extraItems.push(item);
-        }
-      });
-    }
-
-    // Adicionar menu financeiro para administrador
-    if (hasRole('administrador')) {
-      items.extraItems.push({
-        to: '/financeiro/dashboard',
-        icon: <FaChartBar size={18} />,
-        label: 'Financeiro',
-      });
+      // Itens de aluguel
+      items.list.push(
+        { to: "/alugueis", icon: Building2, label: "Imoveis Aluguel" },
+        { to: "/clientes-aluguel", icon: Users, label: "Inquilinos" }
+      );
+      items.add.push(
+        { to: "/alugueis/adicionar", icon: Building2, label: "Adicionar Imovel Aluguel" }
+      );
     }
 
     return items;
-  };
+  }, [hasRole]);
 
-  const menuItems = getMenuItems();
-
-  // Animation variants
-  const sidebarVariants = {
-    open: {
-      x: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 20
-      }
-    },
-    closed: {
-      x: "-100%",
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 20
-      }
-    }
-  };
-
-  const dropdownVariants = {
-    open: {
-      height: "auto",
-      opacity: 1,
-      transition: {
-        height: {
-          duration: 0.3
-        },
-        opacity: {
-          duration: 0.2,
-          delay: 0.1
-        }
-      }
-    },
-    closed: {
-      height: 0,
-      opacity: 0,
-      transition: {
-        height: {
-          duration: 0.3
-        },
-        opacity: {
-          duration: 0.2
-        }
-      }
-    }
-  };
-
-  // Elegant MenuItem component for consistent styling
-  const MenuItem = ({ to, icon, label, onClick, isDropdown = false, openDropdown }) => (
-    <motion.li 
-      className="mb-1"
-      whileHover={{ x: 4 }}
-      transition={{ duration: 0.2 }}
-    >
-      {to ? (
-        <Link
-          to={to}
-          className="flex items-center px-4 py-3 text-sm transition-all duration-300 rounded-xl hover:bg-caixa-primary/30 text-white hover:text-white font-medium group relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-caixa-primary/20 to-caixa-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
-          <span className="text-white group-hover:text-white transition-colors duration-300 relative z-10">{icon}</span>
-          <span className="ml-3 relative z-10">{label}</span>
-        </Link>
-      ) : (
-        <button
-          onClick={onClick}
-          className="flex items-center justify-between w-full px-4 py-3 text-sm transition-all duration-300 rounded-xl hover:bg-caixa-primary/30 text-white hover:text-white font-medium group relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-caixa-primary/20 to-caixa-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
-          <div className="flex items-center relative z-10">
-            <span className="text-white group-hover:text-white transition-colors duration-300">{icon}</span>
-            <span className="ml-3">{label}</span>
-          </div>
-          {isDropdown && (
-            <motion.span 
-              className="text-caixa-extra-light group-hover:text-caixa-light transition-colors duration-300 relative z-10"
-              animate={{ rotate: openDropdown ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <HiChevronRight size={16} />
-            </motion.span>
-          )}
-        </button>
-      )}
-    </motion.li>
-  );
+  const pathname = location.pathname;
 
   return (
-    <>
-      {/* Mobile Overlay */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm lg:hidden z-40"
-            onClick={handleDrawerClose}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar */}
-      <motion.div
-        variants={sidebarVariants}
-        animate={open ? "open" : "closed"}
-        className="fixed inset-0 top-0 left-0 lg:translate-x-0 bg-caixa-gradient text-white w-64 h-full z-50 overflow-y-auto shadow-2xl border-r border-caixa-light/20"
-      >
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-caixa-primary/10 rounded-full blur-2xl" />
-          <div className="absolute bottom-20 right-5 w-24 h-24 bg-caixa-secondary/10 rounded-full blur-2xl" />
-        </div>
-
-        <div className="flex flex-col h-full relative z-10">
-          {/* Mobile Header */}
-          <div className="flex items-center justify-between p-4 bg-caixa-primary/50 backdrop-blur-md border-b border-caixa-light/20 lg:hidden">
-            <div className="text-transparent bg-clip-text bg-gradient-to-r from-caixa-orange to-caixa-orange-light font-bold text-lg">
-              {nomeSistema}
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleDrawerClose}
-              className="text-caixa-orange hover:text-white transition-colors p-2 rounded-lg hover:bg-caixa-primary/30"
+    <div className="flex h-full flex-col bg-caixa-gradient border-r border-white/10 text-white">
+      {/* Header */}
+      <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-5 bg-caixa-primary/50 backdrop-blur-md">
+        <Link to="/dashboard" className="flex items-center gap-2.5">
+          <img src="/logo-crm-imob.svg" alt={nomeSistema} className="h-7 w-auto" />
+          <span className="text-sm font-bold text-white">{nomeSistema}</span>
+        </Link>
+        <div className="flex items-center gap-1">
+          {onToggleVisibility && (
+            <button
+              onClick={onToggleVisibility}
+              className="hidden h-7 w-7 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/10 hover:text-white md:flex"
+              title="Recolher menu"
             >
-              <HiMenu size={24} />
-            </motion.button>
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* User Profile */}
+      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4 bg-caixa-primary/30">
+        <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border-2 border-caixa-orange/50 shadow-lg">
+          <UserAvatar name={fullName} photo={user?.photo} photoUrl={photoUrl} size={44} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-white">{fullName}</p>
+          <div className="mt-0.5 flex items-center gap-2">
+            <span className="text-[11px] text-white/40">{displayRole}</span>
+            <div className="flex gap-1">
+              {hasRole("administrador") && (
+                <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400 border border-red-400/30">ADM</span>
+              )}
+              {hasRole("correspondente") && (
+                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 border border-white/20">COR</span>
+              )}
+              {hasRole("corretor") && (
+                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 border border-white/20">BRK</span>
+              )}
+            </div>
           </div>
-
-          {/* Desktop Header with Hide Button */}
-          <div className="hidden lg:flex items-center justify-between p-4 bg-caixa-primary/50 backdrop-blur-md border-b border-caixa-light/20">
-            <div className="text-transparent bg-clip-text bg-gradient-to-r from-caixa-orange to-caixa-orange-light font-bold text-lg text-white">
-              {nomeSistema}
-            </div>
-            {onToggleVisibility && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onToggleVisibility}
-                className="text-caixa-white hover:text-white transition-colors p-2 rounded-lg hover:bg-caixa-primary/30"
-                title="Esconder Sidebar"
-              >
-                <HiMenu size={20} />
-              </motion.button>
-            )}
-          </div>
-
-          {/* User Profile */}
-          <div className="flex items-center p-6 bg-caixa-primary/30 backdrop-blur-md border-b border-caixa-light/20">
-            <div className="relative">
-              <motion.div 
-                className="w-14 h-14 rounded-full border-2 border-caixa-orange/50 overflow-hidden shadow-lg bg-gradient-to-br from-caixa-primary to-caixa-secondary"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
-              >
-                <img
-                  src={getUserPhotoUrl()}
-                  alt="User"
-                  className="w-full h-full object-cover"
-                  onError={handleImageError}
-                />
-              </motion.div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-caixa-orange rounded-full border-2 border-caixa-primary shadow-lg"></div>
-              
-              {/* Debug info - Remove in production */}
-              {process.env.NODE_ENV === 'development' && user?.photo && (
-                <div className="absolute -top-8 left-0 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">
-                  Dir: {getUserPhotoDirectory()}
-                </div>
-              )}
-            </div>
-            <div className="ml-4 flex-1 min-w-0">
-              <div className="font-semibold text-white text-base truncate">
-                {user?.first_name || "Usuário"} {user?.last_name || ""}
-              </div>
-              <div className="text-xs text-caixa-light truncate">
-                {getUserDisplayRole()}
-              </div>
-              
-              
-                      <div className="flex flex-wrap gap-1 mt-2">
-                      {hasRole('administrador') && (
-                        <span className="px-2 py-0.5 bg-red-700/20 text-red-400 text-xs rounded-full border border-red-400/30">
-                        Admin
-                        </span>
-                      )}
-                      {hasRole('correspondente') && (
-                        <span className="px-2 py-0.5 bg-white/20 text-white text-xs rounded-full border border-white/30">
-                        Corresp
-                        </span>
-                      )}
-                      {hasRole('corretor') && (
-                        <span className="px-2 py-0.5 bg-white/20 text-white text-xs rounded-full border border-white/30">
-                        Corretor
-                        </span>
-                      )}
-                      </div>
-
-                      
-                          <div className="text-xs text-caixa-extra-light mt-2 flex items-center flex-wrap">
-                          <span className="mr-2">Token:</span>
-                          <span
-                          className={`border px-2 py-0.5 rounded-lg text-xs font-mono cursor-pointer transition-all duration-300 hover:scale-105 ${
-                          timeRemaining === "Expirado"
-                            ? "bg-red-950/50 border-red-400/50 text-red-300 animate-pulse"
-                            : timeRemaining.includes("Token") ||
-                            timeRemaining.includes("Erro") ||
-                            timeRemaining.includes("corrompido")
-                            ? "bg-yellow-950/50 border-yellow-400/50 text-yellow-300"
-                            : timeRemaining === "Não logado"
-                            ? "bg-caixa-gray-800/50 border-caixa-gray-400/50 text-caixa-gray-400"
-                            : "bg-caixa-primary/50 border-caixa-orange/50 text-white"
-                          }`}
-                          onClick={() =>
-                          process.env.NODE_ENV === "development" && debugTokenInfo()
-                          }
-                          title={
-                          process.env.NODE_ENV === "development"
-                            ? "Clique para debug info"
-                            : "Status do token"
-                          }
-                          >
-                          {/* Mostra o tempo restante em branco, mas se estiver expirando (<30s), o número fica vermelho */}
-                        {(() => {
-                        if (
-                          typeof timeRemaining === "string" &&
-                          !["Expirado", "Não logado"].includes(timeRemaining) &&
-                          !timeRemaining.includes("Token") &&
-                          !timeRemaining.includes("Erro") &&
-                          !timeRemaining.includes("corrompido")
-                        ) {
-                          // Extrai segundos restantes
-                          const match = timeRemaining.match(/(\d+)s$/);
-                          const seconds =
-                          match && match[1] ? parseInt(match[1], 10) : null;
-                          if (seconds !== null && seconds <= 30) {
-                          // Se está expirando, deixa o número final vermelho
-                          const parts = timeRemaining.split(" ");
-                          return (
-                            <>
-                            {parts.slice(0, -1).join(" ")}{" "}
-                            <span className="text-red-400 font-bold animate-pulse">
-                              {parts[parts.length - 1]}
-                            </span>
-                            </>
-                          );
-                          }
-                        }
-                        // Caso normal, tudo branco
-                        return timeRemaining;
-                        })()}
-                      </span>
-                      </div>
-                    </div>
-                    </div>
-
-                    {/* Navigation */}
-          <nav className="mt-4 flex-1 px-3">
-            <ul className="space-y-2">
-              {/* Extra Items Section */}
-              {menuItems.extraItems.map((item, index) => (
-                <MenuItem
-                  key={`extra-${item.to || item.label}-${index}`}
-                  to={item.to}
-                  icon={item.icon}
-                  label={item.label}
-                />
-              ))}
-
-              {/* Divider */}
-              <li className="my-4">
-                <div className="border-t border-caixa-light/20"></div>
-              </li>
-
-              {/* Add Section */}
-              {menuItems.addItems.length > 0 && (
-                <>
-                  <MenuItem
-                    icon={<FaUserPlus size={18} />}
-                    label="Adicionar"
-                    onClick={() => setAddDropdownOpen(!addDropdownOpen)}
-                    isDropdown={true}
-                    openDropdown={addDropdownOpen}
-                  />
-
-                  <AnimatePresence>
-                    {addDropdownOpen && (
-                      <motion.ul
-                        variants={dropdownVariants}
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        className="ml-4 mt-1 border-l border-caixa-light/20 pl-3 overflow-hidden"
-                      >
-                        {menuItems.addItems.map((item, index) => (
-                          <MenuItem
-                            key={`add-${item.to || item.label}-${index}`}
-                            to={item.to}
-                            icon={item.icon}
-                            label={item.label}
-                          />
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </>
-              )}
-
-              {/* List Section */}
-              {menuItems.listItems.length > 0 && (
-                <>
-                  <MenuItem
-                    icon={<FaListAlt size={18} />}
-                    label="Listagens"
-                    onClick={() => setListDropdownOpen(!listDropdownOpen)}
-                    isDropdown={true}
-                    openDropdown={listDropdownOpen}
-                  />
-
-                  <AnimatePresence>
-                    {listDropdownOpen && (
-                      <motion.ul
-                        variants={dropdownVariants}
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        className="ml-4 mt-1 border-l border-caixa-light/20 pl-3 overflow-hidden"
-                      >
-                        {menuItems.listItems.map((item, index) => (
-                          <MenuItem
-                            key={`list-${item.to || item.label}-${index}`}
-                            to={item.to}
-                            icon={item.icon}
-                            label={item.label}
-                          />
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </>
-              )}
-
-              {/* Divider */}
-              <li className="my-4">
-                <div className="border-t border-caixa-light/20"></div>
-              </li>
-
-              {/* Settings and Logout */}
-              <MenuItem
-                to="/configuracoes"
-                icon={<FaCog size={18} />}
-                label="Configurações"
-              />
-
-              <MenuItem
-                icon={<FaSignOutAlt size={18} />}
-                label="Sair"
-                onClick={handleLogout}
-              />
-            </ul>
-          </nav>
-
-          {/* Footer */}
-          <div className="p-4 mt-auto text-center text-xs text-caixa-extra-light/70 border-t border-caixa-light/20 bg-caixa-primary/30 backdrop-blur-md">
-            <div className="text-transparent bg-clip-text bg-gradient-to-r from-caixa-orange to-caixa-orange-light font-semibold">
-              &copy; {new Date().getFullYear()} {nomeSistema}
-            </div>
-            <div className="mt-1 text-caixa-light/50">
-              Sistema de Gestão Imobiliária
-            </div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <div className={`h-1.5 w-1.5 rounded-full ${timeRemaining === "Expirado" ? "bg-red-400 animate-pulse" : "bg-emerald-400"}`} />
+            <span className={`font-mono text-[10px] ${timeRemaining === "Expirado" ? "text-red-400" : "text-white/30"}`}>
+              {timeRemaining}
+            </span>
           </div>
         </div>
-      </motion.div>
-    </>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="space-y-0.5">
+          {menu.extra.map((item) => (
+            <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
+          ))}
+        </div>
+
+        {menu.add.length > 0 && <div className="my-3 border-t border-white/10" />}
+
+        {menu.add.length > 0 && (
+          <div className="space-y-0.5">
+            <p className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-wider text-white/20">
+              Cadastros
+            </p>
+            <DropdownSection
+              icon={UserPlus}
+              label="Adicionar"
+              isOpen={addOpen}
+              onToggle={() => setAddOpen((p) => !p)}
+              items={menu.add}
+              pathname={pathname}
+            />
+          </div>
+        )}
+
+        {menu.list.length > 0 && (
+          <div className="mt-1 space-y-0.5">
+            <DropdownSection
+              icon={ClipboardList}
+              label="Listagens"
+              isOpen={listOpen}
+              onToggle={() => setListOpen((p) => !p)}
+              items={menu.list}
+              pathname={pathname}
+            />
+          </div>
+        )}
+
+        <div className="my-3 border-t border-white/10" />
+
+        <div className="space-y-0.5">
+          <NavItem to="/configuracoes" icon={Settings} label="Configurações" isActive={pathname === "/configuracoes"} />
+          <button
+            onClick={handleLogout}
+            className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/60 transition-all duration-200 hover:bg-red-500/15 hover:text-red-400"
+          >
+            <LogOut className="h-[18px] w-[18px] text-white/30 group-hover:text-red-400" strokeWidth={1.8} />
+            Sair
+          </button>
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className="flex-shrink-0 border-t border-white/10 bg-caixa-primary/30 px-5 py-3">
+        <p className="text-center text-[10px] text-white/20">
+          &copy; {new Date().getFullYear()} {nomeSistema}
+        </p>
+      </div>
+    </div>
   );
 };
 

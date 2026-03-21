@@ -1,118 +1,104 @@
 import React, { useState, useEffect } from "react";
-import { FiMenu } from "react-icons/fi"; // Using Feather Icons
-import { Link, useLocation } from "react-router-dom"; // Use apenas useLocation, não Router
+import { useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, PanelLeft } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 
 const MainLayout = ({ children }) => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(true); // ✅ NOVO ESTADO PARA CONTROLAR VISIBILIDADE
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  // Check if screen is mobile on mount and window resize
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-
-    return () => window.removeEventListener("resize", checkIsMobile);
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Set initial sidebar state based on screen size
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // ✅ NOVA FUNÇÃO PARA ALTERNAR VISIBILIDADE COMPLETA DO SIDEBAR
-  const toggleSidebarVisibility = () => {
-    setSidebarVisible(!sidebarVisible);
-  };
+  // Fechar sidebar mobile ao navegar
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [location.pathname, isMobile]);
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-caixa-primary via-caixa-secondary to-caixa-primary">
-      {/* Sidebar - Só renderiza se estiver visível */}
+    <div className="flex h-screen overflow-hidden bg-caixa-gradient">
+      {/* Sidebar */}
       {sidebarVisible && (
         <aside
-          className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-caixa-primary/80 backdrop-blur-md 
-            transition-transform duration-300 ease-in-out border-r border-caixa-light/20
-            ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+          className={`fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         >
           <Sidebar
             open={sidebarOpen}
             onClose={() => isMobile && setSidebarOpen(false)}
-            onToggleVisibility={toggleSidebarVisibility}
+            onToggleVisibility={() => setSidebarVisible(false)}
           />
         </aside>
       )}
 
-      {/* Main Content Wrapper */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-caixa-primary/80 backdrop-blur-md border-b border-caixa-light/20">
-          {/* Só mostra o conteúdo do header se for mobile OU se o sidebar estiver escondido */}
-          {(isMobile || !sidebarVisible) && (
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && sidebarVisible && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        {/* Top Bar — só aparece se mobile OU sidebar escondido */}
+        {(isMobile || !sidebarVisible) && (
+          <header className="sticky top-0 z-40 bg-caixa-primary/80 backdrop-blur-md border-b border-white/10">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-2">
-                {/* ✅ BOTÃO PARA MOBILE SIDEBAR */}
-                {isMobile && (
+                {isMobile && sidebarVisible && (
                   <button
-                    onClick={toggleSidebar}
-                    className="p-2 rounded-lg hover:bg-caixa-primary/30 transition-colors"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                   >
-                    <FiMenu className="h-6 w-6 text-caixa-light" />
+                    <Menu className="h-6 w-6 text-white/70" />
                   </button>
                 )}
-                
-                {/* ✅ BOTÃO PARA MOSTRAR SIDEBAR - SÓ APARECE QUANDO SIDEBAR ESTÁ ESCONDIDO */}
                 {!sidebarVisible && (
                   <button
-                    onClick={toggleSidebarVisibility}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-caixa-primary/30 transition-colors"
-                    title="Mostrar Sidebar"
+                    onClick={() => setSidebarVisible(true)}
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    title="Mostrar Menu"
                   >
-                    <FiMenu className="h-6 w-6 text-caixa-light" />
-                    <span className="text-caixa-light text-sm">Menu</span>
+                    <PanelLeft className="h-6 w-6 text-white/70" />
+                    <span className="text-white/70 text-sm">Menu</span>
                   </button>
                 )}
               </div>
-              
-              {/* ✅ TÍTULO DA PÁGINA ATUAL (OPCIONAL) */}
-              <div className="text-white font-medium">
-                {/* Você pode adicionar aqui o título da página atual */}
-              </div>
             </div>
-          )}
-        </header>
+          </header>
+        )}
 
-        {/* Content Area - Now expands properly */}
-        <div className="flex-1 w-full">
-          {/* Mobile Overlay - Só aparece se sidebar estiver visível */}
-          {isMobile && sidebarOpen && sidebarVisible && (
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
-          {/* Main Content - Full width and height */}
+        {/* Content Area */}
+        <div className="flex-1 w-full overflow-y-auto">
           <div className="h-full w-full">{children}</div>
         </div>
 
         {/* Footer */}
-        <footer className="bg-caixa-primary/80 backdrop-blur-md border-t border-caixa-light/20">
+        <footer className="bg-caixa-primary/50 border-t border-white/10">
           <Footer />
         </footer>
-      </main>
+      </div>
     </div>
   );
 };

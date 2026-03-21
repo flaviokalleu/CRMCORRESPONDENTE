@@ -35,7 +35,7 @@ const PublicImoveisPage = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "B2M";
+  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CRMIMOB";
 
   // Buscar imóveis da API
   useEffect(() => {

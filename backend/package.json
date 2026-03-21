@@ -33,6 +33,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-busboy": "^10.1.0",
+    "express-rate-limit": "^8.3.1",
     "firebase": "^10.13.2",
     "formidable": "^3.5.4",
     "fs-extra": "^11.2.0",
@@ -69,6 +70,7 @@
     "socket.io": "^4.8.1",
     "ua-parser-js": "^2.0.3",
     "uuid": "^11.1.0",
+    "whaileys": "^6.4.10",
     "ws": "^8.18.0",
     "yazl": "^2.5.1"
   },

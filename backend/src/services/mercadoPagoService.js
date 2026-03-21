@@ -147,13 +147,13 @@ const criarPreferenciaUniversal = async (dados) => {
       
       // ✅ CONFIGURAÇÕES ADICIONAIS
       marketplace_fee: 0, // Sem taxa de marketplace
-      statement_descriptor: 'B2M IMOBILIARIA', // Aparece na fatura do cartão
+      statement_descriptor: 'CRMIMOB IMOBILIARIA', // Aparece na fatura do cartão
       
       // ✅ METADATA PARA TRACKING
       metadata: {
         cliente_id: cliente.id.toString(),
         cliente_nome: cliente.nome,
-        sistema: 'B2M_IMOVEIS',
+        sistema: 'CRMIMOB_IMOVEIS',
         tipo_pagamento: 'universal',
         parcelas: parcelas.toString(),
         created_at: new Date().toISOString()
@@ -315,13 +315,13 @@ const criarPreferenciaUniversalComJuros = async (dados) => {
       expiration_date_from: new Date().toISOString(),
       expiration_date_to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       
-      statement_descriptor: 'B2M IMOBILIARIA',
+      statement_descriptor: 'CRMIMOB IMOBILIARIA',
       metadata: {
         cliente_id: cliente.id.toString(),
         parcela_atual: parcela_atual.toString(),
         total_parcelas: parcelas.toString(),
         valor_original: valor_numerico.toString(),
-        sistema: 'B2M_IMOVEIS'
+        sistema: 'CRMIMOB_IMOVEIS'
       }
     };
 

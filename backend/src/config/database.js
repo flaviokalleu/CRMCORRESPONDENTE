@@ -9,7 +9,7 @@ const config = {
   dialect: 'postgres',
   logging: false,
   dialectOptions: {
-    ssl: false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   },
   define: {
     timestamps: true,

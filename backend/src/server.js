@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -29,7 +28,22 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 const lembreteRoutes = require('./routes/lembreteRoutes');
 const acessosRoutes = require('./routes/acessos');
 const clienteAluguelRoutes = require('./routes/clienteAluguel');
+const asaasWebhookRoutes = require('./routes/asaasWebhook');
+const dashboardAluguelRoutes = require('./routes/dashboardAluguel');
+const contratoAluguelRoutes = require('./routes/contratoAluguel');
+const portalInquilinoRoutes = require('./routes/portalInquilino');
+const repasseRoutes = require('./routes/repasseRoutes');
+const vistoriaRoutes = require('./routes/vistoriaRoutes');
+const chamadoRoutes = require('./routes/chamadoRoutes');
 const laudosRoutes = require('./routes/laudos');
+
+// ===== IMPORTAÇÃO DO SEQUELIZE =====
+let sequelize;
+try {
+  sequelize = require('./models').sequelize;
+} catch (error) {
+  console.warn('Aviso: Nao foi possivel carregar sequelize:', error.message);
+}
 
 // ===== IMPORTAÇÕES DE JOBS E SERVIÇOS =====
 const { iniciarJobParcelas } = require('./jobs/enviarParcelas');
@@ -134,9 +148,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Body parser adicional
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+// REMOVIDO: bodyParser duplicado — express.json/urlencoded acima já faz o parsing
 
 // ===== FUNÇÃO PARA ORGANIZAR UPLOADS NA INICIALIZAÇÃO =====
 const organizeUploads = () => {
@@ -206,8 +218,8 @@ const organizeUploads = () => {
       }
     });
     
-    // 2. Remover diretórios pais vazios
-    ['corretor', 'imagem_user'].forEach(parentDir => {
+    // 2. Remover diretórios temporários vazios (NÃO remover diretórios base como 'corretor')
+    ['imagem_user'].forEach(parentDir => {
       const parentPath = path.join(uploadsPath, parentDir);
       if (fs.existsSync(parentPath)) {
         try {
@@ -312,12 +324,13 @@ const findFileMiddleware = (req, res, next) => {
   const clientesDir = path.join(uploadsPath, 'clientes');
   let foundInClientes = null;
   if (fs.existsSync(clientesDir)) {
-    const findFileRecursive = (dir) => {
+    const findFileRecursive = (dir, maxDepth = 5, currentDepth = 0) => {
+      if (currentDepth >= maxDepth) return null;
       const files = fs.readdirSync(dir, { withFileTypes: true });
       for (const file of files) {
         const fullPath = path.join(dir, file.name);
         if (file.isDirectory()) {
-          const found = findFileRecursive(fullPath);
+          const found = findFileRecursive(fullPath, maxDepth, currentDepth + 1);
           if (found) return found;
         } else if (file.name === path.basename(requestedPath)) {
           return fullPath;
@@ -407,12 +420,23 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
 }));
 
 // ===== HEALTH CHECK =====
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    if (sequelize) {
+      await sequelize.authenticate();
+    }
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Database connection failed'
+    });
+  }
 });
 
 // ===== TODAS AS ROTAS DA APLICAÇÃO =====
@@ -437,6 +461,13 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api', lembreteRoutes);
 app.use('/api/acessos', acessosRoutes);
 app.use('/api', clienteAluguelRoutes);
+app.use('/api', asaasWebhookRoutes);
+app.use('/api', dashboardAluguelRoutes);
+app.use('/api', contratoAluguelRoutes);
+app.use('/api', portalInquilinoRoutes);
+app.use('/api', repasseRoutes);
+app.use('/api', vistoriaRoutes);
+app.use('/api', chamadoRoutes);
 app.use('/api/laudos', laudosRoutes);
 app.use('/api/pagamentos', pagamentosRoutes);
 // ROTAS FINANCEIRAS
@@ -543,15 +574,16 @@ app.get('/api/find-file/:filename', (req, res) => {
   const { filename } = req.params;
   const uploadsPath = path.join(__dirname, '../uploads');
   
-  // Buscar arquivo recursivamente
-  const findFileRecursive = (dir) => {
+  // Buscar arquivo recursivamente (com limite de profundidade)
+  const findFileRecursive = (dir, maxDepth = 5, currentDepth = 0) => {
+    if (currentDepth >= maxDepth) return null;
     const files = fs.readdirSync(dir, { withFileTypes: true });
-    
+
     for (const file of files) {
       const fullPath = path.join(dir, file.name);
-      
+
       if (file.isDirectory()) {
-        const found = findFileRecursive(fullPath);
+        const found = findFileRecursive(fullPath, maxDepth, currentDepth + 1);
         if (found) return found;
       } else if (file.name === filename) {
         return fullPath;
@@ -680,13 +712,34 @@ server.listen(PORT, () => {
   }
 });
 
-// ===== IMPORTAÇÃO DO SEQUELIZE (OPCIONAL) =====
-let sequelize;
-try {
-  sequelize = require('./models').sequelize;
-} catch (error) {
-  console.warn('⚠️ Aviso: Não foi possível carregar sequelize:', error.message);
-}
+// ===== GRACEFUL SHUTDOWN =====
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  server.close(async () => {
+    console.log('HTTP server closed.');
+    if (sequelize) {
+      try {
+        await sequelize.close();
+        console.log('Database connection closed.');
+      } catch (err) {
+        console.error('Error closing database:', err);
+      }
+    }
+    process.exit(0);
+  });
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout.');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 // Export both the app and sequelize instance
 module.exports = {

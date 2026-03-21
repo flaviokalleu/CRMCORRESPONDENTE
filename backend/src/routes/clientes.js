@@ -860,7 +860,8 @@ router.put('/clientes/:id',
 router.get('/clientes', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', status = '', corretor } = req.query;
-    const realLimit = parseInt(limit) > 0 ? parseInt(limit) : 10000; // default alto se limit inválido
+    const parsed = parseInt(limit);
+    const realLimit = parsed > 0 ? Math.min(parsed, 100) : 10; // cap at 100
     const offset = (page - 1) * limit;
 
     const userResult = await findUserByEmail(req.user?.email);

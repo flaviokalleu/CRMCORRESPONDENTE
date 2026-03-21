@@ -7,60 +7,61 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Paleta principal CAIXA
+        // Paleta principal — Navy + Laranja
         caixa: {
-          // Azuis principais
-          primary: '#1B4F72',      // Azul principal escuro
-          secondary: '#1B4F72',    // Azul médio
-          light: '#5DADE2',        // Azul claro
-          'extra-light': '#AED6F1', // Azul muito claro
-          
+          // Navy
+          primary: '#0B1426',        // Navy profundo
+          secondary: '#162a4a',      // Navy médio
+          light: '#F97316',          // Laranja (accent)
+          'extra-light': '#FDBA74',  // Laranja claro
+
           // Laranja de destaque
-          orange: '#1B4F72',       // Laranja principal
-          'orange-light': '#0E2A44', // Laranja claro
-          'orange-dark': '#5DADE2', // Laranja escuro
-          
+          orange: '#F97316',         // Laranja principal
+          'orange-light': '#FB923C', // Laranja claro
+          'orange-dark': '#EA580C',  // Laranja escuro
+
           // Cinzas e neutros
           gray: {
-            50: '#F8F9FA',
-            100: '#F1F3F4',
-            200: '#E8EAED',
-            300: '#DADCE0',
-            400: '#BDC1C6',
-            500: '#9AA0A6',
-            600: '#80868B',
-            700: '#5F6368',
-            800: '#3C4043',
-            900: '#202124',
+            50: '#FAF7F2',
+            100: '#F0F2F5',
+            200: '#E8E2D9',
+            300: '#D4CFC7',
+            400: '#A09B93',
+            500: '#7A756E',
+            600: '#5C5850',
+            700: '#3E3A34',
+            800: '#252220',
+            900: '#141210',
           },
-          
-          // Status colors seguindo o padrão CAIXA
-          success: '#28A745',
-          warning: '#FFC107',
-          error: '#DC3545',
-          info: '#17A2B8',
+
+          // Status colors
+          success: '#10B981',
+          warning: '#F59E0B',
+          error: '#EF4444',
+          info: '#3B82F6',
+          red: '#EF4444',
         },
-        
-        // Mantendo compatibilidade com primary existente
+
+        // Primary scale — alinhado ao navy
         primary: {
-          50: '#F0F9FF',
-          100: '#E0F2FE', 
-          200: '#BAE6FD',
-          300: '#7DD3FC',
-          400: '#38BDF8',
-          500: '#1B4F72',    // Usando azul CAIXA como primary-500
-          600: '#2980B9',    // Azul médio
-          700: '#1B4F72',    // Azul escuro
-          800: '#154360',    // Azul mais escuro
-          900: '#0E2A44',    // Azul muito escuro
-          950: '#082F49',
+          50: '#F0F4FA',
+          100: '#D9E4F0',
+          200: '#B3C8E0',
+          300: '#7A9EC4',
+          400: '#4A7BAD',
+          500: '#0B1426',
+          600: '#162a4a',
+          700: '#0B1426',
+          800: '#0A1020',
+          900: '#070C18',
+          950: '#050910',
         },
-        
-        // Cores de gradiente para o sistema
+
+        // Cores de gradiente
         gradient: {
-          'caixa-primary': 'linear-gradient(135deg, #1B4F72 0%, #2980B9 100%)',
-          'caixa-secondary': 'linear-gradient(135deg, #2980B9 0%, #5DADE2 100%)',
-          'caixa-accent': 'linear-gradient(135deg, #FF8C00 0%, #FFB347 100%)',
+          'caixa-primary': 'linear-gradient(135deg, #0B1426 0%, #162a4a 100%)',
+          'caixa-secondary': 'linear-gradient(135deg, #162a4a 0%, #1e3a5c 100%)',
+          'caixa-accent': 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
         }
       },
       spacing: {
@@ -87,13 +88,14 @@ module.exports = {
         },
       },
       backgroundImage: {
-        'caixa-gradient': 'linear-gradient(135deg,rgb(7, 32, 48) 0%,rgb(39, 81, 107) 50%,rgb(51, 98, 129) 100%)',
-        'caixa-gradient-reverse': 'linear-gradient(135deg, #5DADE2 0%, #2980B9 50%, #1B4F72 100%)',
-        'caixa-orange': 'linear-gradient(135deg,rgb(3, 80, 128) 0%,rgb(3, 80, 128) 50%,rgb(3, 80, 128) 100%)',
+        'caixa-gradient': 'linear-gradient(135deg, #0B1426 0%, #122240 50%, #162a4a 100%)',
+        'caixa-gradient-reverse': 'linear-gradient(135deg, #162a4a 0%, #122240 50%, #0B1426 100%)',
+        'caixa-orange': 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #C2410C 100%)',
       }
     },
     fontFamily: {
-      sans: ['Inter var', 'sans-serif'],
+      sans: ["'Plus Jakarta Sans'", 'Inter var', 'sans-serif'],
+      serif: ["'Cormorant Garamond'", 'Georgia', 'serif'],
       mono: ['JetBrains Mono', 'monospace'],
     },
   },

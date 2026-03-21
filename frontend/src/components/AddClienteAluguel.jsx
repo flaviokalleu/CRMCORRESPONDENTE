@@ -1,5 +1,6 @@
 // src/components/AddClienteAluguel.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
 const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
   const [cliente, setCliente] = useState({
@@ -9,7 +10,22 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
     telefone: "",
     valor_aluguel: "",
     dia_vencimento: "",
+    aluguel_id: "",
+    data_inicio_contrato: "",
+    data_fim_contrato: "",
+    indice_reajuste: "IGPM",
   });
+  const [asaasStatus, setAsaasStatus] = useState(null);
+  const [imoveis, setImoveis] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch(`${process.env.REACT_APP_API_URL}/alugueis-disponiveis`)
+        .then(res => res.json())
+        .then(data => setImoveis(Array.isArray(data) ? data : []))
+        .catch(() => setImoveis([]));
+    }
+  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,8 +75,21 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
         throw new Error("Erro ao adicionar cliente");
       }
       const data = await response.json();
-      onAddCliente(data); // Passa o cliente adicionado para o componente pai
-      onClose(); // Fecha o modal
+
+      // Mostrar status do Asaas antes de fechar
+      if (data.asaas_subscription_id) {
+        setAsaasStatus('active');
+      } else {
+        setAsaasStatus('pending');
+      }
+
+      onAddCliente(data);
+
+      // Aguarda 2 segundos para o usuario ver o status e fecha
+      setTimeout(() => {
+        setAsaasStatus(null);
+        onClose();
+      }, 2500);
     } catch (error) {
       console.error("Erro ao adicionar cliente:", error);
     }
@@ -155,6 +184,60 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
               className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-700 transition"
             />
           </div>
+
+          {/* Selecao de Imovel */}
+          <div>
+            <label className="block text-white font-semibold mb-1">Imovel (opcional)</label>
+            <select name="aluguel_id" value={cliente.aluguel_id} onChange={handleChange}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-700 transition">
+              <option value="">Selecione um imovel...</option>
+              {imoveis.map(im => (
+                <option key={im.id} value={im.id} className="bg-blue-900 text-white">
+                  {im.nome_imovel} - R$ {Number(im.valor_aluguel).toFixed(2)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Datas do Contrato */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-white font-semibold mb-1">Inicio Contrato</label>
+              <input type="date" name="data_inicio_contrato" value={cliente.data_inicio_contrato} onChange={handleChange}
+                className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-700 transition" />
+            </div>
+            <div>
+              <label className="block text-white font-semibold mb-1">Fim Contrato</label>
+              <input type="date" name="data_fim_contrato" value={cliente.data_fim_contrato} onChange={handleChange}
+                className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-700 transition" />
+            </div>
+          </div>
+
+          {/* Indice de Reajuste */}
+          <div>
+            <label className="block text-white font-semibold mb-1">Indice de Reajuste</label>
+            <select name="indice_reajuste" value={cliente.indice_reajuste} onChange={handleChange}
+              className="w-full p-3 rounded-lg border border-blue-800/40 bg-blue-900/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-700 transition">
+              <option value="IGPM" className="bg-blue-900">IGPM</option>
+              <option value="IPCA" className="bg-blue-900">IPCA</option>
+              <option value="INPC" className="bg-blue-900">INPC</option>
+            </select>
+          </div>
+
+          {/* Status Asaas pos-criacao */}
+          {asaasStatus === 'active' && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-900/40 border border-green-700/50">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="text-green-400 font-medium text-sm">Cobranca automatica ativada no Asaas!</span>
+            </div>
+          )}
+          {asaasStatus === 'pending' && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-900/40 border border-yellow-700/50">
+              <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              <span className="text-yellow-400 font-medium text-sm">Asaas pendente — sincronize depois na lista de clientes.</span>
+            </div>
+          )}
+
           <div className="flex justify-between gap-4 mt-6">
             <button
               type="button"
@@ -165,7 +248,8 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
             </button>
             <button
               type="submit"
-              className="w-1/2 py-3 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-bold transition"
+              disabled={asaasStatus !== null}
+              className="w-1/2 py-3 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-bold transition disabled:opacity-50"
             >
               Adicionar
             </button>

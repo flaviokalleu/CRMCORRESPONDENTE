@@ -4,12 +4,35 @@ const authMiddleware = require('../middleware/authMiddleware');
 const { User, Cliente } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
 
+// Cache simples em memória (5 minutos)
+let dashboardCache = {};
+const CACHE_TTL = 5 * 60 * 1000;
+
+function getCachedData(key) {
+  const entry = dashboardCache[key];
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) return entry.data;
+  return null;
+}
+
+function setCachedData(key, data) {
+  dashboardCache[key] = { data, timestamp: Date.now() };
+}
+
+// Limpar cache quando dados mudam
+function invalidateCache() {
+  dashboardCache = {};
+}
+
 // Middleware de autenticação
 router.use(authMiddleware);
 
 // Dashboard principal com métricas avançadas
 router.get('/', async (req, res) => {
     try {
+        const cacheKey = `dashboard_${req.user.email}_${req.user.role}`;
+        const cached = getCachedData(cacheKey);
+        if (cached) return res.json(cached);
+
         const userRole = req.user.role;
         const user = await User.findOne({ where: { email: req.user.email } });
 
@@ -254,14 +277,14 @@ router.get('/', async (req, res) => {
         try {
             const rendaData = await Cliente.findAll({
                 attributes: [
-                    [fn('AVG', col('valor_renda')), 'rendaMedia'],
-                    [fn('MAX', col('valor_renda')), 'rendaMaxima'],
-                    [fn('MIN', col('valor_renda')), 'rendaMinima'],
+                    [fn('AVG', literal('CAST("valor_renda" AS NUMERIC)')), 'rendaMedia'],
+                    [fn('MAX', literal('CAST("valor_renda" AS NUMERIC)')), 'rendaMaxima'],
+                    [fn('MIN', literal('CAST("valor_renda" AS NUMERIC)')), 'rendaMinima'],
                     [fn('COUNT', col('valor_renda')), 'clientesComRenda']
                 ],
                 where: {
                     ...whereCondition,
-                    valor_renda: { [Op.not]: null, [Op.gt]: 0 }
+                    valor_renda: { [Op.not]: null, [Op.ne]: '', [Op.ne]: '0' }
                 },
                 raw: true
             });
@@ -277,7 +300,7 @@ router.get('/', async (req, res) => {
             console.log('Erro ao analisar renda, continuando com valores padrão:', error.message);
         }
 
-        res.json({
+        const responseData = {
             // Contadores básicos
             totalCorretores,
             totalClientes,
@@ -285,7 +308,7 @@ router.get('/', async (req, res) => {
             totalCorrespondentes,
             totalClientesAguardandoAprovacao,
             clientesAguardandoAprovacao,
-            
+
             // ✅ ADICIONAR PERMISSÕES DO USUÁRIO
             userPermissions: {
                 canViewAll: userRole === 'administrador' || userRole === 'correspondente',
@@ -293,26 +316,26 @@ router.get('/', async (req, res) => {
                 isAdministrador: userRole === 'administrador',
                 isCorrespondente: userRole === 'correspondente'
             },
-            
+
             // Status detalhado
             clientesAprovados,
             clientesReprovados,
             clientesPendentes,
-            
+
             // Crescimento
             clientesEsteMes,
             clientesMesAnterior,
             crescimentoSemanal,
             crescimentoMensal,
-            
+
             // Atividade
             usuariosAtivosHoje,
             clientesHoje,
             clientesSemana,
-            
+
             // Ranking
             top5Usuarios,
-            
+
             // Performance
             performance: {
                 eficienciaMedia,
@@ -320,10 +343,13 @@ router.get('/', async (req, res) => {
                 taxaRejeicao,
                 totalUsuarios
             },
-            
+
             // Análise de renda
             rendaAnalysis
-        });
+        };
+
+        setCachedData(cacheKey, responseData);
+        res.json(responseData);
     } catch (error) {
         console.error('Erro ao buscar dados do dashboard:', error);
         res.status(500).json({ 

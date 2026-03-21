@@ -178,8 +178,6 @@ const StatusButton = ({ status, onChange, disabled, clienteId, onStatusUpdate, c
     try {
       const apiUrl = process.env.REACT_APP_API_URL;
       const url = `${apiUrl}/clientes/${clienteId}/status`;
-      console.log('API URL:', apiUrl);
-      console.log('PATCH URL:', url);
       await axios.patch(
         url,
         { status: selectedStatus },
@@ -531,11 +529,18 @@ const ListaClientes = () => {
     return canEditAll;
   };
 
-  // ✅ ATUALIZAÇÃO DE STATUS
-  const handleStatusUpdate = (clienteId, newStatus) => {
-    setAllClientes(prevClientes => 
-      prevClientes.map(cliente => 
-        cliente.id === clienteId 
+  // ✅ ATUALIZAÇÃO DE STATUS (salva na API + atualiza estado local)
+  const handleStatusUpdate = async (clienteId, newStatus) => {
+    const token = localStorage.getItem('authToken');
+    await axios.patch(
+      `${process.env.REACT_APP_API_URL}/clientes/${clienteId}/status`,
+      { status: newStatus },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    // Só atualiza local se a API não deu erro (senão o catch do Kanban reverte)
+    setAllClientes(prevClientes =>
+      prevClientes.map(cliente =>
+        cliente.id === clienteId
           ? { ...cliente, status: newStatus }
           : cliente
       )
@@ -640,7 +645,6 @@ const ListaClientes = () => {
         corretores = response.data;
       }
       
-      console.log('Corretores carregados para filtros:', corretores.length);
       setCorretores(corretores);
     } catch (error) {
       console.error('Erro ao carregar corretores:', error);

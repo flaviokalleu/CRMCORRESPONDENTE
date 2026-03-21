@@ -1,126 +1,178 @@
-import React, { useState } from "react";
-import generateStableKey from 'utils/generateStableKey';
-import { motion, AnimatePresence } from "framer-motion";
-import { FaPlus, FaMinus } from "react-icons/fa";
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Minus, MessageCircle } from 'lucide-react';
+
+const faqs = [
+  {
+    question: 'Como funciona o processo de compra ou aluguel?',
+    answer:
+      'Nosso processo é simples e transparente. Primeiro, você escolhe o imóvel ideal no nosso catálogo ou com a ajuda de um consultor. Em seguida, agendamos uma visita presencial. Após a escolha, nossa equipe cuida de toda a análise documental, negociação e elaboração do contrato. Acompanhamos cada etapa até a entrega das chaves, garantindo total segurança jurídica.',
+  },
+  {
+    question: 'Quais documentos são necessários?',
+    answer:
+      'Para pessoa física: RG, CPF, comprovante de renda (últimos 3 meses), comprovante de residência e certidão de estado civil. Para pessoa jurídica: CNPJ, contrato social atualizado, balanço patrimonial dos últimos 3 anos e documentos dos sócios. Nossa equipe orienta todo o processo documental e pode solicitar documentos adicionais conforme a operação.',
+  },
+  {
+    question: 'Vocês trabalham com financiamento e Minha Casa Minha Vida?',
+    answer:
+      'Sim! Trabalhamos com os principais bancos do país — Caixa Econômica, Banco do Brasil, Bradesco, Itaú e Santander. Facilitamos todo o processo de financiamento, incluindo o programa Minha Casa Minha Vida. Nossa equipe acompanha da simulação à aprovação do crédito, buscando sempre as melhores condições para o seu perfil.',
+  },
+  {
+    question: 'Qual a área de atuação da CRM IMOB?',
+    answer:
+      'Atuamos principalmente em Valparaíso de Goiás, Cidade Ocidental, Luziânia, Novo Gama, Jardim Ingá e toda a região do Entorno de Brasília. Também possuímos opções selecionadas no Distrito Federal. Nosso conhecimento profundo da região nos permite oferecer as melhores oportunidades para cada perfil de cliente.',
+  },
+  {
+    question: 'Como agendar uma visita ao imóvel?',
+    answer:
+      'Você pode agendar uma visita de diversas formas: pelo nosso site, pelo WhatsApp (61) 98637-4261, por telefone ou diretamente em nosso escritório. Oferecemos horários flexíveis, incluindo finais de semana, para sua comodidade. Todas as visitas são acompanhadas por um consultor especializado na região.',
+  },
+  {
+    question: 'Existe taxa de administração?',
+    answer:
+      'Nossas taxas são transparentes e competitivas. Apresentamos todos os custos envolvidos antes da assinatura de qualquer contrato, sem surpresas ou cobranças ocultas. O valor varia conforme o tipo de serviço (venda, locação ou administração). Entre em contato para conhecer nossas condições especiais.',
+  },
+];
 
 const FAQAccordion = () => {
   const [openIndex, setOpenIndex] = useState(null);
 
-  const faqs = [
-    {
-      question: "Como funciona o processo de aluguel?",
-      answer: "Nosso processo é simples: você escolhe o imóvel, agenda uma visita, analisa a documentação e assina o contrato. Tudo com total transparência e segurança jurídica.",
-    },
-    {
-      question: "Quais documentos são necessários?",
-      answer: "Solicitamos RG, CPF, comprovante de renda, comprovante de residência e referências. Para empresas, CNPJ e balanço patrimonial dos últimos 3 anos.",
-    },
-    {
-      question: "Vocês aceitam financiamento?",
-      answer: "Sim! Trabalhamos com os principais bancos e facilitamos todo o processo de financiamento. Nossa equipe te acompanha desde a simulação até a aprovação.",
-    },
-    {
-      question: "Existe taxa de administração?",
-      answer: "Nossas taxas são transparentes e competitivas. Entre em contato para conhecer nossos valores e condições especiais para clientes.",
-    },
-    {
-      question: "Como agendar uma visita?",
-      answer: "Você pode agendar através do nosso site, WhatsApp ou telefone. Temos horários flexíveis, incluindo finais de semana, para sua comodidade.",
-    },
-    {
-      question: "Vocês oferecem seguro do imóvel?",
-      answer: "Sim, oferecemos seguros completos para inquilinos e proprietários, cobrindo danos, incêndio, roubo e responsabilidade civil.",
-    },
-  ];
-
-  const toggleAccordion = (index) => {
+  const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <section className="py-20">
-      <div className="max-w-4xl mx-auto px-4">
+    <section id="faq" className="relative bg-[#FAF7F2] py-24 lg:py-32">
+      {/* Subtle decorative */}
+      <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#0B1426]/5 to-transparent" />
+
+      <div className="mx-auto max-w-3xl px-6 lg:px-8">
+        {/* Header */}
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6 }}
+          className="mb-16 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Perguntas{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-              Frequentes
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <div className="h-px w-8 bg-[#F97316]" />
+            <span
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[#F97316]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Dúvidas Frequentes
             </span>
+            <div className="h-px w-8 bg-[#F97316]" />
+          </div>
+          <h2
+            className="text-4xl font-light text-[#0B1426] md:text-5xl"
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+          >
+            Perguntas <span className="italic font-medium">frequentes</span>
           </h2>
-          <p className="text-blue-200 text-lg">
-            Tire suas dúvidas sobre nossos serviços
+          <p
+            className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#0B1426]/50"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Reunimos as dúvidas mais comuns para facilitar sua jornada imobiliária.
           </p>
         </motion.div>
 
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <motion.div
-              key={generateStableKey(faq, index)}
-              initial={{ y: 50, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden hover:border-blue-400/50 transition-all duration-300"
-            >
-              <motion.button
-                onClick={() => toggleAccordion(index)}
-                className="w-full px-6 py-6 text-left flex justify-between items-center hover:bg-white/5 transition-colors duration-300"
+        {/* Accordion */}
+        <div className="space-y-3">
+          {faqs.map((faq, index) => {
+            const isOpen = openIndex === index;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+                className={`overflow-hidden rounded-xl border transition-all duration-300 ${
+                  isOpen
+                    ? 'border-[#F97316]/30 bg-white shadow-md shadow-[#F97316]/5'
+                    : 'border-[#0B1426]/[0.08] bg-white hover:border-[#F97316]/20 hover:shadow-sm'
+                }`}
               >
-                <h3 className="text-lg font-semibold text-white pr-4">
-                  {faq.question}
-                </h3>
-                <motion.div
-                  animate={{ rotate: openIndex === index ? 45 : 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white"
+                <button
+                  onClick={() => toggleFAQ(index)}
+                  className="flex w-full items-center justify-between px-6 py-5 text-left"
+                  aria-expanded={isOpen}
                 >
-                  {openIndex === index ? <FaMinus /> : <FaPlus />}
-                </motion.div>
-              </motion.button>
-
-              <AnimatePresence>
-                {openIndex === index && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="overflow-hidden"
+                  <h3
+                    className={`pr-4 text-base font-semibold transition-colors duration-300 ${
+                      isOpen ? 'text-[#F97316]' : 'text-[#0B1426]'
+                    }`}
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                   >
-                    <div className="px-6 pb-6 pt-0">
-                      <p className="text-blue-200 leading-relaxed">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
+                    {faq.question}
+                  </h3>
+                  <div
+                    className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+                      isOpen
+                        ? 'bg-[#F97316] text-white shadow-md shadow-[#F97316]/30'
+                        : 'bg-[#0B1426]/5 text-[#0B1426]/40'
+                    }`}
+                  >
+                    {isOpen ? (
+                      <Minus className="h-3.5 w-3.5" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    >
+                      <div className="border-t border-[#0B1426]/5 px-6 py-5">
+                        <p
+                          className="text-sm leading-relaxed text-[#0B1426]/50"
+                          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                        >
+                          {faq.answer}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* CTA */}
+        {/* Bottom CTA */}
         <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mt-12"
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-12 text-center"
         >
-          <p className="text-blue-200 mb-4">Não encontrou sua resposta?</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
+          <p
+            className="mb-4 text-sm text-[#0B1426]/40"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
-            Fale Conosco
-          </motion.button>
+            Não encontrou sua resposta?
+          </p>
+          <a
+            href="https://wa.me/5561994617584?text=Olá! Tenho uma dúvida sobre os serviços da CRM IMOB"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border-2 border-[#0B1426] px-7 py-3 text-sm font-semibold text-[#0B1426] transition-all duration-300 hover:bg-[#0B1426] hover:text-white hover:shadow-lg"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Fale conosco
+          </a>
         </motion.div>
       </div>
     </section>

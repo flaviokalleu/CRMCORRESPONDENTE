@@ -1,5 +1,5 @@
 // src/components/LoadingScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Building2, Loader2, CheckCircle } from 'lucide-react';
 
@@ -7,33 +7,39 @@ const LoadingScreen = ({ onComplete }) => {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     // Simulação de carregamento com progresso
     const interval = setInterval(() => {
       setProgress(prev => {
         const nextProgress = prev + Math.random() * 2 + 0.5; // Progresso mais controlado
-        
+
         if (nextProgress >= 100) {
           clearInterval(interval);
           setIsComplete(true);
-          
+
           // Aguarda um pouco para mostrar o 100% antes de chamar onComplete
-          setTimeout(() => {
+          timeoutRef.current = setTimeout(() => {
             setLoading(false);
             if (onComplete) {
               onComplete();
             }
           }, 1500); // Aguarda 1.5 segundos após chegar aos 100%
-          
+
           return 100;
         }
-        
+
         return nextProgress;
       });
     }, 150); // Mais lento para dar tempo de ver o progresso
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, [onComplete]);
 
   const containerVariants = {

@@ -1,223 +1,185 @@
-import React, { useState, useEffect } from "react";
-import { FaSearch, FaWhatsapp, FaSignInAlt } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showSubmenu, setShowSubmenu] = useState(true);
-  const whatsappNumber = process.env.REACT_APP_WHATSAPP_NUMBER;
-
-  const toggleMenu = () => setIsOpen((prev) => !prev);
-
-  const handleScroll = () => setShowSubmenu(window.scrollY === 0);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const submenuLinks = [
-    { href: "/", label: "Início" },
-    { href: "/imoveis?categoria=novo", label: "Imóveis Novos" },
-    { href: "/imoveis?categoria=usados", label: "Imóveis Usados" },
-    {
-      href: "/imoveis?localizacao=Valparaiso de Goiás - Goiás",
-      label: "Valparaíso de Goiás",
-    },
-    {
-      href: "/imoveis?localizacao=cidade-ocidental",
-      label: "Cidade Ocidental",
-    },
-    { href: "/imoveis?localizacao=luziania", label: "Luziânia" },
-    { href: "/imoveis?localizacao=Jardim Inga - Goias", label: "Jardim Ingá" },
-    { href: "/imoveis?localizacao=brasilia", label: "Brasília" },
-    { href: "/imoveis", label: "Todos os Imóveis" },
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  const navLinks = [
+    { label: 'Início', href: '#inicio' },
+    { label: 'Imóveis', href: '#imoveis' },
+    { label: 'Sobre', href: '#sobre' },
+    { label: 'Como Funciona', href: '#como-funciona' },
+    { label: 'Contato', href: '#contato' },
   ];
 
   return (
-    <>
-      {/* Barra de boas-vindas */}
-      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-blue-950 text-white text-center py-2 fixed w-full z-30 top-0 shadow">
-        <p className="text-sm font-semibold tracking-wide">
-          Bem-vindo ao nosso site! Aproveite nossas ofertas especiais.
-        </p>
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        scrolled
+          ? 'bg-[#0B1426]/95 shadow-lg shadow-black/10 backdrop-blur-xl'
+          : 'bg-transparent'
+      }`}
+    >
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+        {/* Logo */}
+        <Link to="/" className="group flex items-center gap-3">
+          <img
+            src="/logo-crm-imob.svg"
+            alt="CRM IMOB"
+            className="h-9 w-auto transition-transform duration-300 group-hover:scale-105"
+          />
+          <span
+            className="text-xl font-semibold tracking-wide text-white"
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+          >
+            CRM IMOB
+          </span>
+        </Link>
+
+        {/* Desktop Links - Center */}
+        <div className="hidden items-center gap-1 lg:flex">
+          {navLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              className="relative rounded-lg px-4 py-2 text-sm font-medium text-white/60 transition-all duration-300 hover:text-white"
+            >
+              <span className="relative z-10">{link.label}</span>
+              <span className="absolute inset-x-2 -bottom-0.5 h-px origin-left scale-x-0 bg-[#F97316] transition-transform duration-300 hover:scale-x-0 group-hover:scale-x-100" />
+            </a>
+          ))}
+        </div>
+
+        {/* Desktop CTA - Right */}
+        <div className="hidden items-center gap-5 lg:flex">
+          <Link
+            to="/login"
+            className="text-sm font-medium text-white/60 transition-colors duration-300 hover:text-white"
+          >
+            Entrar
+          </Link>
+          <Link
+            to="/imoveis-publicos"
+            className="rounded-full bg-[#F97316] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#EA580C] hover:shadow-lg hover:shadow-[#F97316]/25 active:scale-[0.97]"
+          >
+            Ver Imóveis
+          </Link>
+        </div>
+
+        {/* Mobile Toggle */}
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10 lg:hidden"
+          aria-label="Abrir menu"
+        >
+          <AnimatePresence mode="wait">
+            {mobileOpen ? (
+              <motion.div
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <X size={22} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="menu"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Menu size={22} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
 
-      {/* Navbar Desktop */}
-      <nav className="hidden md:block bg-blue-950/95 fixed w-full z-20 top-8 border-b border-blue-900/40 shadow-lg backdrop-blur-md">
-        <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-          <a href="/" className="flex items-center space-x-3">
-            <img src="/logo.png" className="h-12" alt="Logo" />
-          </a>
-          <div className="flex-grow mx-8">
-            <form
-              id="frmBusca"
-              role="search"
-              method="GET"
-              action="/busca/"
-              className="w-full"
-            >
-              <div className="relative">
-                <input
-                  type="text"
-                  id="buscaTopo"
-                  name="busca"
-                  placeholder="O que você procura?"
-                  className="w-full py-2 px-4 rounded-lg border border-blue-900/40 bg-blue-900/60 text-white placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-400 hover:text-blue-200"
-                >
-                  <FaSearch />
-                </button>
-              </div>
-            </form>
-          </div>
-          <div className="flex items-center space-x-6">
-            <a
-              href={`https://wa.me/${whatsappNumber}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-700 hover:to-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 flex items-center space-x-2 shadow"
-            >
-              <FaWhatsapp />
-              <span>Dúvidas? WhatsApp</span>
-            </a>
-            <a
-              href="/login"
-              className="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-800 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 flex items-center space-x-2 shadow"
-            >
-              <FaSignInAlt />
-              <span>Corretores</span>
-            </a>
-          </div>
-        </div>
-        <AnimatePresence>
-          {showSubmenu && (
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="border-t border-blue-900/40 bg-blue-950/95"
-            >
-              <div className="flex justify-center items-center w-full">
-                <ul className="flex space-x-4 m-0 p-0">
-                  {submenuLinks.map(({ href, label }) => (
-                    <li key={href}>
-                      <a
-                        href={href}
-                        className="block px-4 py-2 text-blue-100 hover:text-blue-400 font-semibold transition"
-                      >
-                        {label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 top-[72px] bg-black/50 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
 
-      {/* Navbar Mobile */}
-      <nav className="md:hidden bg-blue-950/95 fixed w-full z-20 top-8 border-b border-blue-900/40 shadow-lg">
-        <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-          <a href="/" className="flex items-center space-x-3">
-            <img src="/logo.png" className="h-12" alt="Logo" />
-          </a>
-          <button
-            onClick={toggleMenu}
-            type="button"
-            className="inline-flex items-center p-2 w-10 h-10 justify-center text-blue-200 rounded-lg hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            aria-controls="navbar-sticky"
-            aria-expanded={isOpen}
-          >
-            <span className="sr-only">Abrir menu principal</span>
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              ></path>
-            </svg>
-          </button>
-        </div>
-        <AnimatePresence>
-          {isOpen && (
+            {/* Menu panel */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-blue-950/95 flex flex-col items-center p-4 border-t border-blue-900/40"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute left-0 right-0 top-full border-t border-white/[0.06] bg-[#0B1426]/98 backdrop-blur-2xl lg:hidden"
             >
-              <form
-                id="frmBusca"
-                role="search"
-                method="GET"
-                action="/busca/"
-                className="w-full p-4"
-              >
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="buscaTopo"
-                    name="busca"
-                    placeholder="O que você procura?"
-                    className="w-full py-2 px-4 rounded-lg border border-blue-900/40 bg-blue-900/60 text-white placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-400 hover:text-blue-200"
+              <div className="flex flex-col gap-1 px-6 py-6">
+                {navLinks.map((link, index) => (
+                  <motion.a
+                    key={link.label}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="rounded-xl px-4 py-3.5 text-base font-medium text-white/70 transition-colors hover:bg-white/[0.05] hover:text-white"
                   >
-                    <FaSearch />
-                  </button>
-                </div>
-              </form>
-              <a
-                href={`https://wa.me/${whatsappNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="my-4 bg-gradient-to-r from-green-600 to-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-700 hover:to-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 flex items-center space-x-2 shadow"
-              >
-                <FaWhatsapp />
-                <span>Dúvidas? WhatsApp</span>
-              </a>
-              <a
-                href="/login"
-                className="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-800 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 flex items-center space-x-2 shadow"
-              >
-                <FaSignInAlt />
-                <span>Corretores</span>
-              </a>
-              {/* Submenu links for mobile */}
-              <div className="mt-4 w-full">
-                {submenuLinks.map(({ href, label }) => (
-                  <a
-                    key={href}
-                    href={href}
-                    className="block px-4 py-2 text-blue-100 hover:text-blue-400 font-semibold transition"
-                  >
-                    {label}
-                  </a>
+                    {link.label}
+                  </motion.a>
                 ))}
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-white/[0.06] pt-5">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-xl px-4 py-3.5 text-center text-base font-medium text-white/70 transition-colors hover:bg-white/[0.05] hover:text-white"
+                  >
+                    Entrar
+                  </Link>
+                  <Link
+                    to="/imoveis-publicos"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-full bg-[#F97316] px-6 py-3.5 text-center text-sm font-semibold text-white transition-all hover:bg-[#EA580C]"
+                  >
+                    Ver Imóveis
+                  </Link>
+                </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
-      {/* Espaço para compensar a navbar fixa */}
-      <div className="h-20 md:h-32"></div>
-    </>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.nav>
   );
 };
 

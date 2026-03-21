@@ -18,12 +18,9 @@ export const AuthProvider = ({ children }) => {
 
   // Função para verificar autenticação - MELHORADA
   const checkAuth = useCallback(async () => {
-    console.log('🔍 Iniciando verificação de autenticação...');
-    
     const token = localStorage.getItem('authToken');
     
     if (!token) {
-      console.log('❌ Nenhum token encontrado no localStorage');
       setLoading(false);
       setIsAuthenticated(false);
       setUser(null);
@@ -31,8 +28,6 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      console.log('📡 Verificando token no servidor...');
-      
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/auth/check-auth`,
         {
@@ -45,15 +40,11 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (response.data.authenticated) {
-        console.log('✅ Usuário autenticado:', response.data.user.email);
-        console.log('⏰ Token expira em:', response.data.expiresAt);
-        
         setUser(response.data.user);
         setIsAuthenticated(true);
         
         // Atualizar token se necessário
         if (response.data.token && response.data.token !== token) {
-          console.log('🔄 Atualizando token no localStorage');
           localStorage.setItem('authToken', response.data.token);
         }
         
@@ -66,7 +57,6 @@ export const AuthProvider = ({ children }) => {
       
       // Se for erro 401 ou 403, limpar dados
       if (error.response?.status === 401 || error.response?.status === 403) {
-        console.log('🧹 Limpando dados de autenticação inválidos');
         localStorage.removeItem('authToken');
         localStorage.removeItem('refreshToken');
       }
@@ -86,7 +76,6 @@ export const AuthProvider = ({ children }) => {
 
     // Verificação periódica a cada 5 minutos
     const interval = setInterval(() => {
-      console.log('🔄 Verificação periódica de token...');
       checkAuth();
     }, 5 * 60 * 1000); // 5 minutos
 
@@ -97,8 +86,6 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setLoading(true);
-      console.log('🔐 Tentando fazer login...');
-      
       const loginData = {
         email: credentials.email?.trim(),
         password: credentials.password
@@ -107,8 +94,6 @@ export const AuthProvider = ({ children }) => {
       if (!loginData.email || !loginData.password) {
         throw new Error('Email e senha são obrigatórios');
       }
-
-      console.log('📤 Enviando dados de login...');
 
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/login`,
@@ -138,9 +123,6 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
       
-      console.log('✅ Login realizado com sucesso');
-      console.log('👤 Usuário logado:', userData.email);
-      
       return { success: true, user: userData };
     } catch (error) {
       console.error('❌ Erro no login:', error);
@@ -164,8 +146,6 @@ export const AuthProvider = ({ children }) => {
 
   // Função de logout - MELHORADA
   const logout = useCallback(async () => {
-    console.log('🔓 Iniciando logout...');
-    
     try {
       const token = localStorage.getItem('authToken');
       
@@ -182,7 +162,6 @@ export const AuthProvider = ({ children }) => {
               timeout: 5000
             }
           );
-          console.log('✅ Logout no servidor realizado');
         } catch (error) {
           console.warn('⚠️ Erro ao fazer logout no servidor:', error.message);
         }
@@ -196,7 +175,6 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       
-      console.log('🧹 Dados locais limpos');
     }
   }, []);
 
@@ -208,8 +186,6 @@ export const AuthProvider = ({ children }) => {
       if (!refreshToken) {
         throw new Error('Refresh token não encontrado');
       }
-
-      console.log('🔄 Renovando token...');
 
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
@@ -226,7 +202,6 @@ export const AuthProvider = ({ children }) => {
       const { token } = response.data;
       localStorage.setItem('authToken', token);
       
-      console.log('✅ Token renovado com sucesso');
       return token;
     } catch (error) {
       console.error('❌ Erro ao renovar token:', error);
@@ -243,14 +218,15 @@ export const AuthProvider = ({ children }) => {
         const originalRequest = error.config;
 
         if (
-          error.response?.status === 401 && 
+          error.response?.status === 401 &&
           !originalRequest._retry &&
-          isAuthenticated
+          isAuthenticated &&
+          (!originalRequest._retryCount || originalRequest._retryCount < 1)
         ) {
           originalRequest._retry = true;
+          originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
 
           try {
-            console.log('🔄 Tentando renovar token automaticamente...');
             const newToken = await refreshAuth();
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return axios(originalRequest);
@@ -313,7 +289,6 @@ export const AuthProvider = ({ children }) => {
 
         // Se restam menos de 10 minutos, tentar renovar
         if (timeLeft < 10 * 60 * 1000 && timeLeft > 0) {
-          console.log('⚠️ Token expira em breve, renovando...');
           await refreshAuth();
         }
       } catch (error) {

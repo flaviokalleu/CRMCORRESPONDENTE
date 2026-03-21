@@ -34,6 +34,8 @@ import LandingPage from './pages/LandingPage';
 import LembretesPage from './pages/Lembretes';
 import AcessosList from './pages/AcessosList';
 import ClientesAluguel from './pages/ClienteAluguelPage';
+import DashboardAlugueis from './components/Dashboard/DashboardAlugueis';
+import PortalInquilinoPage from './pages/PortalInquilinoPage';
 import RelatorioPage from './pages/RelatorioPage';
 import PublicPropertyList from './pages/PublicImoveisPage';
 import MoveisDetail from './pages/MoveisDetailPage';
@@ -411,9 +413,21 @@ const AppContent = () => {
             } 
           />
 
+          <Route
+            path="/dashboard/alugueis"
+            element={
+              <ProtectedRoute>
+                <DashboardAlugueis />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Portal do Inquilino (rota publica) */}
+          <Route path="/portal/inquilino" element={<PortalInquilinoPage />} />
+
           {/* Outras rotas protegidas */}
-          <Route 
-            path="/whatsapp-qr" 
+          <Route
+            path="/whatsapp-qr"
             element={
               <ProtectedRoute>
                 <WhatsAppQRCodePage />

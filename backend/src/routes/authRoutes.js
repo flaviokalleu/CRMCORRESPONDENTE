@@ -7,6 +7,14 @@ const path = require('path');
 const fs = require('fs');
 const { User, Token } = require('../models');
 const { Op } = require('sequelize');
+const rateLimit = require('express-rate-limit');
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your_jwt_secret_key';
 const REFRESH_SECRET_KEY = process.env.JWT_REFRESH_SECRET_KEY || 'your_jwt_refresh_secret_key';
@@ -65,7 +73,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
-    const originalName = path.parse(file.originalname).name;
+    const originalName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const extension = path.extname(file.originalname);
     const filename = `${timestamp}_${originalName}${extension}`;
     
@@ -160,7 +168,7 @@ const authenticateToken = async (req, res, next) => {
 // ===== ROTAS DE AUTENTICAÇÃO =====
 
 // Rota de login - CORRIGIDA
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   console.log('🔐 Tentativa de login recebida');
   console.log('📋 Headers:', req.headers);
   console.log('📦 Body:', req.body);

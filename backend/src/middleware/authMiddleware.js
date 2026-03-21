@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { Token } = require('../models'); // Importar o modelo Token
-const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your_jwt_secret_key';
+if (!process.env.JWT_SECRET_KEY) {
+  throw new Error('JWT_SECRET_KEY environment variable is required');
+}
+const SECRET_KEY = process.env.JWT_SECRET_KEY;
 
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];

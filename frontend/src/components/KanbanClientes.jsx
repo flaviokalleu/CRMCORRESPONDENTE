@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { FaEdit, FaTrashAlt, FaEye, FaEnvelope, FaPhone, FaCalendarAlt, FaIdCard } from "react-icons/fa";
 import { HiOutlineDocumentText, HiOutlineUserCircle } from "react-icons/hi";
 import { MdDragIndicator } from "react-icons/md";

@@ -1,7 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { makeWASocket, DisconnectReason } = require('@whiskeysockets/baileys');
+const whaileys = require('whaileys');
+const makeWASocket = whaileys.default;
+const { DisconnectReason, fetchLatestWaWebVersion } = whaileys;
 const SimpleFileAuthAdapter = require('../services/simpleFileAuthAdapter');
 const WhatsAppFileSessionManager = require('../services/whatsappFileSessionManager');
 
@@ -15,6 +17,9 @@ let isInitializing = false;
 let currentSessionId = 'default';
 let authStateAdapter = null;
 let sessionManager = new WhatsAppFileSessionManager();
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+let connectionBlocked = false; // true quando 405 ou limite de tentativas atingido
 
 // ✅ IMPORT WSS DO SERVER
 let wss = null;
@@ -65,10 +70,23 @@ const initializeWhatsAppClient = async (sessionId = 'default') => {
     authStateAdapter = new SimpleFileAuthAdapter(sessionId);
     await authStateAdapter.markAsConnecting();
 
-    // Usar sistema de arquivos padrão do Baileys
+    // Buscar versão mais recente do WhatsApp Web automaticamente
+    let waVersion;
+    try {
+      const { version } = await fetchLatestWaWebVersion({});
+      waVersion = version;
+      console.log(`📱 Versão do WhatsApp Web: ${version.join('.')}`);
+    } catch {
+      waVersion = [2, 3000, 1035608266]; // Fallback
+      console.log(`⚠️ Usando versão fallback: ${waVersion.join('.')}`);
+    }
+
+    // Usar sistema de arquivos padrão
     const { state, saveCreds } = await authStateAdapter.useFileAuthState();
     sock = makeWASocket({
-      auth: state
+      auth: state,
+      version: waVersion,
+      browser: ['CRM IMOB', 'Chrome', '22.0'],
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -91,7 +109,9 @@ const initializeWhatsAppClient = async (sessionId = 'default') => {
         isAuthenticated = true;
         isInitializing = false;
         qrCodeData = null;
-        
+        reconnectAttempts = 0;
+        connectionBlocked = false;
+
         // Extrair número do telefone se disponível
         const phoneNumber = sock.user?.id?.replace(/:\d+@.*/, '') || null;
         
@@ -129,20 +149,32 @@ const initializeWhatsAppClient = async (sessionId = 'default') => {
           }
         }
         
-        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-        
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 405;
+
         broadcast({
           type: 'status',
           status: 'disconnected',
           message: 'WhatsApp desconectado',
           sessionId: currentSessionId
         });
-        
-        if (shouldReconnect) {
-          console.log('🔄 Tentando reconectar...');
-          setTimeout(() => initializeWhatsAppClient(currentSessionId), 5000);
+
+        if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          const delay = Math.min(5000 * reconnectAttempts, 30000); // backoff: 5s, 10s, 15s... max 30s
+          console.log(`🔄 Tentando reconectar... (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}, aguardando ${delay/1000}s)`);
+          setTimeout(() => initializeWhatsAppClient(currentSessionId), delay);
+        } else if (statusCode === 405) {
+          console.log('🚫 Erro 405 — WhatsApp bloqueou a conexão. Não reconectando. Tente novamente mais tarde ou escaneie um novo QR Code.');
+          reconnectAttempts = 0;
+          connectionBlocked = true;
+        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          console.log(`🛑 Limite de ${MAX_RECONNECT_ATTEMPTS} tentativas de reconexão atingido. Parando reconexão automática.`);
+          reconnectAttempts = 0;
+          connectionBlocked = true;
         } else {
-          console.log('🚪 Usuário fez logout - não reconectando');
+          console.log('🚪 Usuário fez logout — não reconectando');
+          reconnectAttempts = 0;
         }
       }
     });
@@ -244,11 +276,9 @@ const formatPhoneNumber = (phone) => {
 
 // ===== ROTAS DA API =====
 
-// Rota para obter QR Code
+// Rota para obter QR Code (não inicializa automaticamente — só retorna estado atual)
 router.get('/qr-code', async (req, res) => {
   try {
-    console.log('📱 Requisição QR Code recebida');
-
     if (isAuthenticated && sock) {
       return res.json({
         authenticated: true,
@@ -257,10 +287,22 @@ router.get('/qr-code', async (req, res) => {
       });
     }
 
-    if (!sock || (!qrCodeData && !isInitializing)) {
-      console.log('🚀 Inicializando cliente para gerar QR...');
-      initializeWhatsAppClient();
-      await new Promise(resolve => setTimeout(resolve, 5000));
+    if (connectionBlocked) {
+      return res.json({
+        authenticated: false,
+        hasQrCode: false,
+        message: 'Conexão bloqueada pelo WhatsApp. Limpe a sessão e tente novamente.',
+        blocked: true
+      });
+    }
+
+    if (isInitializing) {
+      return res.json({
+        authenticated: false,
+        hasQrCode: false,
+        message: 'Gerando QR Code, aguarde...',
+        isInitializing: true
+      });
     }
 
     if (qrCodeData) {
@@ -272,11 +314,12 @@ router.get('/qr-code', async (req, res) => {
       });
     }
 
+    // Não inicializa sozinho — retorna que está aguardando o usuário clicar "Conectar"
     return res.json({
       authenticated: false,
       hasQrCode: false,
-      message: 'QR Code sendo gerado, aguarde...',
-      isInitializing: isInitializing
+      message: 'Clique em "Conectar WhatsApp" para gerar o QR Code.',
+      idle: true
     });
 
   } catch (error) {
@@ -285,6 +328,39 @@ router.get('/qr-code', async (req, res) => {
       error: true,
       message: 'Erro interno do servidor: ' + error.message
     });
+  }
+});
+
+// Rota para iniciar conexão manualmente (usuário clica "Conectar")
+router.post('/connect', async (req, res) => {
+  try {
+    const { sessionId } = req.body || {};
+
+    if (isAuthenticated && sock) {
+      return res.json({ success: true, message: 'Já está conectado.' });
+    }
+
+    if (isInitializing) {
+      return res.json({ success: true, message: 'Já está inicializando, aguarde...' });
+    }
+
+    connectionBlocked = false;
+    reconnectAttempts = 0;
+
+    initializeWhatsAppClient(sessionId || 'default');
+
+    // Aguardar um pouco para o QR aparecer
+    await new Promise(resolve => setTimeout(resolve, 4000));
+
+    res.json({
+      success: true,
+      hasQrCode: !!qrCodeData,
+      qrCode: qrCodeData || null,
+      message: qrCodeData ? 'QR Code gerado! Escaneie com o WhatsApp.' : 'Inicializando, aguarde...'
+    });
+  } catch (error) {
+    console.error('❌ Erro ao conectar:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -328,6 +404,22 @@ router.get('/status', async (req, res) => {
       error: true,
       message: 'Erro ao verificar status: ' + error.message
     });
+  }
+});
+
+// Rota para resetar bloqueio e tentar nova conexão
+router.post('/reset', async (req, res) => {
+  try {
+    connectionBlocked = false;
+    reconnectAttempts = 0;
+    sock = null;
+    qrCodeData = null;
+    isAuthenticated = false;
+    isInitializing = false;
+    console.log('🔄 Reset manual realizado — pronto para nova conexão');
+    res.json({ success: true, message: 'Reset realizado. Tente conectar novamente.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

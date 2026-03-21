@@ -1,14 +1,28 @@
 import React, { useState } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { FileText, Download, Loader2, Eye, BarChart3 } from "lucide-react";
+import {
+  FileText,
+  Download,
+  Loader2,
+  Eye,
+  BarChart3,
+  Info,
+  CheckCircle,
+} from "lucide-react";
 
 const RelatorioPage = () => {
   const [loading, setLoading] = useState(false);
-  const [viewType, setViewType] = useState(''); // 'html', 'pdf', 'dados'
+  const [viewType, setViewType] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(""), 4000);
+  };
 
   const handleVisualizarRelatorio = async () => {
     setLoading(true);
-    setViewType('html');
+    setViewType("html");
 
     try {
       const response = await fetch(
@@ -23,27 +37,27 @@ const RelatorioPage = () => {
 
       if (response.ok) {
         const htmlContent = await response.text();
-        
-        // Abrir em nova janela
-        const newWindow = window.open('', '_blank');
+
+        const newWindow = window.open("", "_blank");
         newWindow.document.write(htmlContent);
         newWindow.document.close();
-        
+
+        showSuccess("Relatorio aberto em nova aba!");
       } else {
-        throw new Error("Erro ao gerar o relatório");
+        throw new Error("Erro ao gerar o relatorio");
       }
     } catch (error) {
       console.error("Erro:", error);
-      alert("Ocorreu um erro ao gerar o relatório. Tente novamente.");
+      alert("Ocorreu um erro ao gerar o relatorio. Tente novamente.");
     } finally {
       setLoading(false);
-      setViewType('');
+      setViewType("");
     }
   };
 
   const handleBaixarPDF = async () => {
     setLoading(true);
-    setViewType('pdf');
+    setViewType("pdf");
 
     try {
       const response = await fetch(
@@ -56,20 +70,17 @@ const RelatorioPage = () => {
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
-        // Criar link para download
-        const link = document.createElement('a');
+
+        const link = document.createElement("a");
         link.href = url;
-        link.download = `relatorio-clientes-${new Date().toISOString().split('T')[0]}.pdf`;
+        link.download = `relatorio-clientes-${new Date().toISOString().split("T")[0]}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        // Limpar URL
+
         window.URL.revokeObjectURL(url);
-        
-        alert("Relatório PDF baixado com sucesso!");
-        
+
+        showSuccess("PDF baixado com sucesso!");
       } else {
         throw new Error("Erro ao gerar o PDF");
       }
@@ -78,13 +89,13 @@ const RelatorioPage = () => {
       alert("Ocorreu um erro ao gerar o PDF. Tente novamente.");
     } finally {
       setLoading(false);
-      setViewType('');
+      setViewType("");
     }
   };
 
   const handleVisualizarDados = async () => {
     setLoading(true);
-    setViewType('dados');
+    setViewType("dados");
 
     try {
       const response = await fetch(
@@ -99,13 +110,12 @@ const RelatorioPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Mostrar dados em formato JSON em nova janela
-        const newWindow = window.open('', '_blank');
+
+        const newWindow = window.open("", "_blank");
         newWindow.document.write(`
           <html>
             <head>
-              <title>Dados do Relatório - JSON</title>
+              <title>Dados do Relatorio - JSON</title>
               <style>
                 body { font-family: 'Courier New', monospace; padding: 20px; background: #f5f5f5; }
                 pre { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: auto; }
@@ -113,95 +123,188 @@ const RelatorioPage = () => {
               </style>
             </head>
             <body>
-              <h1>📊 Dados do Relatório (JSON)</h1>
+              <h1>Dados do Relatorio (JSON)</h1>
               <pre>${JSON.stringify(data, null, 2)}</pre>
             </body>
           </html>
         `);
         newWindow.document.close();
-        
+
+        showSuccess("Dados abertos em nova aba!");
       } else {
-        throw new Error("Erro ao obter dados do relatório");
+        throw new Error("Erro ao obter dados do relatorio");
       }
     } catch (error) {
       console.error("Erro:", error);
       alert("Ocorreu um erro ao obter os dados. Tente novamente.");
     } finally {
       setLoading(false);
-      setViewType('');
+      setViewType("");
     }
   };
 
+  const actions = [
+    {
+      id: "html",
+      title: "Visualizar Online",
+      description:
+        "Abre o relatorio completo com graficos interativos em uma nova aba do navegador.",
+      icon: Eye,
+      handler: handleVisualizarRelatorio,
+      loadingText: "Carregando relatorio...",
+      buttonText: "Visualizar Relatorio",
+    },
+    {
+      id: "pdf",
+      title: "Baixar em PDF",
+      description:
+        "Gera e baixa o relatorio em formato PDF para salvar no seu computador.",
+      icon: Download,
+      handler: handleBaixarPDF,
+      loadingText: "Gerando PDF...",
+      buttonText: "Baixar PDF",
+    },
+    {
+      id: "dados",
+      title: "Ver Dados Brutos",
+      description:
+        "Exibe os dados do relatorio em formato JSON para analise tecnica.",
+      icon: BarChart3,
+      handler: handleVisualizarDados,
+      loadingText: "Processando dados...",
+      buttonText: "Ver Dados",
+    },
+  ];
+
   return (
     <MainLayout>
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-caixa-primary via-caixa-secondary to-black p-4">
-        <div className="w-full max-w-4xl bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-caixa-orange/30">
-          <div className="flex flex-col items-center mb-8">
-            <div className="bg-caixa-orange rounded-full p-4 mb-4 shadow-lg">
+      <div className="min-h-screen bg-caixa-gradient p-4">
+        <div className="max-w-5xl mx-auto pt-8 pb-16">
+          {/* Header */}
+          <div className="flex flex-col items-center mb-10">
+            <div className="bg-caixa-orange rounded-2xl p-4 mb-5 shadow-lg shadow-caixa-orange/20">
               <FileText className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-center text-white mb-2 tracking-tight drop-shadow-lg">
-              Relatórios de Clientes
+            <h1 className="text-3xl md:text-4xl font-extrabold text-white text-center tracking-tight mb-3">
+              Relatorios de Clientes
             </h1>
-            <p className="text-base md:text-lg text-caixa-gray-200 text-center max-w-2xl">
-              Gere relatórios completos com análises detalhadas dos clientes cadastrados no sistema.
+            <p className="text-base md:text-lg text-white/60 text-center max-w-2xl">
+              Gere relatorios completos com analises detalhadas dos clientes
+              cadastrados no sistema.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
-            {/* Visualizar Relatório HTML */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-caixa-orange/20 hover:border-caixa-orange/40 transition-all">
-              <div className="text-center mb-4">
-                <Eye className="w-8 h-8 text-white mx-auto mb-2" />
-                <h3 className="text-lg font-semibold text-white">Visualizar Online</h3>
-                <p className="text-sm text-caixa-gray-200 mt-2">
-                  Abrir relatório interativo com gráficos em nova aba
-                </p>
-              </div>
-              <button
-                onClick={handleVisualizarRelatorio}
-                disabled={loading}
-                className={`w-full py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2
-                  ${loading && viewType === 'html'
-                    ? "bg-caixa-orange/60 opacity-60 cursor-not-allowed text-white"
-                    : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"}
-                `}
-              >
-                {loading && viewType === 'html' ? (
-                  <>
-                    <Loader2 className="animate-spin w-4 h-4" />
-                    Carregando...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Visualizar
-                  </>
-                )}
-              </button>
-            </div>
-            
-            
-
-            
-          </div>
-
-          {loading && (
-            <div className="mt-8 flex flex-col items-center">
-              <Loader2 className="animate-spin h-12 w-12 text-caixa-orange mb-4" />
-              <p className="text-white text-lg font-medium">
-                {viewType === 'pdf' && 'Gerando PDF, isso pode levar alguns segundos...'}
-                {viewType === 'html' && 'Carregando relatório interativo...'}
-                {viewType === 'dados' && 'Processando dados do relatório...'}
-              </p>
+          {/* Success toast */}
+          {successMsg && (
+            <div className="flex items-center gap-3 bg-green-500/20 border border-green-400/30 rounded-xl px-5 py-3 mb-6 max-w-md mx-auto animate-pulse">
+              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <span className="text-green-300 font-medium">{successMsg}</span>
             </div>
           )}
 
-          <div className="mt-8 p-4 bg-white/5 rounded-lg border border-caixa-orange/20 max-w-2xl">
-            <h4 className="text-white font-semibold mb-2">ℹ️ Informações:</h4>
-            <ul className="text-sm text-caixa-gray-200 space-y-1">
-              <li>• <strong>Visualizar Online:</strong> Relatório completo com gráficos interativos</li>
-              
+          {/* Action Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {actions.map((action) => {
+              const Icon = action.icon;
+              const isCurrentLoading = loading && viewType === action.id;
+              const isDisabled = loading;
+
+              return (
+                <div
+                  key={action.id}
+                  className="backdrop-blur-xl bg-white/10 rounded-2xl p-6 border border-white/10 flex flex-col justify-between transition-all duration-300 hover:bg-white/15 hover:border-white/20"
+                >
+                  <div className="mb-6">
+                    <div className="bg-white/10 rounded-xl w-12 h-12 flex items-center justify-center mb-4">
+                      <Icon className="w-6 h-6 text-caixa-orange" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      {action.title}
+                    </h3>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      {action.description}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={action.handler}
+                    disabled={isDisabled}
+                    className={`w-full rounded-xl px-6 py-3 font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 ${
+                      isDisabled
+                        ? "bg-white/10 text-white/40 cursor-not-allowed"
+                        : "bg-caixa-orange hover:bg-caixa-orange-dark text-white shadow-lg shadow-caixa-orange/20 hover:shadow-caixa-orange/30"
+                    }`}
+                  >
+                    {isCurrentLoading ? (
+                      <>
+                        <Loader2 className="animate-spin w-5 h-5" />
+                        <span>{action.loadingText}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon className="w-5 h-5" />
+                        <span>{action.buttonText}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Loading Feedback Banner */}
+          {loading && (
+            <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-6 border border-white/10 flex items-center gap-5 mb-8 max-w-lg mx-auto">
+              <Loader2 className="animate-spin w-10 h-10 text-caixa-orange flex-shrink-0" />
+              <div>
+                <p className="text-white font-semibold text-lg">
+                  Aguarde um momento...
+                </p>
+                <p className="text-white/60 text-sm mt-1">
+                  {viewType === "pdf" &&
+                    "Gerando o PDF, isso pode levar alguns segundos."}
+                  {viewType === "html" &&
+                    "Carregando o relatorio interativo."}
+                  {viewType === "dados" &&
+                    "Processando os dados do relatorio."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Info Section */}
+          <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-6 border border-white/10 max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <Info className="w-5 h-5 text-caixa-orange flex-shrink-0" />
+              <h4 className="text-white font-semibold text-lg">
+                Sobre os relatorios
+              </h4>
+            </div>
+            <ul className="space-y-3 text-sm text-white/60">
+              <li className="flex items-start gap-2">
+                <Eye className="w-4 h-4 text-white/40 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong className="text-white/80">Visualizar Online:</strong>{" "}
+                  Relatorio completo com graficos interativos, abre direto no
+                  navegador.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Download className="w-4 h-4 text-white/40 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong className="text-white/80">Baixar PDF:</strong> Salva o
+                  relatorio no seu computador para imprimir ou enviar por
+                  e-mail.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <BarChart3 className="w-4 h-4 text-white/40 mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong className="text-white/80">Dados Brutos:</strong>{" "}
+                  Mostra os dados em formato JSON, util para integracao com
+                  outros sistemas.
+                </span>
+              </li>
             </ul>
           </div>
         </div>

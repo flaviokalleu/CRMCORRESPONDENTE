@@ -1,340 +1,232 @@
-import React, { useEffect, useState } from "react";
-import generateStableKey from 'utils/generateStableKey';
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { 
-  FaBed, 
-  FaBath, 
-  FaMapMarkerAlt, 
-  FaHeart, 
-  FaEye,
-  FaCar,
-  FaRuler,
-  FaBuilding
-} from "react-icons/fa";
-import axios from "axios";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import {
+  MapPin,
+  BedDouble,
+  Bath,
+  Car,
+  Maximize2,
+  ArrowRight,
+  Home,
+  Building2,
+  Trees,
+} from 'lucide-react';
 
-const CardGrid = () => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const placeholderImages = {
+  Casa: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop',
+  Apartamento: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',
+  Terreno: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop',
+  default: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=400&fit=crop',
+};
 
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/imoveis`
-        );
-        setProperties(response.data);
-      } catch (error) {
-        console.error("Erro ao buscar imóveis:", error);
-        setError("Erro ao carregar propriedades");
-      } finally {
-        setLoading(false);
-      }
-    };
+const typeIcons = {
+  Casa: Home,
+  Apartamento: Building2,
+  Terreno: Trees,
+};
 
-    fetchProperties();
-  }, []);
+function getPlaceholder(tipo) {
+  return placeholderImages[tipo] || placeholderImages.default;
+}
 
-  const displayedProperties = properties.slice(0, 6);
+const CardGrid = ({ imoveis = [], loading = false }) => {
+  return (
+    <section id="imoveis" className="relative bg-[#0B1426] py-20 md:py-28 lg:py-32">
+      {/* Decorative accents */}
+      <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#F97316]/20 to-transparent" />
+      <div className="absolute top-20 right-[10%] h-72 w-72 rounded-full bg-[#F97316]/5 blur-3xl pointer-events-none" />
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const cardVariants = {
-    hidden: { y: 50, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-      },
-    },
-  };
-
-  // Loading Component
-  const LoadingCard = () => (
-    <div className="bg-white/10 backdrop-blur-md rounded-2xl overflow-hidden animate-pulse">
-      <div className="bg-white/20 h-56"></div>
-      <div className="p-6 space-y-3">
-        <div className="bg-white/20 h-4 rounded w-3/4"></div>
-        <div className="bg-white/20 h-3 rounded w-1/2"></div>
-        <div className="bg-white/20 h-3 rounded w-2/3"></div>
-        <div className="flex space-x-4">
-          <div className="bg-white/20 h-3 rounded w-1/4"></div>
-          <div className="bg-white/20 h-3 rounded w-1/4"></div>
-        </div>
-        <div className="bg-white/20 h-8 rounded"></div>
-      </div>
-    </div>
-  );
-
-  if (loading) {
-    return (
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className="mb-12 md:mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Propriedades em{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Destaque
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-px w-8 bg-[#F97316]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#F97316]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                Seleção Exclusiva
               </span>
+            </div>
+            <h2
+              className="text-3xl sm:text-4xl md:text-5xl font-light text-white"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              Imóveis em <span className="italic font-medium text-[#F97316]">destaque</span>
             </h2>
-            <p className="text-blue-200 text-lg max-w-2xl mx-auto">
-              Carregando nossa seleção exclusiva dos melhores imóveis
+            <p className="mt-3 max-w-lg text-sm sm:text-base text-white/40"
+               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Imóveis selecionados com perfil de valorização e documentação verificada.
             </p>
           </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[...Array(6)].map((_, index) => (
-              <LoadingCard key={generateStableKey(index)} />
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Link
+              to="/imoveis-publicos"
+              className="group inline-flex items-center gap-2 rounded-full border border-[#F97316] px-5 sm:px-6 py-3 text-sm font-semibold text-[#F97316] transition-all duration-300 hover:bg-[#F97316] hover:text-white"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Ver catálogo completo
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </motion.div>
+        </div>
+
+        {/* Loading State */}
+        {loading ? (
+          <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={`skel-${i}`} className="animate-pulse rounded-2xl border border-white/10 bg-white/5">
+                <div className="h-56 rounded-t-2xl bg-white/5" />
+                <div className="space-y-3 p-5 sm:p-6">
+                  <div className="h-4 w-3/4 rounded bg-white/10" />
+                  <div className="h-3 w-1/2 rounded bg-white/5" />
+                  <div className="flex gap-3">
+                    <div className="h-3 w-10 rounded bg-white/5" />
+                    <div className="h-3 w-10 rounded bg-white/5" />
+                    <div className="h-3 w-10 rounded bg-white/5" />
+                  </div>
+                  <div className="h-3 w-2/3 rounded bg-white/5" />
+                </div>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <div className="text-red-400 mb-4">
-            <FaBuilding className="text-6xl mx-auto mb-4 opacity-50" />
-            <h3 className="text-2xl font-bold mb-2">Ops! Algo deu errado</h3>
-            <p>{error}</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
-          >
-            Tentar novamente
-          </motion.button>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="py-20 relative">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 relative z-10">
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Propriedades em{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-              Destaque
-            </span>
-          </h2>
-          <p className="text-blue-200 text-lg max-w-2xl mx-auto">
-            Descubra nossa seleção exclusiva dos melhores imóveis disponíveis
-          </p>
-        </motion.div>
-
-        {displayedProperties.length === 0 ? (
+        ) : imoveis.length === 0 ? (
           <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center py-16"
+            className="rounded-2xl border border-white/10 bg-white/5 py-16 text-center"
           >
-            <FaBuilding className="text-6xl text-gray-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-white mb-2">Nenhum imóvel encontrado</h3>
-            <p className="text-blue-200">Em breve teremos novos imóveis disponíveis</p>
+            <Home className="mx-auto mb-4 h-10 w-10 text-white/15" />
+            <p className="text-white/40" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Nenhum imóvel disponível no momento.
+            </p>
+            <p className="mt-2 text-sm text-white/25" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Novos imóveis são adicionados frequentemente. Volte em breve!
+            </p>
           </motion.div>
         ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {displayedProperties.map((property, index) => (
-              <motion.div
-                key={property.id}
-                variants={cardVariants}
-                whileHover={{ y: -10 }}
-                className="group relative"
-              >
-                <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden transition-all duration-300 hover:border-blue-400/50 hover:shadow-2xl hover:shadow-blue-500/20">
-                  {/* Image Container */}
-                  <div className="relative overflow-hidden h-56">
-                    <img
-                      src={
-                        property.imagem_capa
-                          ? `${process.env.REACT_APP_API_URL}/${property.imagem_capa.replace(/\\/g, "/")}`
-                          : "https://via.placeholder.com/500x300/1e293b/60a5fa?text=Imóvel"
-                      }
-                      alt={property.nome_imovel}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      loading="lazy"
-                    />
-                    
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-red-500/80 transition-colors"
-                        >
-                          <FaHeart />
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-blue-500/80 transition-colors"
-                        >
-                          <FaEye />
-                        </motion.button>
-                      </div>
-                    </div>
+          <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {imoveis.map((imovel, index) => {
+              const TypeIcon = typeIcons[imovel.tipo] || Home;
 
-                    {/* Property Type Badge */}
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
-                        {property.tipo?.toUpperCase() || "IMÓVEL"}
-                      </span>
-                    </div>
+              return (
+                <motion.article
+                  key={imovel.id || `prop-${index}`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.08 }}
+                  className="group overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0f1c33] transition-all duration-500 hover:border-[#F97316]/30 hover:shadow-2xl hover:shadow-[#F97316]/5"
+                >
+                  {/* Image */}
+                  <div className="relative h-56 overflow-hidden">
+                    {imovel.imagem_capa ? (
+                      <img
+                        src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa.replace(/\\/g, '/')}`}
+                        alt={imovel.nome_imovel || 'Imóvel'}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <img
+                        src={getPlaceholder(imovel.tipo)}
+                        alt={imovel.tipo || 'Imóvel'}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    )}
 
-                    {/* Status Badge */}
-                    <div className="absolute top-4 right-4">
-                      <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-lg">
-                        Disponível
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B1426]/90 via-[#0B1426]/20 to-transparent" />
+
+                    {/* Type badge */}
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-[#F97316] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-lg shadow-[#F97316]/25">
+                      <TypeIcon className="h-3 w-3" />
+                      {imovel.tipo || 'Imóvel'}
+                    </span>
+
+                    {/* Price on image */}
+                    <div className="absolute bottom-4 left-4">
+                      <span
+                        className="text-2xl sm:text-[1.7rem] font-semibold text-white drop-shadow-lg"
+                        style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                      >
+                        {imovel.valor_venda
+                          ? `R$ ${Number(imovel.valor_venda).toLocaleString('pt-BR')}`
+                          : imovel.valor_aluguel
+                          ? `R$ ${Number(imovel.valor_aluguel).toLocaleString('pt-BR')}`
+                          : 'Sob consulta'}
                       </span>
+                      {imovel.valor_aluguel && !imovel.valor_venda && (
+                        <span className="text-sm text-white/50"> /mês</span>
+                      )}
                     </div>
                   </div>
 
                   {/* Content */}
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors line-clamp-1">
-                      {property.nome_imovel}
+                  <div className="p-5 sm:p-6">
+                    <h3
+                      className="mb-2 text-lg font-semibold text-white line-clamp-1"
+                      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                    >
+                      {imovel.nome_imovel || 'Imóvel exclusivo'}
                     </h3>
-                    
-                    <div className="flex items-center text-blue-200 text-sm mb-3">
-                      <FaMapMarkerAlt className="mr-2 flex-shrink-0" />
-                      <span className="line-clamp-1">{property.localizacao}</span>
-                    </div>
 
-                    <p className="text-blue-200/80 text-sm mb-4 line-clamp-2 leading-relaxed">
-                      {property.descricao_imovel?.substring(0, 120) || "Excelente oportunidade de investimento"}...
+                    <p className="mb-4 flex items-center gap-2 text-sm text-white/40"
+                       style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-[#F97316]" />
+                      <span className="line-clamp-1">{imovel.localizacao || 'Região estratégica'}</span>
                     </p>
 
                     {/* Features */}
-                    <div className="flex items-center justify-between mb-4 text-blue-200 text-sm">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center">
-                          <FaBed className="mr-1" />
-                          <span>{property.quartos || 0}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <FaBath className="mr-1" />
-                          <span>{property.banheiro || 0}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <FaCar className="mr-1" />
-                          <span>{property.garagem || 0}</span>
-                        </div>
-                      </div>
-                      
-                      {property.area && (
-                        <div className="flex items-center text-xs">
-                          <FaRuler className="mr-1" />
-                          <span>{property.area}m²</span>
-                        </div>
+                    <div className="mb-5 flex flex-wrap items-center gap-4 border-t border-white/[0.08] pt-4 text-sm text-white/40">
+                      {imovel.quartos > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <BedDouble className="h-4 w-4" /> {imovel.quartos}
+                        </span>
+                      )}
+                      {imovel.banheiro > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <Bath className="h-4 w-4" /> {imovel.banheiro}
+                        </span>
+                      )}
+                      {imovel.garagem > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <Car className="h-4 w-4" /> {imovel.garagem}
+                        </span>
+                      )}
+                      {imovel.area && (
+                        <span className="flex items-center gap-1.5">
+                          <Maximize2 className="h-4 w-4" /> {imovel.area}m²
+                        </span>
                       )}
                     </div>
 
-                    {/* Price */}
-                    <div className="mb-6">
-                      <span className="text-2xl font-bold text-white">
-                        {property.valor_aluguel 
-                          ? Number(property.valor_aluguel).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            })
-                          : "Consultar"
-                        }
-                      </span>
-                      {property.valor_aluguel && (
-                        <span className="text-blue-200 text-sm ml-1">/mês</span>
-                      )}
-                    </div>
-
-                    {/* CTA Button */}
-                    <Link to={`/imoveis/${property.id}`} className="block">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                      >
-                        Ver Detalhes
-                      </motion.button>
+                    <Link
+                      to={imovel.id ? `/imovel/${imovel.id}` : '/imoveis-publicos'}
+                      className="group/btn inline-flex items-center gap-2 text-sm font-medium text-[#F97316] transition-colors hover:text-[#FB923C]"
+                      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                    >
+                      Ver detalhes
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                     </Link>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* View All Button */}
-        {displayedProperties.length > 0 && (
-          <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="text-center mt-12"
-          >
-            <Link to="/imoveis">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-transparent border-2 border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 group"
-              >
-                <span className="flex items-center">
-                  Ver Todos os Imóveis
-                  <motion.span
-                    className="ml-2"
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    →
-                  </motion.span>
-                </span>
-              </motion.button>
-            </Link>
-          </motion.div>
+                </motion.article>
+              );
+            })}
+          </div>
         )}
       </div>
     </section>

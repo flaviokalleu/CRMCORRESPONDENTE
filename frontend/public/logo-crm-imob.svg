@@ -1,0 +1,27 @@
+<svg width="640" height="220" viewBox="0 0 640 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">CRM IMOB</title>
+  <desc id="logoDesc">Logo provisoria do CRM IMOB com simbolo de casa e predio.</desc>
+  <defs>
+    <linearGradient id="bg" x1="30" y1="20" x2="190" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B3C6F"/>
+      <stop offset="1" stop-color="#1E6FB8"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="50" y1="35" x2="185" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F47C20"/>
+      <stop offset="1" stop-color="#FFB15A"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="188" height="188" rx="34" fill="url(#bg)"/>
+
+  <path d="M55 118L110 72L165 118V166C165 171.523 160.523 176 155 176H135V136H85V176H65C59.4772 176 55 171.523 55 166V118Z" fill="white"/>
+  <path d="M126 90H154C157.314 90 160 92.6863 160 96V122H126V90Z" fill="url(#accent)"/>
+
+  <rect x="82" y="103" width="11" height="11" rx="2" fill="#0B3C6F"/>
+  <rect x="99" y="103" width="11" height="11" rx="2" fill="#0B3C6F"/>
+  <rect x="82" y="120" width="11" height="11" rx="2" fill="#0B3C6F"/>
+  <rect x="99" y="120" width="11" height="11" rx="2" fill="#0B3C6F"/>
+
+  <text x="228" y="108" fill="#0B3C6F" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="2">CRM</text>
+  <text x="232" y="164" fill="#F47C20" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="3">IMOB</text>
+</svg>

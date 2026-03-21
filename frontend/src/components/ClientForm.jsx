@@ -21,8 +21,8 @@ import {
 import { useAuth } from "../hooks/useAuth"; // ajuste o caminho conforme seu projeto
 
 const API_URL = process.env.REACT_APP_API_URL;
-const ESTADOS_API_URL = process.env.REACT_APP_ESTADOS_API_URL;
-const MUNICIPIOS_API_URL = process.env.REACT_APP_MUNICIPIOS_API_URL;
+const ESTADOS_API_URL = process.env.REACT_APP_ESTADOS_API_URL || `${process.env.REACT_APP_API_URL}/estados`;
+const MUNICIPIOS_API_URL = process.env.REACT_APP_MUNICIPIOS_API_URL || `${process.env.REACT_APP_API_URL}/municipios`;
 
 const ClientForm = ({ onSuccess }) => {
   const [nome, setNome] = useState("");
