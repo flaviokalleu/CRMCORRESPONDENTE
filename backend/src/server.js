@@ -4,43 +4,23 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const requestIp = require('request-ip');
+const logger = require('./config/logger');
+const errorHandler = require('./middleware/errorHandler');
 
-// ===== IMPORTAÇÕES DE ROTAS =====
-const pagamentosRoutes = require('./routes/pagamentos');
-const { router: authRoutes } = require('./routes/authRoutes');
-const protectedRoutes = require('./routes/protectedRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes');
-const corretorRoutes = require('./routes/corretorRoutes');
-const correspondenteRoutes = require('./routes/correspondente');
-const listadecorretores = require('./routes/listadecorretores');
-const clienteRoutes = require('./routes/clientes');
-const adminRoutes = require('./routes/adminRoutes');
-const userRoutes = require('./routes/userRoutes');
-const reportRoutes = require('./routes/reportRoutes');
-const listadeclientesRoutes = require('./routes/listadeclientes');
-const imoveisRouter = require('./routes/imoveis.js');
-const notasRouter = require('./routes/notas');
-const configurationsRoute = require('./routes/configurations');
-const notasRoutes = require('./routes/notasRoutes');
-const locationsRoute = require('./routes/locations');
-const alugueisRouter = require('./routes/alugueis');
-const whatsappRoutes = require('./routes/whatsappRoutes');
-const lembreteRoutes = require('./routes/lembreteRoutes');
-const acessosRoutes = require('./routes/acessos');
-const clienteAluguelRoutes = require('./routes/clienteAluguel');
-const asaasWebhookRoutes = require('./routes/asaasWebhook');
-const dashboardAluguelRoutes = require('./routes/dashboardAluguel');
-const contratoAluguelRoutes = require('./routes/contratoAluguel');
-const portalInquilinoRoutes = require('./routes/portalInquilino');
-const repasseRoutes = require('./routes/repasseRoutes');
-const vistoriaRoutes = require('./routes/vistoriaRoutes');
-const chamadoRoutes = require('./routes/chamadoRoutes');
-const laudosRoutes = require('./routes/laudos');
+// ===== IMPORTAÇÕES DE ROTAS (centralizadas em routes/index.js) =====
+const { mountRoutes } = require('./routes');
+const authenticateToken = require('./middleware/authenticateToken');
+const { resolveTenant, checkSubscription } = require('./middleware/tenantMiddleware');
+const { checkFeature, getPlanUsage } = require('./middleware/featureGating');
+const { tenantContextMiddleware, setupTenantScopes } = require('./middleware/tenantScope');
 
 // ===== IMPORTAÇÃO DO SEQUELIZE =====
 let sequelize;
 try {
   sequelize = require('./models').sequelize;
+  // Configurar scopes automáticos de tenant nos models
+  setupTenantScopes();
+  console.log('✅ Tenant scopes configurados');
 } catch (error) {
   console.warn('Aviso: Nao foi possivel carregar sequelize:', error.message);
 }
@@ -439,44 +419,27 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// ===== TODAS AS ROTAS DA APLICAÇÃO =====
-app.use('/api/auth', authRoutes);
-app.use('/api/protected', protectedRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/corretor', corretorRoutes);
-app.use('/api/correspondente', correspondenteRoutes);
-app.use('/api/listadecorretores', listadecorretores);
-app.use('/api/admin', adminRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/report', reportRoutes);
-// ✅ ROTAS ESPECÍFICAS DE CLIENTES (mais específicas primeiro)
-app.use('/api/listadeclientes', listadeclientesRoutes);
-app.use('/api/imoveis', imoveisRouter);
-app.use('/api/notas', notasRouter);
-app.use('/api', configurationsRoute);
-app.use('/notas', notasRoutes);
-app.use('/api', locationsRoute);
-app.use('/api/alugueis', alugueisRouter);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api', lembreteRoutes);
-app.use('/api/acessos', acessosRoutes);
-app.use('/api', clienteAluguelRoutes);
-app.use('/api', asaasWebhookRoutes);
-app.use('/api', dashboardAluguelRoutes);
-app.use('/api', contratoAluguelRoutes);
-app.use('/api', portalInquilinoRoutes);
-app.use('/api', repasseRoutes);
-app.use('/api', vistoriaRoutes);
-app.use('/api', chamadoRoutes);
-app.use('/api/laudos', laudosRoutes);
-app.use('/api/pagamentos', pagamentosRoutes);
-// ROTAS FINANCEIRAS
-app.use('/api/receitas', require('./routes/receitas'));
-app.use('/api/despesas', require('./routes/despesas'));
-app.use('/api/comissoes', require('./routes/comissoes'));
-app.use('/api/fluxocaixa', require('./routes/fluxocaixa'));
-// ✅ ROTA PRINCIPAL DE CLIENTES (deve vir depois das rotas mais específicas)
-app.use('/api/', clienteRoutes);
+// ===== MIDDLEWARE DE TENANT (contexto automático para rotas autenticadas) =====
+app.use('/api', (req, res, next) => {
+  const publicPaths = ['/auth', '/tenant', '/health', '/uploads', '/webhook'];
+  if (publicPaths.some(p => req.path.startsWith(p))) return next();
+
+  if (req.user && req.user.tenant_id) {
+    req.tenantId = req.user.tenant_id;
+    req.isSuperAdmin = req.user.is_super_admin || false;
+
+    if (req.isSuperAdmin && req.headers['x-tenant-id']) {
+      req.tenantId = parseInt(req.headers['x-tenant-id'], 10);
+    }
+  }
+  next();
+});
+
+// Contexto assíncrono do tenant (ativa os hooks automáticos do Sequelize)
+app.use(tenantContextMiddleware);
+
+// ===== MONTAGEM CENTRALIZADA DE ROTAS =====
+mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription, getPlanUsage });
 
 // ===== ROTAS UTILITÁRIAS =====
 
@@ -655,29 +618,8 @@ app.get('/api/cliente/:id/documento/:tipo', async (req, res) => {
   }
 });
 
-// ===== MANIPULAÇÃO DE ERROS =====
-app.use((err, req, res, next) => {
-  console.error('🚨 Global error handler:', err);
-  
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({
-      error: 'Arquivo muito grande',
-      message: 'O arquivo excede o tamanho máximo permitido'
-    });
-  }
-
-  if (err.message === 'Unexpected end of form') {
-    return res.status(400).json({
-      error: 'Erro no upload',
-      message: 'Dados do formulário incompletos. Tente novamente.'
-    });
-  }
-
-  res.status(500).json({ 
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno'
-  });
-});
+// ===== MANIPULAÇÃO DE ERROS (middleware global) =====
+app.use(errorHandler);
 
 // ===== EXECUTAR LIMPEZA DA PASTA TEMP =====
 // Executar limpeza da pasta temp a cada 1 hora
@@ -699,16 +641,16 @@ const PORT = process.env.PORT || 8000;
 organizeUploads();
 
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log(`🔗 Backend URL: http://localhost:${PORT}`);
-  
+  logger.info({ port: PORT }, 'Servidor rodando');
+  logger.info({ url: process.env.FRONTEND_URL || 'http://localhost:3000' }, 'Frontend URL');
+  logger.info({ url: `http://localhost:${PORT}` }, 'Backend URL');
+
   // Iniciar job de parcelas
   try {
     iniciarJobParcelas();
-    console.log('✅ Job de parcelas iniciado');
+    logger.info('Job de parcelas iniciado');
   } catch (error) {
-    console.error('❌ Erro ao iniciar job de parcelas:', error);
+    logger.error({ err: error }, 'Erro ao iniciar job de parcelas');
   }
 });
 
@@ -738,7 +680,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error({ reason }, 'Unhandled Rejection');
 });
 
 // Export both the app and sequelize instance

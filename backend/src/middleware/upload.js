@@ -102,11 +102,13 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configuração robusta do upload SEM LIMITES
-const uploadFields = multer({ 
+// Configuração do upload COM LIMITE PADRÃO POR ARQUIVO (10MB)
+const uploadFields = multer({
   storage: storage,
-  fileFilter: fileFilter
-  // ✅ REMOVIDO: limits - Sem limites de tamanho ou quantidade
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE_MB || '10') * 1024 * 1024 // Default 10MB por arquivo
+  }
 }).fields([
   // Campos existentes
   { name: 'documentosPessoais' }, // Sem maxCount = ilimitado

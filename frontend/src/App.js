@@ -34,7 +34,7 @@ import LandingPage from './pages/LandingPage';
 import LembretesPage from './pages/Lembretes';
 import AcessosList from './pages/AcessosList';
 import ClientesAluguel from './pages/ClienteAluguelPage';
-import DashboardAlugueis from './components/Dashboard/DashboardAlugueis';
+import DashboardAlugueisPage from './pages/DashboardAlugueisPage';
 import PortalInquilinoPage from './pages/PortalInquilinoPage';
 import RelatorioPage from './pages/RelatorioPage';
 import PublicPropertyList from './pages/PublicImoveisPage';
@@ -42,17 +42,25 @@ import MoveisDetail from './pages/MoveisDetailPage';
 import Busca from './components/Busca';
 import EditarCliente from './pages/EditarCliente.jsx';
 import LaudosPage from './pages/LaudosPage';
+import SimuladorPage from './pages/SimuladorPage';
+import VisitasPage from './pages/VisitasPage';
+import PropostasPage from './pages/PropostasPage';
 
 // ✅ NOVAS IMPORTAÇÕES - PAGAMENTOS
 import CriarPagamento from './components/Pagamentos/CriarPagamento';
 import ListaPagamentos from './components/Pagamentos/ListaPagamentos';
 
-
-
 // Importando os Dashboards
 import DashboardCorretor from './components/Dashboard/DashboardCorretor';
 import DashboardCorrespondente from './components/Dashboard/DashboardCorrespondente';
 import DashboardAdministrador from './components/Dashboard/DashboardAdministrador';
+
+// ✅ IMPORTAÇÕES SAAS (lazy load)
+const RegistroSaasPage = React.lazy(() => import('./pages/RegistroSaasPage'));
+const PrecosPage = React.lazy(() => import('./pages/PrecosPage'));
+const SuperAdminPage = React.lazy(() => import('./pages/SuperAdminPage'));
+const MinhaAssinaturaPage = React.lazy(() => import('./pages/MinhaAssinaturaPage'));
+const ConfiguracoesTenantPage = React.lazy(() => import('./pages/ConfiguracoesTenantPage'));
 
 // Componente para rotas protegidas
 const ProtectedRoute = ({ children }) => {
@@ -80,6 +88,17 @@ const AdminOnlyRoute = ({ children }) => {
   if (!hasRole('administrador')) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  return children;
+};
+
+// ✅ Rota exclusiva para Super Admin (dono da plataforma)
+const SuperAdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, isSuperAdmin, user } = useAuth();
+
+  if (loading) return <AuthLoading />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isSuperAdmin && !user?.is_super_admin) return <Navigate to="/dashboard" replace />;
 
   return children;
 };
@@ -368,13 +387,43 @@ const AppContent = () => {
           />
 
           {/* Rota de Laudos */}
-          <Route 
-            path="/laudos" 
+          <Route
+            path="/laudos"
             element={
               <ProtectedRoute>
                 <LaudosPage />
               </ProtectedRoute>
-            } 
+            }
+          />
+
+          {/* Simulador de Financiamento */}
+          <Route
+            path="/simulador"
+            element={
+              <ProtectedRoute>
+                <SimuladorPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Agenda de Visitas */}
+          <Route
+            path="/visitas"
+            element={
+              <ProtectedRoute>
+                <VisitasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Propostas de Compra */}
+          <Route
+            path="/propostas"
+            element={
+              <ProtectedRoute>
+                <PropostasPage />
+              </ProtectedRoute>
+            }
           />
 
           {/* ✅ NOVAS ROTAS DE PAGAMENTOS - APENAS PARA ADMINISTRADORES */}
@@ -417,7 +466,7 @@ const AppContent = () => {
             path="/dashboard/alugueis"
             element={
               <ProtectedRoute>
-                <DashboardAlugueis />
+                <DashboardAlugueisPage />
               </ProtectedRoute>
             }
           />
@@ -473,15 +522,67 @@ const AppContent = () => {
             element={<Navigate to="/login" replace />} 
           />
           
+          {/* ✅ ROTAS SAAS */}
+          <Route
+            path="/registro"
+            element={
+              <PublicRoute>
+                <React.Suspense fallback={<AuthLoading />}>
+                  <RegistroSaasPage />
+                </React.Suspense>
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/precos"
+            element={
+              <PublicOnlyRoute>
+                <React.Suspense fallback={<AuthLoading />}>
+                  <PrecosPage />
+                </React.Suspense>
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/super-admin"
+            element={
+              <SuperAdminRoute>
+                <React.Suspense fallback={<AuthLoading />}>
+                  <SuperAdminPage />
+                </React.Suspense>
+              </SuperAdminRoute>
+            }
+          />
+          <Route
+            path="/minha-assinatura"
+            element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<AuthLoading />}>
+                  <MinhaAssinaturaPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes-empresa"
+            element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<AuthLoading />}>
+                  <ConfiguracoesTenantPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            }
+          />
+
           {/* Rotas customizadas (financeiro, laudos, etc) */}
           {customRoutes.map((route, idx) => (
             <Route key={route.path || idx} path={route.path} element={route.element} />
           ))}
 
           {/* ✅ Rota 404 - redireciona para landing page */}
-          <Route 
-            path="*" 
-            element={<Navigate to="/" replace />} 
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
           />
         </Routes>
       )}

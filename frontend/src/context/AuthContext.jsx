@@ -15,6 +15,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tenantId, setTenantId] = useState(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [planInfo, setPlanInfo] = useState(null);
 
   // Função para verificar autenticação - MELHORADA
   const checkAuth = useCallback(async () => {
@@ -42,12 +45,17 @@ export const AuthProvider = ({ children }) => {
       if (response.data.authenticated) {
         setUser(response.data.user);
         setIsAuthenticated(true);
-        
+        setTenantId(response.data.tenant_id || response.data.user?.tenant_id || null);
+        setIsSuperAdmin(response.data.is_super_admin || response.data.user?.is_super_admin || false);
+
         // Atualizar token se necessário
         if (response.data.token && response.data.token !== token) {
           localStorage.setItem('authToken', response.data.token);
         }
-        
+
+        // Buscar info do plano
+        fetchPlanInfo(token);
+
         return true;
       } else {
         throw new Error('Não autenticado');
@@ -122,7 +130,12 @@ export const AuthProvider = ({ children }) => {
       // Atualizar estado
       setUser(userData);
       setIsAuthenticated(true);
-      
+      setTenantId(userData.tenant_id || null);
+      setIsSuperAdmin(userData.is_super_admin || false);
+
+      // Buscar info do plano
+      if (token) fetchPlanInfo(token);
+
       return { success: true, user: userData };
     } catch (error) {
       console.error('❌ Erro no login:', error);
@@ -174,7 +187,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('refreshToken');
       setUser(null);
       setIsAuthenticated(false);
-      
+      setTenantId(null);
+      setIsSuperAdmin(false);
+      setPlanInfo(null);
     }
   }, []);
 
@@ -301,6 +316,52 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [isAuthenticated, refreshAuth]);
 
+  // ===== FUNÇÕES SAAS =====
+
+  // Buscar informações do plano do tenant
+  const fetchPlanInfo = useCallback(async (tokenOverride) => {
+    try {
+      const token = tokenOverride || localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/plan-usage`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
+        }
+      );
+      setPlanInfo(response.data);
+    } catch (error) {
+      // 402 = sem assinatura ativa (normal para novos tenants)
+      if (error.response?.status !== 402) {
+        console.warn('Erro ao buscar info do plano:', error.message);
+      }
+    }
+  }, []);
+
+  // Verificar se uma feature está disponível no plano
+  const hasFeature = useCallback((featureName) => {
+    if (isSuperAdmin) return true;
+    if (!planInfo?.features) return false;
+    return !!planInfo.features[featureName];
+  }, [planInfo, isSuperAdmin]);
+
+  // Verificar uso de um recurso (retorna { atual, limite, remaining, atLimit })
+  const getResourceUsage = useCallback((resourceType) => {
+    if (!planInfo?.uso) return null;
+    const usage = planInfo.uso[resourceType];
+    if (!usage) return null;
+    const isUnlimited = usage.limite === 'Ilimitado' || usage.limite === 0;
+    return {
+      atual: usage.atual,
+      limite: usage.limite,
+      remaining: isUnlimited ? Infinity : usage.limite - usage.atual,
+      atLimit: !isUnlimited && usage.atual >= usage.limite,
+      isUnlimited
+    };
+  }, [planInfo]);
+
   const value = {
     user,
     loading,
@@ -310,7 +371,14 @@ export const AuthProvider = ({ children }) => {
     checkAuth,
     refreshAuth,
     hasRole,
-    getUserType
+    getUserType,
+    // SaaS
+    tenantId,
+    isSuperAdmin,
+    planInfo,
+    hasFeature,
+    getResourceUsage,
+    fetchPlanInfo
   };
 
   return (

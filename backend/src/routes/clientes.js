@@ -10,6 +10,7 @@ const { authenticateToken } = require('./authRoutes');
 
 // ✅ IMPORTAÇÕES CORRETAS
 const { uploadFields, logUploadedFiles, handleMulterError, uploadDirectories } = require('../middleware/upload');
+const { validateCliente } = require('../middleware/validators');
 const PDFService = require('../services/pdfService');
 const { getSocketIO } = require('../socket');
 
@@ -348,11 +349,12 @@ const buildClienteDataForCreate = (body) => {
 // ===========================
 
 // CRIAR CLIENTE - USAR A NOVA FUNÇÃO
-router.post('/clientes', 
-  authenticateToken, 
-  uploadFields, 
+router.post('/clientes',
+  authenticateToken,
+  uploadFields,
   handleMulterError,
-  logUploadedFiles, 
+  logUploadedFiles,
+  validateCliente,
   async (req, res) => {
     const transaction = await sequelize.transaction();
     

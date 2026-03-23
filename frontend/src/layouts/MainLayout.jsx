@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, PanelLeft } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import NotificationBell from "../components/NotificationBell";
 import { useAuth } from "../context/AuthContext";
 
 const MainLayout = ({ children }) => {
@@ -61,33 +62,34 @@ const MainLayout = ({ children }) => {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Top Bar — só aparece se mobile OU sidebar escondido */}
-        {(isMobile || !sidebarVisible) && (
-          <header className="sticky top-0 z-40 bg-caixa-primary/80 backdrop-blur-md border-b border-white/10">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-2">
-                {isMobile && sidebarVisible && (
-                  <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    <Menu className="h-6 w-6 text-white/70" />
-                  </button>
-                )}
-                {!sidebarVisible && (
-                  <button
-                    onClick={() => setSidebarVisible(true)}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                    title="Mostrar Menu"
-                  >
-                    <PanelLeft className="h-6 w-6 text-white/70" />
-                    <span className="text-white/70 text-sm">Menu</span>
-                  </button>
-                )}
-              </div>
+        {/* Top Bar */}
+        <header className="sticky top-0 z-40 bg-caixa-primary/80 backdrop-blur-md border-b border-white/10">
+          <div className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center gap-2">
+              {isMobile && sidebarVisible && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <Menu className="h-6 w-6 text-white/70" />
+                </button>
+              )}
+              {!sidebarVisible && (
+                <button
+                  onClick={() => setSidebarVisible(true)}
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  title="Mostrar Menu"
+                >
+                  <PanelLeft className="h-6 w-6 text-white/70" />
+                  <span className="text-white/70 text-sm">Menu</span>
+                </button>
+              )}
             </div>
-          </header>
-        )}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+            </div>
+          </div>
+        </header>
 
         {/* Content Area */}
         <div className="flex-1 w-full overflow-y-auto">

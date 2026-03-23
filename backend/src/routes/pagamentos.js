@@ -3,6 +3,8 @@ const router = express.Router();
 const { User, Cliente, Pagamento } = require('../models');
 const { authenticateToken } = require('./authRoutes');
 const mercadoPagoService = require('../services/mercadoPagoService');
+const pagamentoController = require('../controllers/pagamentoController');
+const pagamentoService = require('../services/pagamentoService');
 
 // ✅ CONFIGURAÇÕES DO ENV
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
@@ -1697,122 +1699,16 @@ router.put('/:id', async (req, res) => {
 });
 
 // ✅ ROTA PARA VERIFICAR STATUS DO WHATSAPP
-router.get('/whatsapp/status', async (req, res) => {
-  try {
-    const status = await verificarStatusWhatsApp();
-    
-    res.json({
-      whatsapp_connected: status,
-      whatsapp_api_url: WHATSAPP_API_URL,
-      message: status ? 'WhatsApp conectado e pronto para envio' : 'WhatsApp desconectado. Use o QR Code para conectar.'
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao verificar status do WhatsApp:', error);
-    res.status(500).json({
-      error: 'Erro ao verificar status do WhatsApp',
-      details: error.message
-    });
-  }
-});
+router.get('/whatsapp/status', pagamentoController.getWhatsAppStatus);
 
 // ✅ ROTA PARA OBTER CONFIGURAÇÕES DO SISTEMA
-router.get('/config', async (req, res) => {
-  try {
-    res.json({
-      backend_url: BACKEND_URL,
-      whatsapp_api_url: WHATSAPP_API_URL,
-      max_parcelas: parseInt(process.env.MAX_PARCELAS || '12'),
-      boleto_days_to_expire: parseInt(process.env.BOLETO_DAYS_TO_EXPIRE || '7'),
-      pix_expire_minutes: parseInt(process.env.PIX_EXPIRE_MINUTES || '30'),
-      empresa_nome: process.env.EMPRESA_NOME || 'Sistema CRM CAIXA',
-      currency_locale: process.env.CURRENCY_LOCALE || 'pt-BR',
-      country_code: process.env.WHATSAPP_COUNTRY_CODE || '55',
-      phone_length: parseInt(process.env.WHATSAPP_PHONE_LENGTH || '12')
-    });
-  } catch (error) {
-    console.error('❌ Erro ao obter configurações:', error);
-    res.status(500).json({
-      error: 'Erro ao obter configurações',
-      details: error.message
-    });
-  }
-});
+router.get('/config', pagamentoController.getConfig);
 
 // ✅ ROTA PARA OBTER CONFIGURAÇÕES PÚBLICAS DO MERCADO PAGO
-router.get('/mercadopago/config', async (req, res) => {
-  try {
-    // Retornar apenas a public key (seguro para frontend)
-    res.json({
-      public_key: mercadoPagoService.PUBLIC_KEY,
-      access_token_configured: !!mercadoPagoService.ACCESS_TOKEN,
-      ready: !!mercadoPagoService.ACCESS_TOKEN && !!mercadoPagoService.PUBLIC_KEY
-    });
-  } catch (error) {
-    console.error('❌ Erro ao obter config do MP:', error);
-    res.status(500).json({
-      error: 'Erro ao obter configurações',
-      details: error.message
-    });
-  }
-});
+router.get('/mercadopago/config', pagamentoController.getMercadoPagoConfig);
 
 // ✅ ROTA PARA TESTAR CONEXÃO COM MERCADO PAGO
-router.get('/mercadopago/test', async (req, res) => {
-  try {
-    const user = await User.findOne({ where: { email: req.user.email } });
-    if (!user || !user.is_administrador) {
-      return res.status(403).json({ error: 'Apenas administradores podem testar' });
-    }
-
-    // Teste simples: tentar criar uma preferência de teste
-    const dadosTeste = {
-      cliente: {
-        id: 1,
-        nome: 'Cliente Teste',
-        email: 'teste@teste.com',
-        telefone: '11999999999',
-        cpf: '00000000000'
-      },
-      titulo: 'Teste de Conexão MP',
-      descricao: 'Teste automático da API',
-      valor_numerico: 0.01,
-      parcelas: 1,
-      data_vencimento: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    };
-
-    try {
-      const preferencia = await mercadoPagoService.criarPreferenciaBoleto(dadosTeste);
-      
-      res.json({
-        success: true,
-        message: 'Conexão com Mercado Pago está funcionando!',
-        test_preference: {
-          id: preferencia.id,
-          created: true
-        },
-        access_token_ok: true,
-        public_key_ok: !!mercadoPagoService.PUBLIC_KEY
-      });
-
-    } catch (mpError) {
-      res.status(500).json({
-        success: false,
-        error: 'Erro na conexão com Mercado Pago',
-        details: mpError.message,
-        access_token_configured: !!mercadoPagoService.ACCESS_TOKEN,
-        public_key_configured: !!mercadoPagoService.PUBLIC_KEY
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Erro no teste do MP:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      details: error.message
-    });
-  }
-});
+router.get('/mercadopago/test', pagamentoController.testMercadoPago);
 
 // ✅ ROTA PARA VERIFICAR STATUS DE PAGAMENTOS PENDENTES
 router.post('/verificar-status', async (req, res) => {

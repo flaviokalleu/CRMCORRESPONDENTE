@@ -9,11 +9,17 @@ module.exports = (sequelize) => {
         foreignKey: 'user_id',
         as: 'clientes'
       });
-      
+
       // Associação com notas
       User.hasMany(models.Nota, {
         foreignKey: 'criado_por_id',
         as: 'notas_criadas'
+      });
+
+      // Associação com tenant
+      User.belongsTo(models.Tenant, {
+        foreignKey: 'tenant_id',
+        as: 'tenant'
       });
     }
 
@@ -37,7 +43,14 @@ module.exports = (sequelize) => {
     // Flags de papel
     is_corretor: { type: DataTypes.BOOLEAN, defaultValue: false },
     is_administrador: { type: DataTypes.BOOLEAN, defaultValue: false },
-    is_correspondente: { type: DataTypes.BOOLEAN, defaultValue: false }
+    is_correspondente: { type: DataTypes.BOOLEAN, defaultValue: false },
+    // SaaS
+    is_super_admin: { type: DataTypes.BOOLEAN, defaultValue: false },
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
+    }
   }, {
     sequelize,
     modelName: 'User',

@@ -20,6 +20,12 @@ import {
   BarChart3,
   PanelLeftClose,
   X,
+  Crown,
+  Sparkles,
+  Building,
+  Calculator,
+  CalendarCheck,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -123,7 +129,8 @@ const DropdownSection = ({ icon: Icon, label, isOpen, onToggle, items, pathname 
 // ─── Sidebar principal ───
 
 const Sidebar = ({ open, onClose, onToggleVisibility }) => {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, isSuperAdmin: ctxSuperAdmin } = useAuth();
+  const isSuperAdmin = ctxSuperAdmin || user?.is_super_admin || false;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -219,6 +226,9 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
     const items = { add: [], list: [], extra: [] };
 
     items.extra.push({ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
+    items.extra.push({ to: "/simulador", icon: Calculator, label: "Simulador" });
+    items.extra.push({ to: "/visitas", icon: CalendarCheck, label: "Visitas" });
+    items.extra.push({ to: "/propostas", icon: FileText, label: "Propostas" });
 
     if (hasRole("corretor")) {
       items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
@@ -269,8 +279,17 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
       );
     }
 
+    // ✅ Itens SaaS
+    if (isSuperAdmin) {
+      items.extra.push({ to: "/super-admin", icon: Crown, label: "Super Admin" });
+    }
+    if (hasRole("administrador")) {
+      items.extra.push({ to: "/minha-assinatura", icon: Sparkles, label: "Minha Assinatura" });
+      items.extra.push({ to: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" });
+    }
+
     return items;
-  }, [hasRole]);
+  }, [hasRole, isSuperAdmin]);
 
   const pathname = location.pathname;
 

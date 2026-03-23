@@ -9,6 +9,12 @@ import {
 
 const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
+// Design tokens
+const CARD = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.10)';
+const INPUT_BG = 'rgba(255,255,255,0.05)';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #F97316, #EA580C)';
+
 const ListaCorretores = () => {
   const [corretores, setCorretores] = useState([]);
   const [filteredCorretores, setFilteredCorretores] = useState([]);
@@ -35,7 +41,7 @@ const ListaCorretores = () => {
       const response = await axios.get(`${apiUrl}/corretor?all=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       console.log('Corretores carregados:', response.data.data?.length || 0);
       setCorretores(response.data.data || []);
     } catch (error) {
@@ -81,17 +87,18 @@ const ListaCorretores = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-400 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-8 shadow-2xl text-center"
+          style={{ background: CARD, borderColor: BORDER }}
+          className="backdrop-blur-xl rounded-2xl border p-8 shadow-2xl text-center"
         >
-          <Loader2 className="w-12 h-12 text-primary-300 mx-auto mb-4 animate-spin" />
+          <Loader2 className="w-12 h-12 text-orange-400 mx-auto mb-4 animate-spin" />
           <h3 className="text-xl font-semibold text-white mb-2">
             Carregando Corretores
           </h3>
-          <p className="text-primary-100">
+          <p className="text-white/60">
             Buscando dados dos corretores...
           </p>
         </motion.div>
@@ -101,11 +108,12 @@ const ListaCorretores = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-400 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-red-500/10 backdrop-blur-sm rounded-2xl border border-red-500/20 p-8 shadow-2xl text-center max-w-md w-full"
+          className="backdrop-blur-xl rounded-2xl border border-red-500/20 p-8 shadow-2xl text-center max-w-md w-full"
+          style={{ background: 'rgba(239,68,68,0.08)' }}
         >
           <h3 className="text-xl font-semibold text-white mb-2">
             Erro ao Carregar
@@ -117,7 +125,8 @@ const ListaCorretores = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => window.location.reload()}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+            className="text-white px-6 py-3 rounded-xl font-medium transition-colors"
+            style={{ background: ACCENT_GRADIENT }}
           >
             Tentar Novamente
           </motion.button>
@@ -127,31 +136,44 @@ const ListaCorretores = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-700 to-primary-400 py-8 px-4">
+    <div className="min-h-screen bg-caixa-gradient py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Sticky Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="sticky top-0 z-30 pb-4"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-primary-600 to-primary-400 rounded-2xl flex items-center justify-center shadow-lg">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white">
-              Corretores
-            </h1>
-          </div>
-          <p className="text-primary-100 text-lg mb-6">
-            Gerencie a equipe de corretores do sistema
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 mb-6">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-2 flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary-300" />
-              <span className="text-white font-medium">
-                {filteredCorretores.length} de {corretores.length} corretores
-              </span>
+          <div
+            className="backdrop-blur-xl rounded-2xl border p-6 shadow-2xl"
+            style={{ background: CARD, borderColor: BORDER }}
+          >
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
+                  style={{ background: ACCENT_GRADIENT }}
+                >
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    Corretores
+                  </h1>
+                  <p className="text-white/50 text-sm">
+                    Gerencie a equipe de corretores do sistema
+                  </p>
+                </div>
+              </div>
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border"
+                style={{ background: CARD, borderColor: BORDER }}
+              >
+                <Users className="w-4 h-4 text-orange-400" />
+                <span className="text-white/80 text-sm font-medium">
+                  {filteredCorretores.length} de {corretores.length} corretores
+                </span>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -160,62 +182,72 @@ const ListaCorretores = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-8"
+          className="backdrop-blur-xl rounded-2xl border p-5 mb-8"
+          style={{ background: CARD, borderColor: BORDER }}
         >
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             {/* Busca */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary-100 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Buscar corretores..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-10 py-3 text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+                className="w-full rounded-xl px-10 py-3 text-white placeholder-white/30 border focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none"
+                style={{ background: INPUT_BG, borderColor: BORDER }}
               />
             </div>
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1">
+            <div
+              className="flex items-center gap-1 rounded-xl p-1 border"
+              style={{ background: INPUT_BG, borderColor: BORDER }}
+            >
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium ${
                   viewMode === 'grid'
-                    ? 'bg-primary-400 text-white'
-                    : 'text-primary-100 hover:text-white'
+                    ? 'text-white shadow-lg'
+                    : 'text-white/40 hover:text-white/70'
                 }`}
+                style={viewMode === 'grid' ? { background: ACCENT_GRADIENT } : {}}
               >
                 <Grid3X3 className="w-4 h-4" />
                 Cards
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium ${
                   viewMode === 'list'
-                    ? 'bg-primary-400 text-white'
-                    : 'text-primary-100 hover:text-white'
+                    ? 'text-white shadow-lg'
+                    : 'text-white/40 hover:text-white/70'
                 }`}
+                style={viewMode === 'list' ? { background: ACCENT_GRADIENT } : {}}
               >
                 <List className="w-4 h-4" />
                 Lista
               </button>
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={fetchCorretores}
-              className="p-2 bg-primary-400 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              className="p-2.5 text-white rounded-xl border transition-colors hover:border-orange-500/30"
+              style={{ background: INPUT_BG, borderColor: BORDER }}
               title="Recarregar"
             >
               <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            </motion.button>
           </div>
           {searchTerm && (
-            <div className="mt-4 flex items-center gap-2 text-primary-200">
-              <Badge className="w-4 h-4 text-primary-400" />
+            <div className="mt-4 flex items-center gap-2 text-white/50">
+              <Badge className="w-4 h-4 text-orange-400" />
               <span>
-                Filtrando por: <strong>"{searchTerm}"</strong>
+                Filtrando por: <strong className="text-white/80">"{searchTerm}"</strong>
               </span>
               <button
                 onClick={() => setSearchTerm('')}
-                className="ml-2 text-primary-400 hover:text-white flex items-center gap-1"
+                className="ml-2 text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors"
               >
                 <X className="w-4 h-4" />
                 Limpar
@@ -250,29 +282,36 @@ const ListaCorretores = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden"
+              className="backdrop-blur-xl rounded-2xl border overflow-hidden"
+              style={{ background: CARD, borderColor: BORDER }}
             >
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-white/5 border-b border-white/10">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-primary-200">
+                    <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${BORDER}` }}>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-white/50 uppercase tracking-wider">
                         <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-primary-400" />
+                          <User className="w-4 h-4 text-orange-400" />
                           Corretor
                         </div>
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-primary-200">
-                        <Mail className="w-4 h-4 text-primary-400" /> Email
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-orange-400" />
+                          Email
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-primary-200">
-                        <Phone className="w-4 h-4 text-primary-400" /> Telefone
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-orange-400" />
+                          Telefone
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-primary-200">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-white/50 uppercase tracking-wider">
                         CRECI
                       </th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-primary-200">
-                        Ações
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-white/50 uppercase tracking-wider">
+                        Acoes
                       </th>
                     </tr>
                   </thead>
@@ -283,7 +322,8 @@ const ListaCorretores = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="border-b border-white/10 hover:bg-white/5 transition-colors"
+                        className="hover:bg-white/[0.03] transition-colors"
+                        style={{ borderBottom: `1px solid ${BORDER}` }}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -291,31 +331,46 @@ const ListaCorretores = () => {
                               <img
                                 src={`${apiUrl}/uploads/corretor/${corretor.photo}`}
                                 alt={corretor.username}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-primary-400/50"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-orange-500/30"
                               />
                             ) : (
-                              <div className="w-10 h-10 bg-primary-400/20 rounded-full flex items-center justify-center">
-                                <User className="w-6 h-6 text-primary-400" />
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center"
+                                style={{ background: 'rgba(249,115,22,0.15)' }}
+                              >
+                                <User className="w-5 h-5 text-orange-400" />
                               </div>
                             )}
                             <div>
-                              <div className="text-white font-medium">
+                              <div className="text-white font-medium text-sm">
                                 {corretor.first_name} {corretor.last_name}
                               </div>
-                              <div className="text-primary-200 text-sm">@{corretor.username}</div>
+                              <div className="text-white/40 text-xs">@{corretor.username}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-primary-100">{corretor.email}</td>
-                        <td className="px-6 py-4 text-primary-100">{corretor.telefone}</td>
-                        <td className="px-6 py-4 text-primary-100">{corretor.creci || 'N/A'}</td>
+                        <td className="px-6 py-4 text-white/60 text-sm">{corretor.email}</td>
+                        <td className="px-6 py-4 text-white/60 text-sm">{corretor.telefone}</td>
+                        <td className="px-6 py-4">
+                          {corretor.creci ? (
+                            <span
+                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium text-orange-300"
+                              style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.20)' }}
+                            >
+                              {corretor.creci}
+                            </span>
+                          ) : (
+                            <span className="text-white/30 text-sm">N/A</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               onClick={() => handleView(corretor)}
-                              className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors"
+                              className="p-2 rounded-lg transition-colors text-blue-400 hover:text-blue-300"
+                              style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.15)' }}
                               title="Visualizar"
                             >
                               <Eye className="w-4 h-4" />
@@ -324,7 +379,8 @@ const ListaCorretores = () => {
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               onClick={() => handleEdit(corretor)}
-                              className="p-2 bg-primary-400/20 hover:bg-primary-400/30 text-primary-400 rounded-lg transition-colors"
+                              className="p-2 rounded-lg transition-colors text-orange-400 hover:text-orange-300"
+                              style={{ background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.15)' }}
                               title="Editar"
                             >
                               <Edit className="w-4 h-4" />
@@ -347,15 +403,18 @@ const ListaCorretores = () => {
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 max-w-md mx-auto">
-              <Users className="w-16 h-16 text-primary-200 mx-auto mb-4" />
+            <div
+              className="backdrop-blur-xl rounded-2xl border p-8 max-w-md mx-auto"
+              style={{ background: CARD, borderColor: BORDER }}
+            >
+              <Users className="w-16 h-16 text-white/20 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
                 {searchTerm ? 'Nenhum resultado encontrado' : 'Nenhum corretor cadastrado'}
               </h3>
-              <p className="text-primary-100">
-                {searchTerm 
+              <p className="text-white/50">
+                {searchTerm
                   ? 'Tente alterar os termos de busca'
-                  : 'Cadastre o primeiro corretor para começar'
+                  : 'Cadastre o primeiro corretor para comecar'
                 }
               </p>
             </div>
@@ -376,14 +435,15 @@ const ListaCorretores = () => {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-primary-700 border border-white/20 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                className="backdrop-blur-xl border rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                style={{ background: 'rgba(11,20,38,0.95)', borderColor: BORDER }}
               >
                 {modalType === 'view' && (
                   <ViewModal corretor={selectedCorretor} onClose={closeModal} />
                 )}
                 {modalType === 'edit' && (
-                  <EditModal 
-                    corretor={selectedCorretor} 
+                  <EditModal
+                    corretor={selectedCorretor}
                     onClose={closeModal}
                     onUpdate={fetchCorretores}
                   />
@@ -403,48 +463,55 @@ const CorretorCard = ({ corretor, index, onView, onEdit }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
-    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 hover:border-primary-400/50 hover:bg-white/15 transition-all duration-300 group"
+    className="backdrop-blur-xl rounded-2xl border p-6 hover:border-orange-500/30 transition-all duration-300 group"
+    style={{ background: CARD, borderColor: BORDER }}
   >
     <div className="flex items-center gap-4 mb-4">
       {corretor.photo ? (
         <img
           src={`${apiUrl}/uploads/corretor/${corretor.photo}`}
           alt={corretor.username}
-          className="w-16 h-16 rounded-full object-cover border-3 border-primary-400/50 shadow-lg"
+          className="w-16 h-16 rounded-full object-cover border-2 border-orange-500/30 shadow-lg"
         />
       ) : (
-        <div className="w-16 h-16 bg-gradient-to-br from-primary-400/30 to-primary-400/50 rounded-full flex items-center justify-center shadow-lg">
-          <User className="text-primary-400 w-8 h-8" />
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
+          style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.2), rgba(234,88,12,0.3))' }}
+        >
+          <User className="text-orange-400 w-8 h-8" />
         </div>
       )}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <h3 className="text-white font-semibold text-lg truncate">
           {corretor.first_name} {corretor.last_name}
         </h3>
-        <p className="text-primary-400 font-medium">
+        <p className="text-orange-400 font-medium text-sm">
           @{corretor.username}
         </p>
       </div>
     </div>
-    <div className="space-y-3 mb-4">
+    <div className="space-y-3 mb-5">
       <div className="flex items-center gap-3">
-        <Mail className="text-primary-400 w-4 h-4" />
-        <span className="text-primary-100 text-sm flex-1 truncate">
+        <Mail className="text-orange-400 w-4 h-4 flex-shrink-0" />
+        <span className="text-white/60 text-sm flex-1 truncate">
           {corretor.email}
         </span>
       </div>
       {corretor.telefone && (
         <div className="flex items-center gap-3">
-          <Phone className="text-green-400 w-4 h-4" />
-          <span className="text-primary-100 text-sm">
+          <Phone className="text-green-400 w-4 h-4 flex-shrink-0" />
+          <span className="text-white/60 text-sm">
             {corretor.telefone}
           </span>
         </div>
       )}
       {corretor.creci && (
         <div className="flex items-center gap-3">
-          <Badge className="text-primary-400 w-4 h-4" />
-          <span className="text-primary-100 text-sm">
+          <Badge className="text-orange-400 w-4 h-4 flex-shrink-0" />
+          <span
+            className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium text-orange-300"
+            style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.20)' }}
+          >
             CRECI: {corretor.creci}
           </span>
         </div>
@@ -455,7 +522,8 @@ const CorretorCard = ({ corretor, index, onView, onEdit }) => (
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => onView(corretor)}
-        className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+        className="flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-medium text-white/60 hover:text-white border hover:border-white/20"
+        style={{ background: INPUT_BG, borderColor: BORDER }}
       >
         <Eye className="w-4 h-4" />
         Ver
@@ -464,7 +532,8 @@ const CorretorCard = ({ corretor, index, onView, onEdit }) => (
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => onEdit(corretor)}
-        className="flex-1 bg-primary-400/20 hover:bg-primary-400/30 text-primary-400 py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+        className="flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-medium text-white shadow-lg"
+        style={{ background: ACCENT_GRADIENT }}
       >
         <Edit className="w-4 h-4" />
         Editar
@@ -473,21 +542,22 @@ const CorretorCard = ({ corretor, index, onView, onEdit }) => (
   </motion.div>
 );
 
-// Modal de Visualização
+// Modal de Visualizacao
 const ViewModal = ({ corretor, onClose }) => (
   <div className="p-6">
     <div className="flex items-center justify-between mb-6">
       <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-        <Eye className="text-primary-400 w-6 h-6" />
+        <Eye className="text-orange-400 w-6 h-6" />
         Detalhes do Corretor
       </h3>
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={onClose}
-        className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+        className="p-2 rounded-xl transition-colors text-white/60 hover:text-white border hover:border-white/20"
+        style={{ background: INPUT_BG, borderColor: BORDER }}
       >
-        <X className="text-white w-5 h-5" />
+        <X className="w-5 h-5" />
       </motion.button>
     </div>
     <div className="text-center mb-6">
@@ -495,11 +565,14 @@ const ViewModal = ({ corretor, onClose }) => (
         <img
           src={`${apiUrl}/uploads/corretor/${corretor.photo}`}
           alt={corretor.username}
-          className="w-24 h-24 rounded-full object-cover border-4 border-primary-400/50 mx-auto shadow-lg"
+          className="w-24 h-24 rounded-full object-cover border-4 border-orange-500/30 mx-auto shadow-lg"
         />
       ) : (
-        <div className="w-24 h-24 bg-gradient-to-br from-primary-400/30 to-primary-400/50 rounded-full flex items-center justify-center mx-auto shadow-lg">
-          <User className="text-primary-400 w-12 h-12" />
+        <div
+          className="w-24 h-24 rounded-full flex items-center justify-center mx-auto shadow-lg"
+          style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.2), rgba(234,88,12,0.3))' }}
+        >
+          <User className="text-orange-400 w-12 h-12" />
         </div>
       )}
     </div>
@@ -514,18 +587,21 @@ const ViewModal = ({ corretor, onClose }) => (
 
 // InfoItem
 const InfoItem = ({ icon: Icon, label, value, className = "" }) => (
-  <div className={`bg-white/5 border border-white/10 rounded-xl p-4 ${className}`}>
+  <div
+    className={`backdrop-blur-sm rounded-xl border p-4 ${className}`}
+    style={{ background: CARD, borderColor: BORDER }}
+  >
     <div className="flex items-center gap-2 mb-2">
-      <Icon className="text-primary-400 w-4 h-4" />
-      <span className="text-primary-100 text-sm font-medium">{label}</span>
+      <Icon className="text-orange-400 w-4 h-4" />
+      <span className="text-white/40 text-xs font-medium uppercase tracking-wider">{label}</span>
     </div>
     <p className="text-white font-semibold break-words">
-      {value || "Não informado"}
+      {value || "Nao informado"}
     </p>
   </div>
 );
 
-// Modal de Edição
+// Modal de Edicao
 const EditModal = ({ corretor, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
     username: corretor.username || '',
@@ -567,24 +643,27 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
     }
   };
 
+  const inputClasses = "w-full p-3 rounded-xl text-white placeholder-white/30 border focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition-all outline-none";
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Edit className="text-primary-400 w-6 h-6" />
+          <Edit className="text-orange-400 w-6 h-6" />
           Editar Corretor
         </h3>
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClose}
-          className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+          className="p-2 rounded-xl transition-colors text-white/60 hover:text-white border hover:border-white/20"
+          style={{ background: INPUT_BG, borderColor: BORDER }}
         >
-          <X className="text-white w-5 h-5" />
+          <X className="w-5 h-5" />
         </motion.button>
       </div>
       {error && (
-        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
+        <div className="mb-4 p-4 rounded-xl text-red-400 border" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.20)' }}>
           {error}
         </div>
       )}
@@ -595,7 +674,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
             placeholder="Nome"
             value={formData.first_name}
             onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-            className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+            className={inputClasses}
+            style={{ background: INPUT_BG, borderColor: BORDER }}
             required
           />
           <input
@@ -603,7 +683,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
             placeholder="Sobrenome"
             value={formData.last_name}
             onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-            className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+            className={inputClasses}
+            style={{ background: INPUT_BG, borderColor: BORDER }}
             required
           />
         </div>
@@ -612,7 +693,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
           placeholder="Username"
           value={formData.username}
           onChange={(e) => setFormData({...formData, username: e.target.value})}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+          className={inputClasses}
+          style={{ background: INPUT_BG, borderColor: BORDER }}
           required
         />
         <input
@@ -620,7 +702,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
           placeholder="Email"
           value={formData.email}
           onChange={(e) => setFormData({...formData, email: e.target.value})}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+          className={inputClasses}
+          style={{ background: INPUT_BG, borderColor: BORDER }}
           required
         />
         <input
@@ -628,7 +711,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
           placeholder="Telefone"
           value={formData.telefone}
           onChange={(e) => setFormData({...formData, telefone: e.target.value})}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+          className={inputClasses}
+          style={{ background: INPUT_BG, borderColor: BORDER }}
           required
         />
         <input
@@ -636,28 +720,44 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
           placeholder="CRECI"
           value={formData.creci}
           onChange={(e) => setFormData({...formData, creci: e.target.value})}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+          className={inputClasses}
+          style={{ background: INPUT_BG, borderColor: BORDER }}
         />
         <input
           type="password"
           placeholder="Nova senha (deixe vazio para manter atual)"
           value={formData.password}
           onChange={(e) => setFormData({...formData, password: e.target.value})}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-primary-100 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/30 transition-all"
+          className={inputClasses}
+          style={{ background: INPUT_BG, borderColor: BORDER }}
         />
         <input
           type="file"
           accept="image/*"
           onChange={(e) => setPhoto(e.target.files[0])}
-          className="w-full p-3 bg-white/10 border border-white/20 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary-400 file:text-white file:font-medium hover:file:bg-primary-600 transition-all"
+          className="w-full p-3 rounded-xl text-white/60 border transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-white file:font-medium file:cursor-pointer"
+          style={{
+            background: INPUT_BG,
+            borderColor: BORDER,
+            '--file-bg': ACCENT_GRADIENT
+          }}
         />
+        <style>{`
+          input[type="file"]::file-selector-button {
+            background: linear-gradient(135deg, #F97316, #EA580C);
+          }
+          input[type="file"]::file-selector-button:hover {
+            background: linear-gradient(135deg, #EA580C, #C2410C);
+          }
+        `}</style>
         <div className="flex gap-3 pt-4">
           <motion.button
             type="button"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClose}
-            className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors"
+            className="flex-1 py-3 rounded-xl font-medium transition-all text-white/60 hover:text-white border hover:border-white/20"
+            style={{ background: INPUT_BG, borderColor: BORDER }}
           >
             Cancelar
           </motion.button>
@@ -666,7 +766,8 @@ const EditModal = ({ corretor, onClose, onUpdate }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={loading}
-            className="flex-1 py-3 bg-gradient-to-r from-primary-400 to-primary-600 hover:from-primary-600 hover:to-primary-400 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-3 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+            style={{ background: ACCENT_GRADIENT }}
           >
             {loading ? (
               <>

@@ -16,6 +16,7 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const { validateLogin } = require('../middleware/validators');
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your_jwt_secret_key';
 const REFRESH_SECRET_KEY = process.env.JWT_REFRESH_SECRET_KEY || 'your_jwt_refresh_secret_key';
 const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
@@ -118,7 +119,9 @@ const generateTokens = (user, role) => {
     role,
     is_corretor: user.is_corretor,
     is_correspondente: user.is_correspondente,
-    is_administrador: user.is_administrador
+    is_administrador: user.is_administrador,
+    tenant_id: user.tenant_id || null,
+    is_super_admin: user.is_super_admin || false
   };
 
   return {
@@ -168,7 +171,7 @@ const authenticateToken = async (req, res, next) => {
 // ===== ROTAS DE AUTENTICAÇÃO =====
 
 // Rota de login - CORRIGIDA
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', loginLimiter, validateLogin, async (req, res) => {
   console.log('🔐 Tentativa de login recebida');
   console.log('📋 Headers:', req.headers);
   console.log('📦 Body:', req.body);
@@ -280,7 +283,9 @@ router.post('/login', loginLimiter, async (req, res) => {
         last_name: user.last_name,
         is_corretor: user.is_corretor,
         is_correspondente: user.is_correspondente,
-        is_administrador: user.is_administrador
+        is_administrador: user.is_administrador,
+        tenant_id: user.tenant_id,
+        is_super_admin: user.is_super_admin || false
       }
     });
   } catch (error) {
@@ -360,10 +365,13 @@ router.get('/me', authenticateToken, async (req, res) => {
     }
 
     const role = getUserRole(user);
+    const userData = user.toJSON();
     res.json({
-      user: user.toJSON(),
+      user: userData,
       type: role,
-      role: role.toLowerCase()
+      role: role.toLowerCase(),
+      tenant_id: userData.tenant_id,
+      is_super_admin: userData.is_super_admin || false
     });
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
@@ -470,13 +478,16 @@ router.get('/check-auth', async (req, res) => {
       
       console.log('✅ Token válido para usuário:', user.email);
       
+      const userData = user.toJSON();
       res.json({
         authenticated: true,
-        user: user.toJSON(),
+        user: userData,
         type: role,
         role: role.toLowerCase(),
-        token, // Retornar o mesmo token
-        expiresAt: tokenRecord.expires_at
+        token,
+        expiresAt: tokenRecord.expires_at,
+        tenant_id: userData.tenant_id,
+        is_super_admin: userData.is_super_admin || false
       });
     });
   } catch (error) {

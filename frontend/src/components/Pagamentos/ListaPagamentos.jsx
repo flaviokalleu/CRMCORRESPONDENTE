@@ -32,6 +32,12 @@ import { Link } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
+// Design tokens
+const CARD = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.10)';
+const INPUT_BG = 'rgba(255,255,255,0.05)';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #F97316, #EA580C)';
+
 const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,13 +46,13 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
   const [busca, setBusca] = useState('');
   const [paginaAtual, setPaginaAtual] = useState(1);
   const itensPorPagina = 10;
-  
+
   // Estados para deletar
   const [deletandoId, setDeletandoId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [showActions, setShowActions] = useState(null);
 
-  // ✅ NOVOS ESTADOS PARA EDITAR
+  // Estados para editar
   const [editando, setEditando] = useState(null);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [formEdicao, setFormEdicao] = useState({
@@ -62,7 +68,7 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     fetchPagamentos();
   }, []);
 
-  // ✅ Limpar mensagens após 5 segundos
+  // Limpar mensagens apos 5 segundos
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => setSuccess(null), 5000);
@@ -102,21 +108,19 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     }
   };
 
-  // ✅ FUNÇÃO PARA ABRIR MODAL DE EDIÇÃO
   const abrirModalEdicao = (pagamento) => {
     setEditando(pagamento);
     setFormEdicao({
       titulo: pagamento.titulo || '',
       descricao: pagamento.descricao || '',
       valor: pagamento.valor_numerico ? (pagamento.valor_numerico * 100).toString() : '',
-      data_vencimento: pagamento.data_vencimento ? 
+      data_vencimento: pagamento.data_vencimento ?
         new Date(pagamento.data_vencimento).toISOString().split('T')[0] : '',
       observacoes: pagamento.observacoes || '',
       parcelas: pagamento.parcelas || 1
     });
   };
 
-  // ✅ FUNÇÃO PARA CANCELAR EDIÇÃO
   const cancelarEdicao = () => {
     setEditando(null);
     setFormEdicao({
@@ -129,42 +133,39 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     });
   };
 
-  // ✅ FUNÇÃO PARA FORMATAR VALOR NO INPUT
   const formatarValor = (value) => {
     if (!value) return '';
-    
+
     const numero = value.toString().replace(/\D/g, '');
     if (!numero) return '';
-    
+
     const valorEmCentavos = parseInt(numero, 10);
     const valorDecimal = valorEmCentavos / 100;
-    
+
     return valorDecimal.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
   };
 
-  // ✅ FUNÇÃO PARA CONVERTER VALOR PARA ENVIO
   const converterValorParaEnvio = (valorDigitado) => {
     if (!valorDigitado) return 0;
-    
+
     const numero = valorDigitado.toString().replace(/\D/g, '');
     if (!numero) return 0;
-    
+
     const valorEmCentavos = parseInt(numero, 10);
     const valorFinal = valorEmCentavos / 100;
-    
+
     return valorFinal;
   };
 
-  // ✅ FUNÇÃO PARA SALVAR EDIÇÃO
   const salvarEdicao = async () => {
     try {
       setSalvandoEdicao(true);
       const token = localStorage.getItem('authToken');
       const valorConvertido = converterValorParaEnvio(formEdicao.valor);
-      
+
       const payload = {
         titulo: formEdicao.titulo,
         descricao: formEdicao.descricao,
@@ -191,10 +192,10 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
 
       if (response.ok) {
         // Atualizar lista local
-        setPagamentos(prev => prev.map(p => 
+        setPagamentos(prev => prev.map(p =>
           p.id === editando.id ? { ...p, ...data.pagamento } : p
         ));
-        
+
         cancelarEdicao();
         alert('Pagamento atualizado com sucesso!');
       } else {
@@ -209,12 +210,12 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     }
   };
 
-  // Função para deletar pagamento
+  // Funcao para deletar pagamento
   const handleDeletePagamento = async (id) => {
     try {
       setDeletandoId(id);
       const token = localStorage.getItem('authToken');
-      
+
       const response = await fetch(`${API_URL}/pagamentos/${id}`, {
         method: 'DELETE',
         headers: {
@@ -244,11 +245,11 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     setConfirmDelete(pagamento);
   };
 
-  // Função para reenviar WhatsApp
+  // Funcao para reenviar WhatsApp
   const reenviarWhatsApp = async (id) => {
     try {
       const token = localStorage.getItem('authToken');
-      
+
       const response = await fetch(`${API_URL}/pagamentos/${id}/enviar-whatsapp`, {
         method: 'POST',
         headers: {
@@ -258,7 +259,7 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         alert('WhatsApp enviado com sucesso!');
         fetchPagamentos();
@@ -271,11 +272,11 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     }
   };
 
-  // Função para reenviar Email
+  // Funcao para reenviar Email
   const reenviarEmail = async (id) => {
     try {
       const token = localStorage.getItem('authToken');
-      
+
       const response = await fetch(`${API_URL}/pagamentos/${id}/enviar-email`, {
         method: 'POST',
         headers: {
@@ -285,7 +286,7 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         alert('Email enviado com sucesso!');
         fetchPagamentos();
@@ -298,11 +299,11 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     }
   };
 
-  // ✅ Botão para reenviar notificações
+  // Botao para reenviar notificacoes
   const handleReenviarNotificacoes = async (pagamentoId) => {
     try {
       setLoading(true);
-      
+
       const token = localStorage.getItem('authToken');
       const response = await fetch(`${API_URL}/api/pagamentos/${pagamentoId}/reenviar-notificacoes`, {
         method: 'POST',
@@ -318,10 +319,9 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data.success) {
         setSuccess('Notificações reenviadas com sucesso!');
-        // Mostrar detalhes dos resultados
         console.log('Resultados das notificações:', data.resultados);
       } else {
         setError(data.error || 'Erro ao reenviar notificações');
@@ -334,51 +334,55 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     }
   };
 
-  // Funções auxiliares (getStatusColor, getStatusIcon, getTipoIcon, etc.)
+  // Funcoes auxiliares
   const getStatusColor = (status) => {
     switch (status) {
       case 'aprovado':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'pago':
+        return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
       case 'pendente':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
       case 'rejeitado':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'vencido':
+        return 'bg-red-500/20 text-red-400 border border-red-500/30';
       case 'cancelado':
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
       case 'expirado':
-        return 'bg-caixa-orange-500/20 text-caixa-orange-400 border-caixa-orange-500/30';
+        return 'bg-orange-500/20 text-orange-400 border border-orange-500/30';
       default:
-        return 'bg-caixa-primary/20 text-caixa-light border-caixa-primary/30';
+        return 'bg-white/10 text-white/70 border border-white/20';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'aprovado':
-        return <CheckCircle size={16} />;
+      case 'pago':
+        return <CheckCircle size={14} />;
       case 'pendente':
-        return <Clock size={16} />;
+        return <Clock size={14} />;
       case 'rejeitado':
-        return <XCircle size={16} />;
+      case 'vencido':
+        return <XCircle size={14} />;
       case 'cancelado':
-        return <XCircle size={16} />;
+        return <XCircle size={14} />;
       case 'expirado':
-        return <AlertCircle size={16} />;
+        return <AlertCircle size={14} />;
       default:
-        return <Clock size={16} />;
+        return <Clock size={14} />;
     }
   };
 
   const getTipoIcon = (tipo) => {
     switch (tipo) {
       case 'pix':
-        return <Smartphone size={16} className="text-white" />;
+        return <Smartphone size={16} className="text-emerald-400" />;
       case 'boleto':
-        return <CreditCard size={16} className="text-caixa-primary" />;
+        return <CreditCard size={16} className="text-orange-400" />;
       case 'cartao':
         return <CreditCard size={16} className="text-purple-400" />;
       default:
-        return <CreditCard size={16} className="text-caixa-light" />;
+        return <CreditCard size={16} className="text-white/60" />;
     }
   };
 
@@ -401,7 +405,7 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
     });
   };
 
-  // --- Funções para comprovante ---
+  // --- Funcoes para comprovante ---
   const abrirComprovante = (url) => {
     if (url) window.open(url, '_blank');
     else alert('Comprovante não disponível.');
@@ -459,15 +463,15 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
   // Filtrar pagamentos
   const pagamentosFiltrados = pagamentos.filter(pagamento => {
     const passaFiltro = filtro === 'todos' || pagamento.status === filtro;
-    const passaBusca = !busca || 
+    const passaBusca = !busca ||
       pagamento.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       pagamento.cliente?.nome.toLowerCase().includes(busca.toLowerCase()) ||
       pagamento.cliente?.cpf.includes(busca);
-    
+
     return passaFiltro && passaBusca;
   });
 
-  // Paginação
+  // Paginacao
   const totalPaginas = Math.ceil(pagamentosFiltrados.length / itensPorPagina);
   const pagamentosExibidos = pagamentosFiltrados.slice(
     (paginaAtual - 1) * itensPorPagina,
@@ -479,8 +483,8 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
       <MainLayout>
         <div className="min-h-screen bg-caixa-gradient flex items-center justify-center">
           <div className="text-center">
-            <Loader2 className="animate-spin h-12 w-12 text-caixa-orange mx-auto mb-4" />
-            <p className="text-white text-lg">Carregando pagamentos...</p>
+            <Loader2 className="animate-spin h-12 w-12 text-orange-500 mx-auto mb-4" />
+            <p className="text-white/80 text-lg">Carregando pagamentos...</p>
           </div>
         </div>
       </MainLayout>
@@ -489,115 +493,143 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-caixa-gradient p-4">
+      <div className="min-h-screen bg-caixa-gradient p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
-          
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8"
-          >
-            <div>
-              <h1 className="text-3xl font-bold text-white">Pagamentos</h1>
-              <p className="text-caixa-extra-light">Gerencie boletos e PIX via Mercado Pago</p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={fetchPagamentos}
-                className="px-4 py-2 bg-caixa-primary/30 hover:bg-caixa-primary/50 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <RefreshCw size={16} />
-                Atualizar
-              </button>
-              <Link
-                to="/pagamentos/criar"
-                className="px-6 py-2 bg-gradient-to-r from-caixa-orange to-caixa-red hover:from-caixa-red hover:to-caixa-orange text-white rounded-lg transition-all duration-300 flex items-center gap-2"
-              >
-                <Plus size={16} />
-                Criar Pagamento
-              </Link>
-            </div>
-          </motion.div>
 
-          {/* Filtros */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-xl bg-white/10 rounded-xl p-6 border border-caixa-primary/30 mb-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* Busca */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-caixa-light" size={16} />
-                <input
-                  type="text"
-                  placeholder="Buscar por título, cliente ou CPF..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white/10 border border-caixa-primary/30 rounded-lg text-white placeholder-caixa-extra-light focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
-                />
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-20 pb-4" style={{ backdropFilter: 'blur(16px)' }}>
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6"
+            >
+              <div>
+                <h1 className="text-3xl font-bold text-white tracking-tight">Pagamentos</h1>
+                <p className="text-white/50 text-sm mt-1">Gerencie boletos e PIX via Mercado Pago</p>
               </div>
 
-              {/* Filtro por Status */}
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-caixa-light" size={16} />
-                <select
-                  value={filtro}
-                  onChange={(e) => setFiltro(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white/10 border border-caixa-primary/30 rounded-lg text-white focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange appearance-none"
+              <div className="flex gap-3">
+                <button
+                  onClick={fetchPagamentos}
+                  className="px-4 py-2.5 text-white/80 hover:text-white rounded-xl transition-all duration-200 flex items-center gap-2 text-sm font-medium hover:scale-105"
+                  style={{ background: CARD, border: `1px solid ${BORDER}` }}
                 >
-                  <option value="todos" className="bg-caixa-primary">Todos os Status</option>
-                  <option value="pendente" className="bg-caixa-primary">Pendente</option>
-                  <option value="aprovado" className="bg-caixa-primary">Aprovado</option>
-                  <option value="rejeitado" className="bg-caixa-primary">Rejeitado</option>
-                  <option value="cancelado" className="bg-caixa-primary">Cancelado</option>
-                  <option value="expirado" className="bg-caixa-primary">Expirado</option>
-                </select>
+                  <RefreshCw size={15} />
+                  Atualizar
+                </button>
+                <Link
+                  to="/pagamentos/criar"
+                  className="px-5 py-2.5 text-white rounded-xl transition-all duration-300 flex items-center gap-2 text-sm font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-105"
+                  style={{ background: ACCENT_GRADIENT }}
+                >
+                  <Plus size={15} />
+                  Criar Pagamento
+                </Link>
               </div>
+            </motion.div>
 
-              {/* Estatísticas */}
-              <div className="flex items-center justify-between bg-caixa-primary/20 rounded-lg p-3">
-                <span className="text-caixa-light text-sm">Total:</span>
-                <span className="text-white font-bold">{pagamentosFiltrados.length} pagamentos</span>
+            {/* Filters Card - Glassmorphism */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-2xl p-5 backdrop-blur-xl"
+              style={{ background: CARD, border: `1px solid ${BORDER}` }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/40" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por título, cliente ou CPF..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
+                    style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
+                  />
+                </div>
+
+                {/* Status Filter */}
+                <div className="relative">
+                  <Filter className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-white/40" size={16} />
+                  <select
+                    value={filtro}
+                    onChange={(e) => setFiltro(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 appearance-none transition-all [&>option]:bg-white [&>option]:text-gray-800"
+                    style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
+                  >
+                    <option value="todos">Todos os Status</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="rejeitado">Rejeitado</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="expirado">Expirado</option>
+                  </select>
+                </div>
+
+                {/* Stats */}
+                <div
+                  className="flex items-center justify-between rounded-xl px-4 py-2.5"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
+                >
+                  <span className="text-white/50 text-sm">Total:</span>
+                  <span className="text-white font-bold text-sm">{pagamentosFiltrados.length} pagamentos</span>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
 
-          {/* Lista de Pagamentos */}
+          {/* Payment List */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >            {error && (
-              <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 text-center">
-                <AlertCircle className="mx-auto mb-2 text-red-400" size={24} />
-                <p className="text-red-400">{error}</p>
+            transition={{ delay: 0.2 }}
+            className="space-y-3"
+          >
+            {error && (
+              <div
+                className="rounded-xl p-4 text-center flex items-center justify-center gap-3"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+              >
+                <AlertCircle className="text-red-400" size={20} />
+                <p className="text-red-400 text-sm font-medium">{error}</p>
               </div>
             )}
 
             {success && (
-              <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-                <CheckCircle className="mx-auto mb-2 text-green-400" size={24} />
-                <p className="text-green-400">{success}</p>
+              <div
+                className="rounded-xl p-4 text-center flex items-center justify-center gap-3"
+                style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)' }}
+              >
+                <CheckCircle className="text-emerald-400" size={20} />
+                <p className="text-emerald-400 text-sm font-medium">{success}</p>
               </div>
             )}
 
             {pagamentosExibidos.length === 0 ? (
-              <div className="backdrop-blur-xl bg-white/10 rounded-xl p-12 border border-caixa-primary/30 text-center">
-                <CreditCard className="mx-auto mb-4 text-caixa-primary/50" size={48} />
+              <div
+                className="rounded-2xl p-12 text-center backdrop-blur-xl"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
+              >
+                <div
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
+                  <CreditCard className="text-white/30" size={36} />
+                </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Nenhum pagamento encontrado</h3>
-                <p className="text-caixa-extra-light mb-6">
-                  {pagamentos.length === 0 
+                <p className="text-white/40 mb-6 text-sm">
+                  {pagamentos.length === 0
                     ? 'Comece criando seu primeiro pagamento.'
                     : 'Tente ajustar os filtros de busca.'
                   }
                 </p>
                 <Link
                   to="/pagamentos/criar"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-caixa-orange to-caixa-red hover:from-caixa-red hover:to-caixa-orange text-white rounded-lg transition-all duration-300"
+                  className="inline-flex items-center gap-2 px-6 py-3 text-white rounded-xl transition-all duration-300 text-sm font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-105"
+                  style={{ background: ACCENT_GRADIENT }}
                 >
                   <Plus size={16} />
                   Criar Primeiro Pagamento
@@ -609,30 +641,40 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                   key={pagamento.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="backdrop-blur-xl bg-white/10 rounded-xl p-6 border border-caixa-primary/30 hover:bg-white/15 transition-all duration-300"
+                  transition={{ delay: index * 0.04 }}
+                  className="rounded-2xl p-5 backdrop-blur-xl hover:scale-[1.005] transition-all duration-300 group"
+                  style={{
+                    background: CARD,
+                    border: `1px solid ${BORDER}`,
+                  }}
                 >
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                    
+
                     {/* Info Principal */}
                     <div className="lg:col-span-4">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 bg-caixa-primary/30 rounded-lg">
+                        <div
+                          className="p-2.5 rounded-xl flex-shrink-0"
+                          style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${BORDER}` }}
+                        >
                           {getTipoIcon(pagamento.tipo)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-white truncate">{pagamento.titulo}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <User size={14} className="text-caixa-light" />
-                            <span className="text-caixa-light text-sm truncate">
+                          <h3 className="font-semibold text-white truncate text-sm">{pagamento.titulo}</h3>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <User size={13} className="text-white/40" />
+                            <span className="text-white/50 text-xs truncate">
                               {pagamento.cliente?.nome || 'Cliente não encontrado'}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-caixa-extra-light">
+                            <span className="text-white/30 text-xs">
                               ID: #{pagamento.id}
                             </span>
-                            <span className="text-xs text-caixa-extra-light uppercase font-mono">
+                            <span
+                              className="text-xs uppercase font-mono px-1.5 py-0.5 rounded"
+                              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+                            >
                               {pagamento.tipo}
                             </span>
                           </div>
@@ -643,11 +685,11 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                     {/* Valor e Parcelas */}
                     <div className="lg:col-span-2">
                       <div className="flex items-center gap-2">
-                        <DollarSign size={16} className="text-caixa-orange" />
+                        <DollarSign size={15} className="text-emerald-400" />
                         <div>
-                          <span className="font-bold text-white">R$ {pagamento.valor}</span>
+                          <span className="font-bold text-emerald-400 text-sm">R$ {pagamento.valor}</span>
                           {pagamento.parcelas > 1 && (
-                            <div className="text-xs text-caixa-extra-light">
+                            <div className="text-xs text-white/40 mt-0.5">
                               {pagamento.parcelas}x de R$ {pagamento.valor_parcela}
                             </div>
                           )}
@@ -658,22 +700,28 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                     {/* Status e Envios */}
                     <div className="lg:col-span-2">
                       <div className="space-y-2">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(pagamento.status)}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(pagamento.status)}`}>
                           {getStatusIcon(pagamento.status)}
                           {pagamento.status.charAt(0).toUpperCase() + pagamento.status.slice(1)}
                         </span>
-                        
+
                         {/* Indicadores de Envio */}
-                        <div className="flex gap-1">
+                        <div className="flex gap-1.5">
                           {pagamento.whatsapp_enviado && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
-                              <Smartphone size={12} />
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-emerald-400"
+                              style={{ background: 'rgba(16,185,129,0.12)' }}
+                            >
+                              <Smartphone size={11} />
                               WhatsApp
                             </span>
                           )}
                           {pagamento.email_enviado && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
-                              <Mail size={12} />
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-blue-400"
+                              style={{ background: 'rgba(59,130,246,0.12)' }}
+                            >
+                              <Mail size={11} />
                               Email
                             </span>
                           )}
@@ -684,86 +732,93 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                     {/* Data */}
                     <div className="lg:col-span-2">
                       <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-caixa-light" />
-                        <span className="text-caixa-light text-sm">
+                        <Calendar size={13} className="text-white/40" />
+                        <span className="text-white/50 text-xs">
                           {formatarData(pagamento.created_at)}
                         </span>
                       </div>
                       {pagamento.data_vencimento && (
-                        <div className="text-xs text-caixa-extra-light mt-1">
+                        <div className="text-xs text-white/30 mt-1 ml-5">
                           Venc: {formatarData(pagamento.data_vencimento)}
                         </div>
                       )}
                     </div>
 
-                    {/* Ações */}
+                    {/* Acoes */}
                     <div className="lg:col-span-2">
-                      <div className="flex items-center gap-2 justify-end">
-                        {/* Ações básicas */}
+                      <div className="flex items-center gap-1.5 justify-end">
                         {pagamento.link_pagamento && (
                           <>
                             <button
                               onClick={() => copiarLink(pagamento.link_pagamento)}
-                              className="p-2 bg-caixa-primary/30 hover:bg-caixa-primary/50 text-caixa-light hover:text-white rounded-lg transition-colors"
+                              className="p-2 rounded-lg text-white/40 hover:text-white transition-all duration-200 hover:scale-110"
+                              style={{ background: 'rgba(255,255,255,0.05)' }}
                               title="Copiar Link"
                             >
-                              <Copy size={16} />
+                              <Copy size={15} />
                             </button>
                             <button
                               onClick={() => abrirPagamento(pagamento.link_pagamento)}
-                              className="p-2 bg-caixa-orange/30 hover:bg-caixa-orange/50 text-caixa-orange hover:text-white rounded-lg transition-colors"
+                              className="p-2 rounded-lg text-orange-400 hover:text-orange-300 transition-all duration-200 hover:scale-110"
+                              style={{ background: 'rgba(249,115,22,0.1)' }}
                               title="Abrir Pagamento"
                             >
-                              <ExternalLink size={16} />
+                              <ExternalLink size={15} />
                             </button>
                           </>
                         )}
 
-                        {/* ✅ BOTÃO EDITAR */}
+                        {/* Botao Editar */}
                         <button
                           onClick={() => abrirModalEdicao(pagamento)}
-                          className="p-2 bg-blue-500/30 hover:bg-blue-500/50 text-blue-400 hover:text-white rounded-lg transition-colors"
+                          className="p-2 rounded-lg text-blue-400 hover:text-blue-300 transition-all duration-200 hover:scale-110"
+                          style={{ background: 'rgba(59,130,246,0.1)' }}
                           title="Editar Pagamento"
                         >
-                          <Edit size={16} />
+                          <Edit size={15} />
                         </button>
 
-                        {/* BOTÃO DELETAR */}
+                        {/* Botao Deletar */}
                         <button
                           onClick={() => confirmarExclusao(pagamento)}
                           disabled={deletandoId === pagamento.id}
-                          className="p-2 bg-red-500/30 hover:bg-red-500/50 text-red-400 hover:text-white rounded-lg transition-colors disabled:opacity-50"
+                          className="p-2 rounded-lg text-red-400 hover:text-red-300 transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                          style={{ background: 'rgba(239,68,68,0.1)' }}
                           title="Deletar Pagamento"
                         >
                           {deletandoId === pagamento.id ? (
-                            <Loader2 size={16} className="animate-spin" />
+                            <Loader2 size={15} className="animate-spin" />
                           ) : (
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           )}
                         </button>
 
-                        {/* MENU DE AÇÕES EXTRAS */}
+                        {/* Menu de Acoes Extras */}
                         <div className="relative">
                           <button
                             onClick={() => setShowActions(showActions === pagamento.id ? null : pagamento.id)}
-                            className="p-2 bg-caixa-primary/30 hover:bg-caixa-primary/50 text-caixa-light hover:text-white rounded-lg transition-colors"
+                            className="p-2 rounded-lg text-white/40 hover:text-white transition-all duration-200 hover:scale-110"
+                            style={{ background: 'rgba(255,255,255,0.05)' }}
                             title="Mais Ações"
                           >
-                            <MoreVertical size={16} />
+                            <MoreVertical size={15} />
                           </button>
 
-                          {/* Dropdown de ações */}
+                          {/* Dropdown de acoes */}
                           {showActions === pagamento.id && (
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-caixa-primary/90 backdrop-blur-xl rounded-lg border border-caixa-primary/30 shadow-lg z-10">
-                              <div className="p-2 space-y-1">
+                            <div
+                              className="absolute right-0 top-full mt-2 w-52 rounded-xl shadow-2xl shadow-black/40 z-10 backdrop-blur-xl overflow-hidden"
+                              style={{ background: 'rgba(15,23,42,0.95)', border: `1px solid ${BORDER}` }}
+                            >
+                              <div className="p-1.5 space-y-0.5">
                                 <button
                                   onClick={() => {
                                     reenviarWhatsApp(pagamento.id);
                                     setShowActions(null);
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
                                 >
-                                  <Smartphone size={16} className="text-green-400" />
+                                  <Smartphone size={15} className="text-emerald-400" />
                                   Reenviar WhatsApp
                                 </button>
                                 <button
@@ -771,9 +826,9 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                                     reenviarEmail(pagamento.id);
                                     setShowActions(null);
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
                                 >
-                                  <Mail size={16} className="text-blue-400" />
+                                  <Mail size={15} className="text-blue-400" />
                                   Reenviar Email
                                 </button>
                                 <button
@@ -782,9 +837,9 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                                     alert('Link público copiado!');
                                     setShowActions(null);
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-white hover:bg-white/10 rounded-lg transition-colors"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
                                 >
-                                  <Copy size={16} className="text-caixa-orange" />
+                                  <Copy size={15} className="text-orange-400" />
                                   Copiar Link Público
                                 </button>
                               </div>
@@ -795,38 +850,42 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                     </div>
                   </div>
 
-                  {/* Descrição */}
+                  {/* Descricao */}
                   {pagamento.descricao && (
-                    <div className="mt-4 pt-4 border-t border-caixa-primary/20">
-                      <p className="text-caixa-light text-sm">{pagamento.descricao}</p>
+                    <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+                      <p className="text-white/45 text-sm">{pagamento.descricao}</p>
                     </div>
-                  )}                  {/* ✅ SEÇÃO DE COMPROVANTE */}
+                  )}
+
+                  {/* Secao de Comprovante */}
                   {pagamento.status === 'aprovado' && (
-                    <div className="mt-4 pt-4 border-t border-caixa-primary/20">
+                    <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
                       <div className="flex items-center gap-2 mb-3">
-                        <FileText size={16} className="text-caixa-orange" />
-                        <h4 className="text-white font-semibold">Comprovante</h4>
+                        <FileText size={15} className="text-orange-400" />
+                        <h4 className="text-white font-semibold text-sm">Comprovante</h4>
                       </div>
-                      
+
                       {pagamento.tem_comprovante ? (
                         <div className="flex gap-2 flex-wrap">
                           <button
                             onClick={() => abrirComprovante(pagamento.comprovante_url)}
-                            className="px-3 py-2 bg-caixa-orange/30 hover:bg-caixa-orange/50 text-caixa-orange hover:text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+                            className="px-3 py-2 rounded-lg text-orange-400 hover:text-orange-300 transition-all flex items-center gap-2 text-xs font-medium hover:scale-105"
+                            style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}
                             title="Abrir comprovante oficial"
                           >
-                            <ExternalLink size={14} />
+                            <ExternalLink size={13} />
                             Ver Comprovante
                           </button>
-                          
+
                           {pagamento.cliente?.telefone && (
                             <button
                               onClick={() => enviarComprovante(pagamento.id)}
-                              className="px-3 py-2 bg-green-500/30 hover:bg-green-500/50 text-green-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+                              className="px-3 py-2 rounded-lg text-emerald-400 hover:text-emerald-300 transition-all flex items-center gap-2 text-xs font-medium hover:scale-105"
+                              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}
                               title="Enviar comprovante para cliente"
                               disabled={loading}
                             >
-                              <Smartphone size={14} />
+                              <Smartphone size={13} />
                               Enviar Cliente
                             </button>
                           )}
@@ -835,19 +894,20 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                         <div className="space-y-2">
                           <button
                             onClick={() => obterComprovante(pagamento.id)}
-                            className="px-3 py-2 bg-blue-500/30 hover:bg-blue-500/50 text-blue-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+                            className="px-3 py-2 rounded-lg text-blue-400 hover:text-blue-300 transition-all flex items-center gap-2 text-xs font-medium hover:scale-105"
+                            style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}
                             title="Obter comprovante do Mercado Pago"
                             disabled={loading}
                           >
-                            <Download size={14} />
+                            <Download size={13} />
                             Obter Comprovante
                           </button>
-                          <p className="text-xs text-caixa-extra-light">Buscar comprovante oficial do MP</p>
+                          <p className="text-xs text-white/30">Buscar comprovante oficial do MP</p>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <AlertCircle size={14} className="text-yellow-400" />
-                          <span className="text-sm text-yellow-400">Comprovante não disponível</span>
+                          <AlertCircle size={13} className="text-yellow-400" />
+                          <span className="text-xs text-yellow-400">Comprovante não disponível</span>
                         </div>
                       )}
                     </div>
@@ -857,29 +917,35 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
             )}
           </motion.div>
 
-          {/* Paginação */}
+          {/* Paginacao */}
           {totalPaginas > 1 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
               className="flex justify-center items-center gap-2 mt-8"
             >
               <button
                 onClick={() => setPaginaAtual(Math.max(1, paginaAtual - 1))}
                 disabled={paginaAtual === 1}
-                className="px-4 py-2 bg-caixa-primary/30 hover:bg-caixa-primary/50 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition-all text-sm font-medium"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
                 Anterior
               </button>
-              
-              <span className="px-4 py-2 text-white">
-                Página {paginaAtual} de {totalPaginas}
+
+              <span
+                className="px-4 py-2.5 text-white/60 text-sm rounded-xl"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
+              >
+                Página <span className="text-white font-semibold">{paginaAtual}</span> de <span className="text-white font-semibold">{totalPaginas}</span>
               </span>
-              
+
               <button
                 onClick={() => setPaginaAtual(Math.min(totalPaginas, paginaAtual + 1))}
                 disabled={paginaAtual === totalPaginas}
-                className="px-4 py-2 bg-caixa-primary/30 hover:bg-caixa-primary/50 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="px-4 py-2.5 text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition-all text-sm font-medium"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
                 Próxima
               </button>
@@ -888,55 +954,62 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
         </div>
       </div>
 
-      {/* ✅ MODAL DE EDIÇÃO */}
+      {/* Modal de Edicao */}
       {editando && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-caixa-primary/90 backdrop-blur-xl rounded-xl p-6 border border-caixa-primary/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto backdrop-blur-xl"
+            style={{ background: 'rgba(15,23,42,0.95)', border: `1px solid ${BORDER}` }}
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/30 rounded-lg">
-                  <Edit className="text-blue-400" size={20} />
+                <div
+                  className="p-2.5 rounded-xl"
+                  style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)' }}
+                >
+                  <Edit className="text-blue-400" size={18} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">Editar Pagamento</h3>
-                  <p className="text-caixa-light text-sm">ID: #{editando.id} - {editando.tipo?.toUpperCase()}</p>
+                  <h3 className="text-lg font-bold text-white">Editar Pagamento</h3>
+                  <p className="text-white/40 text-xs">ID: #{editando.id} - {editando.tipo?.toUpperCase()}</p>
                 </div>
               </div>
               <button
                 onClick={cancelarEdicao}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-white/40 hover:text-white"
               >
-                <X className="text-caixa-light" size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <div className="space-y-4">
-              {/* Título */}
+              {/* Titulo */}
               <div>
-                <label className="flex items-center gap-2 text-white font-semibold mb-2">
-                  <FileText size={16} />
+                <label className="flex items-center gap-2 text-white/80 font-medium mb-2 text-sm">
+                  <FileText size={14} />
                   Título *
                 </label>
                 <input
                   type="text"
                   value={formEdicao.titulo}
                   onChange={(e) => setFormEdicao(prev => ({ ...prev, titulo: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white placeholder-caixa-extra-light focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                  className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   placeholder="Ex: Serviço de Consultoria"
                 />
               </div>
 
-              {/* Descrição */}
+              {/* Descricao */}
               <div>
-                <label className="text-white font-semibold mb-2 block">Descrição</label>
+                <label className="text-white/80 font-medium mb-2 block text-sm">Descrição</label>
                 <textarea
                   value={formEdicao.descricao}
                   onChange={(e) => setFormEdicao(prev => ({ ...prev, descricao: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white placeholder-caixa-extra-light focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                  className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm resize-none"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   placeholder="Descrição do serviço ou produto"
                   rows="3"
                 />
@@ -944,8 +1017,8 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
 
               {/* Valor */}
               <div>
-                <label className="flex items-center gap-2 text-white font-semibold mb-2">
-                  <DollarSign size={16} />
+                <label className="flex items-center gap-2 text-white/80 font-medium mb-2 text-sm">
+                  <DollarSign size={14} />
                   Valor *
                 </label>
                 <input
@@ -955,27 +1028,29 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
                     const value = e.target.value.replace(/\D/g, "");
                     setFormEdicao(prev => ({ ...prev, valor: value }));
                   }}
-                  className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white placeholder-caixa-extra-light focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                  className="w-full px-4 py-3 rounded-xl text-emerald-400 font-semibold placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   placeholder="0,00"
                 />
               </div>
 
-              {/* Número de Parcelas (apenas para boleto) */}
+              {/* Numero de Parcelas (apenas para boleto) */}
               {editando.tipo === 'boleto' && (
                 <div>
-                  <label className="flex items-center gap-2 text-white font-semibold mb-2">
-                    <CreditCard size={16} />
+                  <label className="flex items-center gap-2 text-white/80 font-medium mb-2 text-sm">
+                    <CreditCard size={14} />
                     Número de Parcelas
                   </label>
                   <select
                     value={formEdicao.parcelas}
                     onChange={(e) => setFormEdicao(prev => ({ ...prev, parcelas: parseInt(e.target.value) }))
                     }
-                    className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                    className="w-full px-4 py-3 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm [&>option]:bg-white [&>option]:text-gray-800"
+                    style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   >
-                    <option value={1} className="bg-caixa-primary">À vista</option>
+                    <option value={1}>À vista</option>
                     {[2,3,4,5,6,7,8,9,10,11,12].map(num => (
-                      <option key={num} value={num} className="bg-caixa-primary">
+                      <option key={num} value={num}>
                         {num}x de R$ {formEdicao.valor ? formatarValor(Math.floor(parseInt(formEdicao.valor) / num)) : '0,00'}
                       </option>
                     ))}
@@ -986,53 +1061,57 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
               {/* Data de Vencimento (apenas para boleto) */}
               {editando.tipo === 'boleto' && (
                 <div>
-                  <label className="flex items-center gap-2 text-white font-semibold mb-2">
-                    <Calendar size={16} />
+                  <label className="flex items-center gap-2 text-white/80 font-medium mb-2 text-sm">
+                    <Calendar size={14} />
                     Data de Vencimento *
                   </label>
                   <input
                     type="date"
                     value={formEdicao.data_vencimento}
                     onChange={(e) => setFormEdicao(prev => ({ ...prev, data_vencimento: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                    className="w-full px-4 py-3 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm"
+                    style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   />
                 </div>
               )}
 
-              {/* Observações */}
+              {/* Observacoes */}
               <div>
-                <label className="text-white font-semibold mb-2 block">Observações</label>
+                <label className="text-white/80 font-medium mb-2 block text-sm">Observações</label>
                 <textarea
                   value={formEdicao.observacoes}
                   onChange={(e) => setFormEdicao(prev => ({ ...prev, observacoes: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white/10 border border-caixa-primary/30 rounded-xl text-white placeholder-caixa-extra-light focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange"
+                  className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm resize-none"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                   placeholder="Observações adicionais"
                   rows="3"
                 />
               </div>
             </div>
 
-            {/* Botões */}
+            {/* Botoes */}
             <div className="flex gap-3 mt-6">
               <button
                 onClick={cancelarEdicao}
-                className="flex-1 py-3 px-4 bg-caixa-primary/50 hover:bg-caixa-primary/70 text-white rounded-lg transition-colors"
+                className="flex-1 py-3 px-4 text-white/70 hover:text-white rounded-xl transition-all text-sm font-medium"
+                style={{ background: CARD, border: `1px solid ${BORDER}` }}
               >
                 Cancelar
               </button>
               <button
                 onClick={salvarEdicao}
                 disabled={salvandoEdicao || !formEdicao.titulo}
-                className="flex-1 py-3 px-4 bg-gradient-to-r from-caixa-orange to-caixa-red hover:from-caixa-red hover:to-caixa-orange text-white rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 text-white rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40"
+                style={{ background: ACCENT_GRADIENT }}
               >
                 {salvandoEdicao ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" />
+                    <Loader2 size={15} className="animate-spin" />
                     Salvando...
                   </>
                 ) : (
                   <>
-                    <Save size={16} />
+                    <Save size={15} />
                     Salvar Alterações
                   </>
                 )}
@@ -1042,47 +1121,54 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
         </div>
       )}
 
-      {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+      {/* Modal de Confirmacao de Exclusao */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-caixa-primary/90 backdrop-blur-xl rounded-xl p-6 border border-caixa-primary/30 max-w-md w-full"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="rounded-2xl p-6 max-w-md w-full backdrop-blur-xl"
+            style={{ background: 'rgba(15,23,42,0.95)', border: `1px solid ${BORDER}` }}
           >
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="text-red-400" size={32} />
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}
+              >
+                <AlertCircle className="text-red-400" size={28} />
               </div>
-              
-              <h3 className="text-xl font-bold text-white mb-2">Confirmar Exclusão</h3>
-              <p className="text-caixa-light mb-2">
+
+              <h3 className="text-lg font-bold text-white mb-2">Confirmar Exclusão</h3>
+              <p className="text-white/50 mb-2 text-sm">
                 Tem certeza que deseja excluir o pagamento:
               </p>
-              <p className="text-white font-semibold mb-6">
+              <p className="text-white font-semibold mb-6 text-sm">
                 "{confirmDelete.titulo}"?
               </p>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDelete(null)}
-                  className="flex-1 py-3 px-4 bg-caixa-primary/50 hover:bg-caixa-primary/70 text-white rounded-lg transition-colors"
+                  className="flex-1 py-3 px-4 text-white/70 hover:text-white rounded-xl transition-all text-sm font-medium"
+                  style={{ background: CARD, border: `1px solid ${BORDER}` }}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={() => handleDeletePagamento(confirmDelete.id)}
                   disabled={deletandoId === confirmDelete.id}
-                  className="flex-1 py-3 px-4 bg-red-500/80 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-red-500/80 hover:bg-red-500 text-white rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2 text-sm font-semibold"
+                  style={{ border: '1px solid rgba(239,68,68,0.4)' }}
                 >
                   {deletandoId === confirmDelete.id ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
+                      <Loader2 size={15} className="animate-spin" />
                       Excluindo...
                     </>
                   ) : (
                     <>
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                       Excluir
                     </>
                   )}

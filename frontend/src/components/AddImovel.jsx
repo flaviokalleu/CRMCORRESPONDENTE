@@ -3,65 +3,72 @@ import generateStableKey from 'utils/generateStableKey';
 import axios from "axios";
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, MapPin, Bed, Bath, Tag, DollarSign, FileText, Camera, Upload, 
-  Loader2, Save, Trash2, CheckCircle, AlertTriangle, Building, Plus, X,
-  Eye, EyeOff, ImageIcon, Paperclip
+  Home, MapPin, Bed, Bath, Tag, DollarSign, FileText, Camera, Upload,
+  Loader2, Save, Trash2, CheckCircle, AlertCircle, Building, Plus, X,
+  ImageIcon, Paperclip, ArrowRight, Globe, Users, Shield
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-// Componente de Input melhorado
-const InputField = ({
-  label,
-  name,
-  type = 'text',
-  icon: Icon,
-  required = false,
-  placeholder,
-  value,
-  onChange,
-  error,
-  children,
-  className = '',
-  ...props
-}) => {
-  return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-        <Icon className="w-4 h-4 text-caixa-orange" />
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {children || (
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          required={required}
-          placeholder={placeholder}
-          className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-300 ${
-            error 
-              ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
-              : 'border-gray-200 focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary hover:border-gray-300'
-          } ${className}`}
-          {...props}
-        />
-      )}
-      {error && (
-        <motion.p 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-red-500 text-sm flex items-center gap-1"
-        >
-          <AlertTriangle className="h-3 w-3" />
-          {error}
-        </motion.p>
-      )}
-    </div>
-  );
-};
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const CARD = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.10)';
+const INPUT_BG = 'rgba(255,255,255,0.05)';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #F97316, #EA580C)';
 
-// Componente de Tags personalizáveis
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [.22, 1, .36, 1] } },
+};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
+
+const inputClass = `w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200
+  focus:outline-none focus:ring-2 focus:ring-[#F97316]/60 focus:border-[#F97316]/40`;
+const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
+const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
+const selectClass = `${inputClass} cursor-pointer [&>option]:bg-white [&>option]:text-gray-800`;
+
+// ─── Section wrapper ─────────────────────────────────────────────────────────
+const FormSection = ({ icon, title, subtitle, children }) => (
+  <motion.div variants={fadeUp}
+    className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
+    style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+    <div className="flex items-center gap-3 pb-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: ACCENT_GRADIENT }}>
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-white">{title}</h3>
+        {subtitle && <p className="text-[10px] text-white/40 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </motion.div>
+);
+
+// ─── Input field ─────────────────────────────────────────────────────────────
+const InputField = ({ label, name, type = 'text', icon: Icon, required, placeholder, value, onChange, error, children, ...props }) => (
+  <div className="space-y-1.5">
+    <label className={labelClass}>
+      <Icon className="w-3 h-3" />
+      {label} {required && <span className="text-[#F97316]">*</span>}
+    </label>
+    {children || (
+      <input type={type} name={name} value={value} onChange={onChange} required={required}
+        placeholder={placeholder}
+        className={`${inputClass} ${error ? 'ring-2 ring-red-500/40 border-red-500/30' : ''}`}
+        style={inputStyle} {...props} />
+    )}
+    {error && (
+      <p className="text-red-400 text-[10px] flex items-center gap-1">
+        <AlertCircle className="h-3 w-3" />{error}
+      </p>
+    )}
+  </div>
+);
+
+// ─── Tag selector (dark theme) ───────────────────────────────────────────────
 const TagSelector = ({ tags, setTags }) => {
   const [customTag, setCustomTag] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -81,115 +88,69 @@ const TagSelector = ({ tags, setTags }) => {
     }
   };
 
-  const removeTag = (tagToRemove) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  const toggleTag = (tag) => {
-    if (tags.includes(tag)) {
-      removeTag(tag);
-    } else {
-      setTags([...tags, tag]);
-    }
-  };
+  const removeTag = (t) => setTags(tags.filter(tag => tag !== t));
+  const toggleTag = (t) => tags.includes(t) ? removeTag(t) : setTags([...tags, t]);
 
   return (
-    <div className="space-y-4">
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-        <Tag className="w-4 h-4 text-caixa-orange" />
-        Tags do Imóvel
-      </label>
-
-      {/* Tags selecionadas */}
+    <div className="space-y-3">
       {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+        <div className="flex flex-wrap gap-1.5 p-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${BORDER}` }}>
           {tags.map((tag, index) => (
-            <motion.span
-              key={generateStableKey(tag, index)}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-caixa-primary text-white text-sm rounded-full"
-            >
+            <motion.span key={generateStableKey(tag, index)}
+              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg text-white"
+              style={{ background: ACCENT_GRADIENT }}>
               {tag}
-              <button
-                type="button"
-                onClick={() => removeTag(tag)}
-                className="ml-1 hover:bg-white/20 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3 h-3" />
+              <button type="button" onClick={() => removeTag(tag)}
+                className="ml-0.5 hover:bg-white/20 rounded-full p-0.5 transition-colors">
+                <X className="w-2.5 h-2.5" />
               </button>
             </motion.span>
           ))}
         </div>
       )}
 
-      {/* Tags predefinidas */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
         {predefinedTags.map((tag) => (
-          <motion.button
-            key={tag}
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <motion.button key={tag} type="button" whileTap={{ scale: 0.96 }}
             onClick={() => toggleTag(tag)}
-            className={`px-3 py-2 text-sm rounded-lg border-2 transition-all duration-200 ${
+            className={`px-2.5 py-2 text-[10px] font-semibold rounded-lg transition-all duration-200 ${
               tags.includes(tag)
-                ? 'bg-caixa-primary text-white border-caixa-primary'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-caixa-primary/50 hover:bg-gray-50'
+                ? 'text-white shadow-md'
+                : 'text-white/50 hover:text-white/80'
             }`}
-          >
+            style={tags.includes(tag)
+              ? { background: ACCENT_GRADIENT }
+              : { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` }}>
             {tag}
           </motion.button>
         ))}
       </div>
 
-      {/* Botão para adicionar tag personalizada */}
       <div className="flex gap-2">
         <AnimatePresence>
           {showCustomInput ? (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="flex gap-2 flex-1"
-            >
-              <input
-                type="text"
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                placeholder="Digite uma tag personalizada"
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary"
-                onKeyPress={(e) => e.key === 'Enter' && addCustomTag()}
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={addCustomTag}
-                className="px-4 py-2 bg-caixa-primary text-white rounded-lg hover:bg-caixa-secondary transition-colors"
-              >
+            <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }} className="flex gap-2 flex-1">
+              <input type="text" value={customTag} onChange={(e) => setCustomTag(e.target.value)}
+                placeholder="Tag personalizada" className={inputClass} style={inputStyle}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTag())} autoFocus />
+              <button type="button" onClick={addCustomTag}
+                className="px-3 py-2 rounded-lg text-white flex-shrink-0" style={{ background: ACCENT_GRADIENT }}>
                 <Plus className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCustomInput(false);
-                  setCustomTag('');
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-              >
+              <button type="button" onClick={() => { setShowCustomInput(false); setCustomTag(''); }}
+                className="px-3 py-2 rounded-lg text-white/50 flex-shrink-0"
+                style={{ backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` }}>
                 <X className="w-4 h-4" />
               </button>
             </motion.div>
           ) : (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              type="button"
-              onClick={() => setShowCustomInput(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-caixa-orange to-caixa-orange-light text-white rounded-lg hover:shadow-lg transition-all duration-200"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Tag Personalizada
+            <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              type="button" onClick={() => setShowCustomInput(true)}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white rounded-lg"
+              style={{ background: ACCENT_GRADIENT }}>
+              <Plus className="w-3.5 h-3.5" /> Tag Personalizada
             </motion.button>
           )}
         </AnimatePresence>
@@ -198,70 +159,43 @@ const TagSelector = ({ tags, setTags }) => {
   );
 };
 
-// Componente de Upload de arquivos melhorado
+// ─── File drop zone (dark theme) ─────────────────────────────────────────────
 const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon, value }) => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
-
   const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
+    e.preventDefault(); setDragOver(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      onChange({ target: { files: multiple ? files : [files[0]] } });
-    }
+    if (files.length > 0) onChange({ target: { files: multiple ? files : [files[0]] } });
   };
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-        <Icon className="w-4 h-4 text-caixa-orange" />
-        {label}
-      </label>
-      
+    <div className="space-y-1.5">
+      <p className={labelClass}><Icon className="w-3 h-3" />{label}</p>
       <div
-        className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 cursor-pointer ${
-          dragOver 
-            ? 'border-caixa-primary bg-caixa-primary/5' 
-            : 'border-gray-300 hover:border-caixa-primary/50 hover:bg-gray-50'
+        className={`relative rounded-xl p-5 transition-all duration-200 cursor-pointer group ${
+          dragOver ? 'border-[#F97316]/50 bg-white/[0.04]' : 'hover:border-[#F97316]/30 hover:bg-white/[0.03]'
         }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        style={{ border: `1.5px dashed ${dragOver ? 'rgba(249,115,22,0.5)' : 'rgba(255,255,255,0.12)'}`, backgroundColor: 'rgba(255,255,255,0.02)' }}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={accept}
-          multiple={multiple}
-          onChange={onChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        
+        onClick={() => fileInputRef.current?.click()}>
+        <input ref={fileInputRef} type="file" accept={accept} multiple={multiple}
+          onChange={onChange} className="hidden" />
         <div className="text-center">
-          <Icon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600 mb-1">
-            Clique para selecionar ou arraste arquivos aqui
+          <Upload className="w-6 h-6 text-white/20 group-hover:text-[#F97316] transition-colors mx-auto mb-2" />
+          <p className="text-[10px] text-white/30 group-hover:text-white/50 transition-colors">
+            Clique ou arraste arquivos
           </p>
-          <p className="text-xs text-gray-400">
-            {accept === 'image/*' ? 'PNG, JPG, JPEG até 10MB' : 'PDF até 10MB'}
+          <p className="text-[9px] text-white/20 mt-1">
+            {accept === 'image/*' ? 'PNG, JPG até 10MB' : accept === '.pdf' ? 'PDF até 10MB' : 'Qualquer arquivo'}
           </p>
         </div>
-
         {value && (
-          <div className="mt-3 text-xs text-caixa-primary font-medium">
-            {multiple && value.length ? `${value.length} arquivo(s) selecionado(s)` : 
+          <div className="mt-2 text-[10px] font-medium text-center" style={{ color: '#F97316' }}>
+            {multiple && value.length ? `${value.length} arquivo(s)` :
              !multiple && value ? '1 arquivo selecionado' : ''}
           </div>
         )}
@@ -270,121 +204,58 @@ const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon
   );
 };
 
+// ─── Main component ──────────────────────────────────────────────────────────
 const AddImovel = () => {
-  // Estados do formulário
   const [formData, setFormData] = useState({
-    nomeImovel: "",
-    descricaoImovel: "",
-    endereco: "",
-    tipo: "novo",
-    quartos: "",
-    banheiro: "",
-    valorAvaliacao: "",
-    valorVenda: "",
-    localizacao: "Valparaiso de Goiás - Goiás",
-    exclusivo: "não",
-    temInquilino: "não",
-    situacaoImovel: "",
-    observacoes: ""
+    nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo",
+    quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "",
+    localizacao: "Valparaiso de Goiás - Goiás", exclusivo: "não",
+    temInquilino: "não", situacaoImovel: "", observacoes: ""
   });
-
   const [tags, setTags] = useState([]);
-  const [files, setFiles] = useState({
-    documentacao: null,
-    imagens: [],
-    imagemCapa: null
-  });
-
+  const [files, setFiles] = useState({ documentacao: null, imagens: [], imagemCapa: null });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const notificationRef = useRef(null);
 
-  // Formatação de moeda
   const formatCurrency = (value) => {
     if (!value) return "";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
   const handleCurrencyChange = (field, value) => {
-    const numericValue = value.replace(/\D/g, "");
-    setFormData(prev => ({
-      ...prev,
-      [field]: numericValue ? (numericValue / 100).toFixed(2) : ""
-    }));
+    const num = value.replace(/\D/g, "");
+    setFormData(prev => ({ ...prev, [field]: num ? (num / 100).toFixed(2) : "" }));
   };
 
-  // Handler genérico para inputs
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   };
 
-  // Validação do formulário
   const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.nomeImovel.trim()) newErrors.nomeImovel = "Nome do imóvel é obrigatório";
-    if (!formData.endereco.trim()) newErrors.endereco = "Endereço é obrigatório";
-    if (!formData.quartos) newErrors.quartos = "Número de quartos é obrigatório";
-    if (!formData.banheiro) newErrors.banheiro = "Número de banheiros é obrigatório";
-    if (!formData.valorVenda) newErrors.valorVenda = "Valor de venda é obrigatório";
-    if (!formData.situacaoImovel.trim()) newErrors.situacaoImovel = "Situação do imóvel é obrigatória";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!formData.nomeImovel.trim()) e.nomeImovel = "Nome é obrigatório";
+    if (!formData.endereco.trim()) e.endereco = "Endereço é obrigatório";
+    if (!formData.quartos) e.quartos = "Quartos é obrigatório";
+    if (!formData.banheiro) e.banheiro = "Banheiros é obrigatório";
+    if (!formData.valorVenda) e.valorVenda = "Valor de venda é obrigatório";
+    if (!formData.situacaoImovel.trim()) e.situacaoImovel = "Situação é obrigatória";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  // Reset do formulário
   const resetForm = () => {
-    setFormData({
-      nomeImovel: "",
-      descricaoImovel: "",
-      endereco: "",
-      tipo: "novo",
-      quartos: "",
-      banheiro: "",
-      valorAvaliacao: "",
-      valorVenda: "",
-      localizacao: "Valparaiso de Goiás - Goiás",
-      exclusivo: "não",
-      temInquilino: "não",
-      situacaoImovel: "",
-      observacoes: ""
-    });
-    setTags([]);
-    setFiles({
-      documentacao: null,
-      imagens: [],
-      imagemCapa: null
-    });
-    setMessage({ type: '', text: '' });
-    setErrors({});
+    setFormData({ nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo", quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "", localizacao: "Valparaiso de Goiás - Goiás", exclusivo: "não", temInquilino: "não", situacaoImovel: "", observacoes: "" });
+    setTags([]); setFiles({ documentacao: null, imagens: [], imagemCapa: null }); setMessage({ type: '', text: '' }); setErrors({});
   };
 
-  // Submit do formulário
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    if (!validateForm()) {
-      setMessage({
-        type: 'error',
-        text: 'Por favor, corrija os erros no formulário antes de continuar.'
-      });
-      return;
-    }
-
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Corrija os erros no formulário.' }); return; }
+    setLoading(true); setMessage({ type: '', text: '' });
     const submitData = new FormData();
-    
-    // Adicionar dados do formulário
     Object.entries(formData).forEach(([key, value]) => {
       if (key === 'nomeImovel') submitData.append('nome_imovel', value);
       else if (key === 'descricaoImovel') submitData.append('descricao_imovel', value);
@@ -394,415 +265,214 @@ const AddImovel = () => {
       else if (key === 'situacaoImovel') submitData.append('situacao_imovel', value);
       else submitData.append(key, value);
     });
-
-    // Adicionar tags
     submitData.append("tags", tags.join(", "));
-
-    // Adicionar arquivos
-    if (files.documentacao) {
-      submitData.append("documentacao", files.documentacao);
-    }
-    
-    files.imagens.forEach((imagem) => {
-      submitData.append("imagens", imagem);
-    });
-    
-    if (files.imagemCapa) {
-      submitData.append("imagem_capa", files.imagemCapa);
-    }
-
+    if (files.documentacao) submitData.append("documentacao", files.documentacao);
+    files.imagens.forEach((img) => submitData.append("imagens", img));
+    if (files.imagemCapa) submitData.append("imagem_capa", files.imagemCapa);
     try {
-      await axios.post(`${API_URL}/imoveis`, submitData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      
-      setMessage({
-        type: 'success',
-        text: 'Imóvel cadastrado com sucesso!'
-      });
-      
-      setTimeout(() => {
-        resetForm();
-      }, 2000);
-      
+      await axios.post(`${API_URL}/imoveis`, submitData, { headers: { "Content-Type": "multipart/form-data" } });
+      setMessage({ type: 'success', text: 'Imóvel cadastrado com sucesso!' });
+      setTimeout(() => resetForm(), 2000);
     } catch (error) {
-      console.error('Erro ao cadastrar imóvel:', error);
-      setMessage({
-        type: 'error',
-        text: error.response?.data?.message || 'Erro ao cadastrar imóvel. Tente novamente.'
-      });
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao cadastrar imóvel.' });
     } finally {
       setLoading(false);
-      if (notificationRef.current) {
-        notificationRef.current.scrollIntoView({ behavior: "smooth" });
-      }
+      notificationRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-caixa-primary via-caixa-secondary to-caixa-primary">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        
-        {/* Header melhorado */}
-        <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
-          <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 mb-4">
-            <Home className="w-8 h-8 text-caixa-orange" />
-            <h1 className="text-3xl md:text-4xl font-bold text-white">
-              Cadastro de Imóvel
-            </h1>
+    <div className="min-h-screen w-full bg-caixa-gradient">
+      <div className="w-full max-w-6xl mx-auto px-4 py-6 sm:px-6">
+
+        {/* ── Header ── */}
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
+            <Home className="w-5 h-5 text-white" />
           </div>
-          <p className="text-white/90 text-lg max-w-2xl mx-auto">
-            Preencha as informações abaixo para cadastrar um novo imóvel no sistema
-          </p>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Imóvel</h1>
+            <p className="text-[11px] text-white/40">Preencha as informações para cadastrar um novo imóvel</p>
+          </div>
         </motion.div>
 
-        {/* Formulário principal */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
-        >
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
-            
-            {/* Seção 1: Informações Básicas */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Building className="w-5 h-5 text-caixa-orange" />
-                Informações Básicas
-              </h2>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <InputField
-                    label="Nome do Imóvel"
-                    name="nomeImovel"
-                    icon={Home}
-                    required
-                    placeholder="Ex: Residencial Jardim Europa"
-                    value={formData.nomeImovel}
-                    onChange={(e) => handleInputChange('nomeImovel', e.target.value)}
-                    error={errors.nomeImovel}
-                  />
+        <form onSubmit={handleSubmit}>
+          <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
+
+            {/* ═══ INFORMAÇÕES BÁSICAS ═══ */}
+            <FormSection icon={<Building className="w-4 h-4 text-white" />} title="Informações Básicas"
+              subtitle="Nome, tipo e descrição do imóvel">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <InputField label="Nome do Imóvel" name="nomeImovel" icon={Home} required
+                    placeholder="Ex: Residencial Jardim Europa" value={formData.nomeImovel}
+                    onChange={(e) => handleInputChange('nomeImovel', e.target.value)} error={errors.nomeImovel} />
                 </div>
-
-                <InputField
-                  label="Tipo"
-                  name="tipo"
-                  icon={Building}
-                  required
-                  value={formData.tipo}
-                  onChange={(e) => handleInputChange('tipo', e.target.value)}
-                >
-                  <select
-                    value={formData.tipo}
-                    onChange={(e) => handleInputChange('tipo', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300"
-                    required
-                  >
-                    <option value="novo">Novo</option>
-                    <option value="usado">Usado</option>
-                    <option value="agio">Ágio</option>
-                  </select>
-                </InputField>
+                <div>
+                  <InputField label="Tipo" name="tipo" icon={Building} required value={formData.tipo}
+                    onChange={(e) => handleInputChange('tipo', e.target.value)}>
+                    <select value={formData.tipo} onChange={(e) => handleInputChange('tipo', e.target.value)}
+                      className={selectClass} style={inputStyle} required>
+                      <option value="novo">Novo</option>
+                      <option value="usado">Usado</option>
+                      <option value="agio">Ágio</option>
+                    </select>
+                  </InputField>
+                </div>
               </div>
-
-              <div className="mt-6">
-                <InputField
-                  label="Descrição do Imóvel"
-                  name="descricaoImovel"
-                  icon={FileText}
-                  value={formData.descricaoImovel}
-                  onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}
-                >
-                  <textarea
-                    value={formData.descricaoImovel}
+              <div>
+                <InputField label="Descrição" name="descricaoImovel" icon={FileText}
+                  value={formData.descricaoImovel} onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}>
+                  <textarea value={formData.descricaoImovel}
                     onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300 resize-none"
-                    rows="4"
-                    placeholder="Descreva detalhes, diferenciais e características do imóvel..."
-                  />
+                    className={`${inputClass} resize-y min-h-[80px]`} style={inputStyle} rows="3"
+                    placeholder="Descreva detalhes, diferenciais e características..." />
                 </InputField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* Seção 2: Localização */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-caixa-orange" />
-                Localização
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField
-                  label="Endereço"
-                  name="endereco"
-                  icon={MapPin}
-                  required
-                  placeholder="Rua, número, bairro"
-                  value={formData.endereco}
-                  onChange={(e) => handleInputChange('endereco', e.target.value)}
-                  error={errors.endereco}
-                />
-
-                <InputField
-                  label="Cidade/Estado"
-                  name="localizacao"
-                  icon={MapPin}
-                  value={formData.localizacao}
-                  onChange={(e) => handleInputChange('localizacao', e.target.value)}
-                >
-                  <select
-                    value={formData.localizacao}
-                    onChange={(e) => handleInputChange('localizacao', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300"
-                  >
-                    <option value="Valparaiso de Goiás - Goiás">Valparaíso de Goiás - Goiás</option>
-                    <option value="Cidade Ocidental - Goias">Cidade Ocidental - Goiás</option>
-                    <option value="Luziania - Goias">Luziânia - Goiás</option>
-                    <option value="Jardim Inga - Goias">Jardim Ingá - Goiás</option>
+            {/* ═══ LOCALIZAÇÃO ═══ */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Localização"
+              subtitle="Endereço e cidade do imóvel">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField label="Endereço" name="endereco" icon={MapPin} required
+                  placeholder="Rua, número, bairro" value={formData.endereco}
+                  onChange={(e) => handleInputChange('endereco', e.target.value)} error={errors.endereco} />
+                <InputField label="Cidade/Estado" name="localizacao" icon={Globe}
+                  value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}>
+                  <select value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}
+                    className={selectClass} style={inputStyle}>
+                    <option value="Valparaiso de Goiás - Goiás">Valparaíso de Goiás - GO</option>
+                    <option value="Cidade Ocidental - Goias">Cidade Ocidental - GO</option>
+                    <option value="Luziania - Goias">Luziânia - GO</option>
+                    <option value="Jardim Inga - Goias">Jardim Ingá - GO</option>
                   </select>
                 </InputField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* Seção 3: Características */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Bed className="w-5 h-5 text-caixa-orange" />
-                Características
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <InputField
-                  label="Quartos"
-                  name="quartos"
-                  type="number"
-                  icon={Bed}
-                  required
-                  placeholder="Ex: 3"
-                  value={formData.quartos}
-                  onChange={(e) => handleInputChange('quartos', e.target.value)}
-                  error={errors.quartos}
-                />
-
-                <InputField
-                  label="Banheiros"
-                  name="banheiro"
-                  type="number"
-                  icon={Bath}
-                  required
-                  placeholder="Ex: 2"
-                  value={formData.banheiro}
-                  onChange={(e) => handleInputChange('banheiro', e.target.value)}
-                  error={errors.banheiro}
-                />
-
-                <InputField
-                  label="Valor de Avaliação"
-                  name="valorAvaliacao"
-                  icon={DollarSign}
-                  placeholder="Ex: R$ 350.000,00"
-                  value={formatCurrency(formData.valorAvaliacao)}
-                  onChange={(e) => handleCurrencyChange('valorAvaliacao', e.target.value)}
-                />
-
-                <InputField
-                  label="Valor de Venda"
-                  name="valorVenda"
-                  icon={DollarSign}
-                  required
-                  placeholder="Ex: R$ 320.000,00"
-                  value={formatCurrency(formData.valorVenda)}
-                  onChange={(e) => handleCurrencyChange('valorVenda', e.target.value)}
-                  error={errors.valorVenda}
-                />
+            {/* ═══ CARACTERÍSTICAS ═══ */}
+            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Características"
+              subtitle="Quartos, banheiros e valores">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <InputField label="Quartos" name="quartos" type="number" icon={Bed} required
+                  placeholder="3" value={formData.quartos}
+                  onChange={(e) => handleInputChange('quartos', e.target.value)} error={errors.quartos} />
+                <InputField label="Banheiros" name="banheiro" type="number" icon={Bath} required
+                  placeholder="2" value={formData.banheiro}
+                  onChange={(e) => handleInputChange('banheiro', e.target.value)} error={errors.banheiro} />
+                <InputField label="Valor Avaliação" name="valorAvaliacao" icon={DollarSign}
+                  placeholder="R$ 350.000" value={formatCurrency(formData.valorAvaliacao)}
+                  onChange={(e) => handleCurrencyChange('valorAvaliacao', e.target.value)} />
+                <InputField label="Valor Venda" name="valorVenda" icon={DollarSign} required
+                  placeholder="R$ 320.000" value={formatCurrency(formData.valorVenda)}
+                  onChange={(e) => handleCurrencyChange('valorVenda', e.target.value)} error={errors.valorVenda} />
               </div>
-            </div>
+            </FormSection>
 
-            {/* Seção 4: Tags */}
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
+            {/* ═══ TAGS ═══ */}
+            <FormSection icon={<Tag className="w-4 h-4 text-white" />} title="Tags do Imóvel"
+              subtitle="Selecione características e diferenciais">
               <TagSelector tags={tags} setTags={setTags} />
-            </div>
+            </FormSection>
 
-            {/* Seção 5: Detalhes Adicionais */}
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-caixa-orange" />
-                Detalhes Adicionais
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <InputField
-                  label="Situação do Imóvel"
-                  name="situacaoImovel"
-                  icon={Home}
-                  required
-                  placeholder="Ex: Pronto para morar"
-                  value={formData.situacaoImovel}
-                  onChange={(e) => handleInputChange('situacaoImovel', e.target.value)}
-                  error={errors.situacaoImovel}
-                />
-
-                <InputField
-                  label="Exclusivo"
-                  name="exclusivo"
-                  icon={Tag}
-                  value={formData.exclusivo}
-                  onChange={(e) => handleInputChange('exclusivo', e.target.value)}
-                >
-                  <select
-                    value={formData.exclusivo}
-                    onChange={(e) => handleInputChange('exclusivo', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300"
-                  >
+            {/* ═══ DETALHES ADICIONAIS ═══ */}
+            <FormSection icon={<FileText className="w-4 h-4 text-white" />} title="Detalhes Adicionais"
+              subtitle="Situação, exclusividade e observações">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <InputField label="Situação do Imóvel" name="situacaoImovel" icon={Home} required
+                  placeholder="Pronto para morar" value={formData.situacaoImovel}
+                  onChange={(e) => handleInputChange('situacaoImovel', e.target.value)} error={errors.situacaoImovel} />
+                <InputField label="Exclusivo" name="exclusivo" icon={Shield}
+                  value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}>
+                  <select value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}
+                    className={selectClass} style={inputStyle}>
                     <option value="não">Não</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
-
-                <InputField
-                  label="Tem Inquilino"
-                  name="temInquilino"
-                  icon={Home}
-                  value={formData.temInquilino}
-                  onChange={(e) => handleInputChange('temInquilino', e.target.value)}
-                >
-                  <select
-                    value={formData.temInquilino}
-                    onChange={(e) => handleInputChange('temInquilino', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300"
-                  >
+                <InputField label="Tem Inquilino" name="temInquilino" icon={Users}
+                  value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}>
+                  <select value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}
+                    className={selectClass} style={inputStyle}>
                     <option value="não">Não</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
               </div>
-
-              <div className="mt-6">
-                <InputField
-                  label="Observações"
-                  name="observacoes"
-                  icon={FileText}
-                  value={formData.observacoes}
-                  onChange={(e) => handleInputChange('observacoes', e.target.value)}
-                >
-                  <textarea
-                    value={formData.observacoes}
+              <div>
+                <InputField label="Observações" name="observacoes" icon={FileText}
+                  value={formData.observacoes} onChange={(e) => handleInputChange('observacoes', e.target.value)}>
+                  <textarea value={formData.observacoes}
                     onChange={(e) => handleInputChange('observacoes', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary transition-all duration-300 resize-none"
-                    rows="3"
-                    placeholder="Informações adicionais sobre o imóvel..."
-                  />
+                    className={`${inputClass} resize-y min-h-[70px]`} style={inputStyle} rows="3"
+                    placeholder="Informações adicionais sobre o imóvel..." />
                 </InputField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* Seção 6: Upload de Arquivos */}
-            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-caixa-orange" />
-                Documentos e Imagens
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FileUploadField
-                  label="Documentação (PDF)"
-                  accept=".pdf"
-                  icon={Paperclip}
+            {/* ═══ DOCUMENTOS E IMAGENS ═══ */}
+            <FormSection icon={<Upload className="w-4 h-4 text-white" />} title="Documentos e Imagens"
+              subtitle="Anexe documentação e fotos do imóvel">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FileUploadField label="Documentação (PDF)" accept=".pdf" icon={Paperclip}
                   onChange={(e) => setFiles(prev => ({ ...prev, documentacao: e.target.files[0] }))}
-                  value={files.documentacao}
-                />
-
-                <FileUploadField
-                  label="Imagens do Imóvel"
-                  accept="image/*"
-                  multiple
-                  icon={ImageIcon}
+                  value={files.documentacao} />
+                <FileUploadField label="Imagens do Imóvel" accept="image/*" multiple icon={ImageIcon}
                   onChange={(e) => setFiles(prev => ({ ...prev, imagens: Array.from(e.target.files) }))}
-                  value={files.imagens}
-                />
-
-                <FileUploadField
-                  label="Imagem de Capa"
-                  accept="image/*"
-                  icon={Camera}
+                  value={files.imagens} />
+                <FileUploadField label="Imagem de Capa" accept="image/*" icon={Camera}
                   onChange={(e) => setFiles(prev => ({ ...prev, imagemCapa: e.target.files[0] }))}
-                  value={files.imagemCapa}
-                />
+                  value={files.imagemCapa} />
               </div>
-            </div>
+            </FormSection>
 
-            {/* Botões de ação */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={resetForm}
-                className="flex-1 py-4 px-6 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 border-2 border-gray-300 flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-5 h-5" />
-                Limpar Formulário
+            {/* ═══ BOTÕES ═══ */}
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                type="button" onClick={resetForm}
+                className="flex-1 py-3.5 rounded-xl text-sm font-semibold text-white/60 flex items-center justify-center gap-2
+                  hover:text-white/80 transition-all duration-200"
+                style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+                <Trash2 className="w-4 h-4" /> Limpar
               </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: loading ? 1 : 1.02 }}
-                whileTap={{ scale: loading ? 1 : 0.98 }}
-                type="submit"
-                disabled={loading}
-                className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-xl ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-gradient-to-r from-caixa-orange to-caixa-orange-light hover:shadow-2xl text-white'
-                }`}
-              >
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                type="submit" disabled={loading}
+                className={`flex-[2] py-3.5 rounded-xl text-sm text-white font-bold flex items-center justify-center gap-2
+                  shadow-lg shadow-[#F97316]/20 transition-all duration-200 ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-xl hover:shadow-[#F97316]/30'}`}
+                style={{ background: ACCENT_GRADIENT }}>
                 {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Cadastrando...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" />Cadastrando...</>
                 ) : (
-                  <>
-                    <Save className="h-5 w-5" />
-                    Cadastrar Imóvel
-                  </>
+                  <><Save className="w-4 h-4" />Cadastrar Imóvel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
                 )}
               </motion.button>
-            </div>
-          </form>
+            </motion.div>
 
-          {/* Mensagens de feedback */}
-          <div ref={notificationRef}>
-            <AnimatePresence>
-              {message.text && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  className={`mx-8 mb-8 p-6 rounded-xl border-2 flex items-center gap-3 ${
-                    message.type === 'success'
-                      ? 'bg-green-50 border-green-200 text-green-800'
-                      : 'bg-red-50 border-red-200 text-red-800'
-                  }`}
-                >
-                  {message.type === 'success' ? (
-                    <CheckCircle className="h-6 w-6 flex-shrink-0" />
-                  ) : (
-                    <AlertTriangle className="h-6 w-6 flex-shrink-0" />
-                  )}
-                  <span className="font-semibold text-lg">{message.text}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+            {/* ═══ STATUS ═══ */}
+            <div ref={notificationRef}>
+              <AnimatePresence>
+                {message.text && (
+                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="flex items-center gap-3 p-4 rounded-xl backdrop-blur-md"
+                    style={{
+                      backgroundColor: message.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                      border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                    }}>
+                    {message.type === 'success'
+                      ? <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#10b981' }} />
+                      : <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#ef4444' }} />}
+                    <span className="text-sm font-medium" style={{
+                      color: message.type === 'success' ? '#10b981' : '#ef4444'
+                    }}>{message.text}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+          </motion.div>
+        </form>
       </div>
     </div>
   );

@@ -9,6 +9,11 @@ import {
   Image, MoreVertical, RefreshCw, Grid, List, SortAsc, SortDesc
 } from "lucide-react";
 
+const CARD = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.10)';
+const INPUT_BG = 'rgba(255,255,255,0.05)';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #F97316, #EA580C)';
+
 const ListaImoveis = () => {
   const { user } = useAuth();
   const [imoveis, setImoveis] = useState([]);
@@ -37,13 +42,13 @@ const ListaImoveis = () => {
           headers: { 'Content-Type': 'application/json' },
         }
       );
-      
+
       const data = Array.isArray(response.data) ? response.data : response.data?.imoveis || [];
       setImoveis(data);
     } catch (error) {
       console.error("Erro ao buscar imóveis:", error);
       let errorMessage = "Erro ao carregar imóveis.";
-      
+
       if (error.code === 'ECONNABORTED') {
         errorMessage = "Timeout na requisição. Verifique sua conexão.";
       } else if (error.response?.status === 500) {
@@ -51,7 +56,7 @@ const ListaImoveis = () => {
       } else if (!error.response) {
         errorMessage = "Não foi possível conectar ao servidor.";
       }
-      
+
       setError(errorMessage);
       setImoveis([]);
     } finally {
@@ -108,7 +113,7 @@ const ListaImoveis = () => {
   const filteredImoveis = sortedImoveis(
     imoveis.filter((imovel) => {
       if (!imovel) return false;
-      
+
       try {
         const matchesSearch =
           (imovel.nome_imovel || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -135,12 +140,13 @@ const ListaImoveis = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100"
+      className="group rounded-2xl overflow-hidden transition-all duration-300 backdrop-blur-md"
+      style={{ background: CARD, border: `1px solid ${BORDER}` }}
     >
       {/* Imagem */}
       <div className="relative overflow-hidden">
         <img
-          src={imovel.imagem_capa 
+          src={imovel.imagem_capa
             ? `${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`
             : '/placeholder-image.jpg'
           }
@@ -150,35 +156,57 @@ const ListaImoveis = () => {
             e.target.src = '/placeholder-image.jpg';
           }}
         />
-        
+
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
         {/* Badges */}
         <div className="absolute top-4 left-4 flex flex-col gap-2">
-          <span className="bg-caixa-primary text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+          <span
+            className="text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+            style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
+          >
             {imovel.tipo || "IMÓVEL"}
           </span>
           {imovel.exclusivo === "sim" && (
-            <span className="bg-caixa-orange text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+            <span
+              className="text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1"
+              style={{ background: ACCENT_GRADIENT }}
+            >
               <Star className="w-3 h-3" />
               Exclusivo
             </span>
           )}
         </div>
 
+        {/* Preço sobreposto na imagem */}
+        <div className="absolute bottom-4 left-4">
+          <span className="text-white text-lg font-bold drop-shadow-lg">
+            {Number(imovel.valor_venda || 0).toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}
+          </span>
+        </div>
+
         {/* Botão de ações */}
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-white/90 backdrop-blur rounded-lg p-1 flex gap-1">
+          <div
+            className="backdrop-blur-md rounded-lg p-1 flex gap-1"
+            style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${BORDER}` }}
+          >
             {user?.role !== "corretor" && (
               <>
                 <button
                   onClick={() => handleEdit(imovel)}
-                  className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                  className="p-2 hover:bg-white/10 text-white rounded-lg transition-colors"
                   title="Editar"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(imovel.id)}
-                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                  className="p-2 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
                   title="Excluir"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -187,7 +215,7 @@ const ListaImoveis = () => {
             )}
             <button
               onClick={() => handleDownload(imovel.id)}
-              className="p-2 hover:bg-caixa-orange/10 text-caixa-orange rounded-lg transition-colors"
+              className="p-2 hover:bg-orange-500/20 text-orange-400 rounded-lg transition-colors"
               title="Download"
             >
               <Download className="w-4 h-4" />
@@ -200,12 +228,12 @@ const ListaImoveis = () => {
       <div className="p-6">
         {/* Título e Localização */}
         <div className="mb-4">
-          <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-caixa-primary transition-colors">
+          <h3 className="text-lg font-bold text-white mb-2 group-hover:text-orange-400 transition-colors truncate">
             {imovel.nome_imovel || 'Nome não informado'}
           </h3>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-4 h-4 text-caixa-orange" />
-            <span className="text-sm">
+          <div className="flex items-center gap-2 text-white/50">
+            <MapPin className="w-4 h-4 text-orange-400 flex-shrink-0" />
+            <span className="text-sm truncate">
               {imovel.endereco || imovel.localizacao || 'Localização não informada'}
             </span>
           </div>
@@ -213,13 +241,13 @@ const ListaImoveis = () => {
 
         {/* Características */}
         <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-1 text-gray-600">
-            <Bed className="w-4 h-4 text-caixa-orange" />
-            <span className="text-sm font-medium">{imovel.quartos || 0} quartos</span>
+          <div className="flex items-center gap-1.5 text-white/50">
+            <Bed className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-medium">{imovel.quartos || 0}</span>
           </div>
-          <div className="flex items-center gap-1 text-gray-600">
-            <Bath className="w-4 h-4 text-caixa-orange" />
-            <span className="text-sm font-medium">{imovel.banheiro || 0} banheiros</span>
+          <div className="flex items-center gap-1.5 text-white/50">
+            <Bath className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-medium">{imovel.banheiro || 0}</span>
           </div>
         </div>
 
@@ -227,12 +255,19 @@ const ListaImoveis = () => {
         {imovel.tags && (
           <div className="flex flex-wrap gap-1 mb-4">
             {imovel.tags.split(',').slice(0, 3).map((tag, idx) => (
-              <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs">
+              <span
+                key={idx}
+                className="text-white/60 px-2 py-1 rounded-lg text-xs"
+                style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}` }}
+              >
                 {tag.trim()}
               </span>
             ))}
             {imovel.tags.split(',').length > 3 && (
-              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs">
+              <span
+                className="text-white/40 px-2 py-1 rounded-lg text-xs"
+                style={{ background: 'rgba(255,255,255,0.04)' }}
+              >
                 +{imovel.tags.split(',').length - 3}
               </span>
             )}
@@ -240,11 +275,14 @@ const ListaImoveis = () => {
         )}
 
         {/* Preços */}
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 space-y-2">
+        <div
+          className="rounded-xl p-4 space-y-2"
+          style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
+        >
           {imovel.valor_avaliacao && (
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Avaliação:</span>
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm text-white/40">Avaliação:</span>
+              <span className="text-sm font-medium text-white/70">
                 {Number(imovel.valor_avaliacao).toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL",
@@ -253,8 +291,8 @@ const ListaImoveis = () => {
             </div>
           )}
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Venda:</span>
-            <span className="text-lg font-bold text-caixa-primary">
+            <span className="text-sm text-white/40">Venda:</span>
+            <span className="text-lg font-bold text-orange-400">
               {Number(imovel.valor_venda || 0).toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
@@ -272,18 +310,20 @@ const ListaImoveis = () => {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-6 border border-gray-100"
+      className="rounded-2xl backdrop-blur-md transition-all duration-300 p-6 hover:bg-white/[0.03]"
+      style={{ background: CARD, border: `1px solid ${BORDER}` }}
     >
       <div className="flex gap-6">
         {/* Imagem */}
         <div className="flex-shrink-0">
           <img
-            src={imovel.imagem_capa 
+            src={imovel.imagem_capa
               ? `${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`
               : '/placeholder-image.jpg'
             }
             alt={imovel.nome_imovel || 'Imóvel'}
             className="w-32 h-24 object-cover rounded-lg"
+            style={{ border: `1px solid ${BORDER}` }}
             onError={(e) => {
               e.target.src = '/placeholder-image.jpg';
             }}
@@ -294,24 +334,24 @@ const ListaImoveis = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-2">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 truncate">
+              <h3 className="text-lg font-semibold text-white truncate">
                 {imovel.nome_imovel || 'Nome não informado'}
               </h3>
-              <div className="flex items-center gap-2 text-gray-600 mt-1">
-                <MapPin className="w-4 h-4 text-caixa-orange" />
+              <div className="flex items-center gap-2 text-white/50 mt-1">
+                <MapPin className="w-4 h-4 text-orange-400" />
                 <span className="text-sm">{imovel.endereco || imovel.localizacao}</span>
               </div>
             </div>
-            
+
             <div className="text-right">
-              <div className="text-lg font-bold text-caixa-primary">
+              <div className="text-lg font-bold text-orange-400">
                 {Number(imovel.valor_venda || 0).toLocaleString("pt-BR", {
                   style: "currency",
                   currency: "BRL",
                 })}
               </div>
               {imovel.valor_avaliacao && (
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-white/40">
                   Aval: {Number(imovel.valor_avaliacao).toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
@@ -321,34 +361,46 @@ const ListaImoveis = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-gray-600 mb-3">
+          <div className="flex items-center gap-6 text-sm text-white/50 mb-3">
             <div className="flex items-center gap-1">
-              <Bed className="w-4 h-4" />
+              <Bed className="w-4 h-4 text-orange-400" />
               <span>{imovel.quartos || 0}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Bath className="w-4 h-4" />
+              <Bath className="w-4 h-4 text-orange-400" />
               <span>{imovel.banheiro || 0}</span>
             </div>
-            <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+            <span
+              className="px-2 py-1 rounded text-xs text-white/60 uppercase tracking-wide"
+              style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER}` }}
+            >
               {imovel.tipo?.toUpperCase()}
             </span>
+            {imovel.exclusivo === "sim" && (
+              <span
+                className="px-2 py-1 rounded-full text-xs font-semibold text-orange-400 flex items-center gap-1"
+                style={{ background: 'rgba(249,115,22,0.15)' }}
+              >
+                <Star className="w-3 h-3" />
+                Exclusivo
+              </span>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               {user?.role !== "corretor" && (
                 <>
                   <button
                     onClick={() => handleEdit(imovel)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                     title="Editar"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(imovel.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-white/50 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                     title="Excluir"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -357,7 +409,7 @@ const ListaImoveis = () => {
               )}
               <button
                 onClick={() => handleDownload(imovel.id)}
-                className="p-2 text-caixa-orange hover:bg-caixa-orange/10 rounded-lg transition-colors"
+                className="p-2 text-white/50 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
                 title="Download"
               >
                 <Download className="w-4 h-4" />
@@ -377,10 +429,14 @@ const ListaImoveis = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-16 h-16 bg-white/20 rounded-2xl mx-auto flex items-center justify-center mb-4">
+          <div
+            className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 backdrop-blur-md"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          >
             <Home className="w-8 h-8 text-white animate-pulse" />
           </div>
           <p className="text-white text-lg font-medium">Carregando imóveis...</p>
+          <p className="text-white/30 text-sm mt-1">Buscando dados do servidor...</p>
         </motion.div>
       </div>
     );
@@ -389,70 +445,80 @@ const ListaImoveis = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-caixa-primary via-caixa-secondary to-caixa-primary">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        
-        {/* Header Melhorado */}
+
+        {/* Header Sticky com Glassmorphism */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="sticky top-0 z-30 mb-8 -mx-4 px-4 pt-2 pb-4"
         >
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
-            <div className="flex items-center justify-between mb-6">
+          <div
+            className="backdrop-blur-md rounded-2xl p-6"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          >
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-caixa-orange to-caixa-orange-light rounded-2xl flex items-center justify-center shadow-lg">
-                  <Building className="w-8 h-8 text-white" />
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20"
+                  style={{ background: ACCENT_GRADIENT }}
+                >
+                  <Building className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-extrabold text-white tracking-tight">
-                    IMÓVEIS CRMIMOB
+                  <h1 className="text-3xl font-extrabold text-white tracking-tight">
+                    Imóveis
                   </h1>
-                  <p className="text-white/80 text-lg">
+                  <p className="text-white/50 text-sm">
                     {filteredImoveis.length} de {imoveis.length} imóveis encontrados
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={fetchImoveis}
-                  className="p-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-colors"
+                  className="p-2.5 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
                   title="Atualizar"
                 >
                   <RefreshCw className="w-5 h-5" />
                 </button>
-                
-                <div className="flex bg-white/20 rounded-xl p-1">
+
+                <div
+                  className="flex rounded-xl p-1"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
+                >
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-2 rounded-lg transition-colors ${
-                      viewMode === 'grid' ? 'bg-white/30 text-white' : 'text-white/70'
+                      viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
                     }`}
                   >
-                    <Grid className="w-5 h-5" />
+                    <Grid className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
                     className={`p-2 rounded-lg transition-colors ${
-                      viewMode === 'list' ? 'bg-white/30 text-white' : 'text-white/70'
+                      viewMode === 'list' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
                     }`}
                   >
-                    <List className="w-5 h-5" />
+                    <List className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Barra de Busca e Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Busca */}
               <div className="md:col-span-2 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/30 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Buscar por nome, localização, tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/20 border border-white/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/60 focus:outline-none focus:border-caixa-orange focus:ring-2 focus:ring-caixa-orange/20 transition-all"
+                  className="w-full rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all"
+                  style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
                 />
               </div>
 
@@ -460,13 +526,12 @@ const ListaImoveis = () => {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-caixa-orange focus:ring-2 focus:ring-caixa-orange/20 transition-all"
+                className="rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all [&>option]:bg-white [&>option]:text-gray-800"
+                style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
               >
-                <option value="" className="bg-caixa-primary text-white">
-                  Todos os tipos
-                </option>
+                <option value="">Todos os tipos</option>
                 {tiposUnicos.map((tipo) => (
-                  <option key={tipo} value={tipo} className="bg-caixa-primary text-white">
+                  <option key={tipo} value={tipo}>
                     {tipo?.toUpperCase()}
                   </option>
                 ))}
@@ -476,13 +541,14 @@ const ListaImoveis = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-caixa-orange focus:ring-2 focus:ring-caixa-orange/20 transition-all"
+                className="rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all [&>option]:bg-white [&>option]:text-gray-800"
+                style={{ background: INPUT_BG, border: `1px solid ${BORDER}` }}
               >
-                <option value="newest" className="bg-caixa-primary text-white">Mais recentes</option>
-                <option value="oldest" className="bg-caixa-primary text-white">Mais antigos</option>
-                <option value="price_desc" className="bg-caixa-primary text-white">Maior preço</option>
-                <option value="price_asc" className="bg-caixa-primary text-white">Menor preço</option>
-                <option value="name" className="bg-caixa-primary text-white">Nome A-Z</option>
+                <option value="newest">Mais recentes</option>
+                <option value="oldest">Mais antigos</option>
+                <option value="price_desc">Maior preço</option>
+                <option value="price_asc">Menor preço</option>
+                <option value="name">Nome A-Z</option>
               </select>
             </div>
           </div>
@@ -495,10 +561,11 @@ const ListaImoveis = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-100 rounded-xl flex items-center gap-3"
+              className="mb-6 p-4 rounded-xl flex items-center gap-3 text-red-300"
+              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}
             >
-              <AlertTriangle className="w-5 h-5" />
-              {error}
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -510,16 +577,22 @@ const ListaImoveis = () => {
           transition={{ delay: 0.1 }}
         >
           {filteredImoveis.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-20 text-center">
-              <div className="w-24 h-24 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-6">
-                <Home className="w-12 h-12 text-white" />
+            <div
+              className="backdrop-blur-md rounded-2xl p-20 text-center"
+              style={{ background: CARD, border: `1px solid ${BORDER}` }}
+            >
+              <div
+                className="w-24 h-24 rounded-full mx-auto flex items-center justify-center mb-6"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              >
+                <Home className="w-12 h-12 text-white/30" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-4">
+              <h3 className="text-2xl font-bold text-white mb-3">
                 {searchTerm || filterType
                   ? "Nenhum imóvel encontrado"
                   : "Nenhum imóvel cadastrado"}
               </h3>
-              <p className="text-white/70 text-lg max-w-md mx-auto">
+              <p className="text-white/40 text-sm max-w-md mx-auto">
                 {searchTerm || filterType
                   ? "Tente ajustar os filtros de busca para encontrar o que procura"
                   : "Cadastre o primeiro imóvel para começar a construir seu portfólio"}
@@ -527,11 +600,11 @@ const ListaImoveis = () => {
             </div>
           ) : (
             <div className={
-              viewMode === 'grid' 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                : "space-y-4"
+              viewMode === 'grid'
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+                : "space-y-3"
             }>
-              {filteredImoveis.map((imovel, index) => 
+              {filteredImoveis.map((imovel, index) =>
                 viewMode === 'grid' ? (
                   <ImovelCard key={imovel.id} imovel={imovel} index={index} />
                 ) : (

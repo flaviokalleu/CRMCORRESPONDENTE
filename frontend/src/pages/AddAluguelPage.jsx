@@ -13,7 +13,6 @@ const AddAluguelPage = () => {
 
   return (
     <MainLayout>
-      <h1 className="text-2xl font-bold mb-4">Adicionar Novo Aluguel</h1>
       <AddAluguelForm onSuccess={handleSuccess} />
     </MainLayout>
   );

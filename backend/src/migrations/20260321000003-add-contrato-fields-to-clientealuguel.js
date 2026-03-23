@@ -5,7 +5,7 @@ module.exports = {
     await queryInterface.addColumn('ClienteAluguels', 'aluguel_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
-      references: { model: 'aluguels', key: 'id' },
+      references: { model: 'alugueis', key: 'id' },
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL',
     });

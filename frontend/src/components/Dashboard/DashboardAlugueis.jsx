@@ -15,7 +15,13 @@ const DashboardAlugueis = () => {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/alugueis`);
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/alugueis`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
       if (response.ok) {
         const result = await response.json();
         setData(result);

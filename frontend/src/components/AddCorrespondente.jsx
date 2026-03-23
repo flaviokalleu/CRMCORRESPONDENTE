@@ -1,102 +1,88 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FaUser,
-  FaEnvelope,
-  FaLock,
-  FaPhone,
-  FaMapMarkerAlt,
-  FaCreditCard,
-  FaCamera,
-  FaUpload,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaEye,
-  FaEyeSlash,
-  FaSpinner,
-  FaSave,
-  FaTrash
-} from 'react-icons/fa';
+  User, Mail, Lock, Phone, MapPin, Camera,
+  Upload, CheckCircle, AlertCircle, Eye, EyeOff, Loader2,
+  Save, Trash2, Shield, ArrowRight, UserPlus, Wallet, Building
+} from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-// Componente de Input
-const InputField = ({
-  label,
-  name,
-  type = 'text',
-  icon: Icon,
-  required = false,
-  placeholder,
-  value,
-  onChange,
-  error,
-  showPassword,
-  togglePassword,
-  ...props
-}) => {
-  const inputType = type === 'password' && showPassword ? 'text' : type;
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const CARD = 'rgba(255,255,255,0.06)';
+const BORDER = 'rgba(255,255,255,0.10)';
+const INPUT_BG = 'rgba(255,255,255,0.05)';
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #F97316, #EA580C)';
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [.22, 1, .36, 1] } },
+};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
+
+const inputClass = `w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 transition-all duration-200
+  focus:outline-none focus:ring-2 focus:ring-[#F97316]/60 focus:border-[#F97316]/40`;
+const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
+const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
+
+// ─── Section wrapper ─────────────────────────────────────────────────────────
+const FormSection = ({ icon, title, subtitle, children }) => (
+  <motion.div variants={fadeUp}
+    className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
+    style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+    <div className="flex items-center gap-3 pb-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: ACCENT_GRADIENT }}>
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-white">{title}</h3>
+        {subtitle && <p className="text-[10px] text-white/40 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    {children}
+  </motion.div>
+);
+
+// ─── Input field ─────────────────────────────────────────────────────────────
+const InputField = ({ label, name, type = 'text', icon: Icon, required, placeholder, value, onChange, error, showPassword, togglePassword, ...props }) => {
+  const inputType = type === 'password' && showPassword ? 'text' : type;
   return (
-    <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-medium text-caixa-primary mb-2">
-        <Icon className="w-4 h-4 text-caixa-orange" />
-        {label} {required && <span className="text-caixa-orange">*</span>}
+    <div className="space-y-1.5">
+      <label className={labelClass}>
+        <Icon className="w-3 h-3" />
+        {label} {required && <span className="text-[#F97316]">*</span>}
       </label>
       <div className="relative">
-        <input
-          type={inputType}
-          name={name}
-          value={value}
-          onChange={onChange}
-          required={required}
+        <input type={inputType} name={name} value={value} onChange={onChange} required={required}
           placeholder={placeholder}
-          className={`w-full px-4 py-3 border-2 rounded-xl transition-all duration-200 ${
-            error 
-              ? 'border-caixa-orange bg-caixa-orange/5 focus:ring-2 focus:ring-caixa-orange focus:border-caixa-orange' 
-              : 'border-caixa-primary/30 focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary'
-          }`}
-          {...props}
-        />
+          className={`${inputClass} ${error ? 'ring-2 ring-red-500/40 border-red-500/30' : ''}`}
+          style={inputStyle} {...props} />
         {type === 'password' && (
-          <button
-            type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-            onClick={togglePassword}
-          >
-            {showPassword ? (
-              <FaEyeSlash className="h-4 w-4 text-caixa-primary/60 hover:text-caixa-primary" />
-            ) : (
-              <FaEye className="h-4 w-4 text-caixa-primary/60 hover:text-caixa-primary" />
-            )}
+          <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={togglePassword}>
+            {showPassword
+              ? <EyeOff className="h-4 w-4 text-white/30 hover:text-white/60 transition-colors" />
+              : <Eye className="h-4 w-4 text-white/30 hover:text-white/60 transition-colors" />}
           </button>
         )}
       </div>
       {error && (
-        <p className="text-caixa-orange text-sm flex items-center gap-1">
-          <FaExclamationTriangle className="h-3 w-3" />
-          {error}
+        <p className="text-red-400 text-[10px] flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />{error}
         </p>
       )}
     </div>
   );
 };
 
+// ─── Main component ──────────────────────────────────────────────────────────
 const AddCorrespondente = () => {
-  // Estados do formulário
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    first_name: '',
-    last_name: '',
-    address: '',
-    pix_account: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
+    username: '', email: '', first_name: '', last_name: '',
+    address: '', pix_account: '', phone: '',
+    password: '', confirmPassword: ''
   });
-  
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -105,475 +91,231 @@ const AddCorrespondente = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [errors, setErrors] = useState({});
 
-  // Manipular mudanças nos inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Limpar erro do campo
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  // Manipular upload de foto
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
-    
     if (!file) return;
-
-    // Validar tipo
     if (!file.type.startsWith('image/')) {
-      setMessage({
-        type: 'error',
-        text: 'Por favor, selecione apenas arquivos de imagem'
-      });
-      return;
+      setMessage({ type: 'error', text: 'Por favor, selecione apenas arquivos de imagem' }); return;
     }
-
-    // Validar tamanho (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setMessage({
-        type: 'error',
-        text: 'Imagem muito grande. Máximo: 5MB'
-      });
-      return;
+      setMessage({ type: 'error', text: 'Imagem muito grande. Máximo: 5MB' }); return;
     }
-
     setPhoto(file);
-    
-    // Criar preview
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setPhotoPreview(e.target.result);
-    };
+    reader.onload = (e) => setPhotoPreview(e.target.result);
     reader.readAsDataURL(file);
-    
-    // Limpar erro de foto
-    if (errors.photo) {
-      setErrors(prev => ({
-        ...prev,
-        photo: ''
-      }));
-    }
-    
+    if (errors.photo) setErrors(prev => ({ ...prev, photo: '' }));
     setMessage({ type: '', text: '' });
   };
 
-  // Validar formulário
   const validateForm = () => {
     const newErrors = {};
-
-    // Validar campos obrigatórios
-    if (!formData.username || formData.username.length < 3) {
-      newErrors.username = 'Username deve ter pelo menos 3 caracteres';
-    }
-
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
-    }
-
-    if (!formData.first_name || formData.first_name.length < 2) {
-      newErrors.first_name = 'Nome deve ter pelo menos 2 caracteres';
-    }
-
-    if (!formData.last_name || formData.last_name.length < 2) {
-      newErrors.last_name = 'Sobrenome deve ter pelo menos 2 caracteres';
-    }
-
-    if (!formData.phone || formData.phone.length < 10) {
-      newErrors.phone = 'Telefone deve ter pelo menos 10 caracteres';
-    }
-
-    if (!formData.password || formData.password.length < 6) {
-      newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Senhas não conferem';
-    }
-
-    if (!photo) {
-      newErrors.photo = 'Foto é obrigatória';
-    }
-
+    if (!formData.username || formData.username.length < 3) newErrors.username = 'Username deve ter pelo menos 3 caracteres';
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email inválido';
+    if (!formData.first_name || formData.first_name.length < 2) newErrors.first_name = 'Nome deve ter pelo menos 2 caracteres';
+    if (!formData.last_name || formData.last_name.length < 2) newErrors.last_name = 'Sobrenome deve ter pelo menos 2 caracteres';
+    if (!formData.phone || formData.phone.length < 10) newErrors.phone = 'Telefone deve ter pelo menos 10 caracteres';
+    if (!formData.password || formData.password.length < 6) newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não conferem';
+    if (!photo) newErrors.photo = 'Foto é obrigatória';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submeter formulário
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      setMessage({
-        type: 'error',
-        text: 'Por favor, corrija os erros no formulário'
-      });
-      return;
-    }
-
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulário' }); return; }
     setLoading(true);
     setMessage({ type: '', text: '' });
-
     try {
-      // Criar FormData
       const submitData = new FormData();
-      
-      // Adicionar campos obrigatórios
       submitData.append('username', formData.username.trim());
       submitData.append('email', formData.email.trim().toLowerCase());
       submitData.append('first_name', formData.first_name.trim());
       submitData.append('last_name', formData.last_name.trim());
       submitData.append('phone', formData.phone.trim());
       submitData.append('password', formData.password);
-      
-      // Adicionar campos opcionais se preenchidos
-      if (formData.address?.trim()) {
-        submitData.append('address', formData.address.trim());
-      }
-      if (formData.pix_account?.trim()) {
-        submitData.append('pix_account', formData.pix_account.trim());
-      }
-      
-      // Adicionar foto
-      if (photo) {
-        submitData.append('photo', photo);
-      }
-
-      console.log('📤 Enviando dados para:', `${API_URL}/correspondente`);
-
-      // Fazer requisição
-      const response = await axios.post(`${API_URL}/correspondente`, submitData);
-
-      console.log('[FRONTEND] Resposta recebida:', response.data);
-
-      setMessage({
-        type: 'success',
-        text: 'Correspondente criado com sucesso!'
-      });
-
-      // Resetar formulário
-      setFormData({
-        username: '',
-        email: '',
-        first_name: '',
-        last_name: '',
-        address: '',
-        pix_account: '',
-        phone: '',
-        password: '',
-        confirmPassword: ''
-      });
-      setPhoto(null);
-      setPhotoPreview(null);
-      setErrors({});
-
+      if (formData.address?.trim()) submitData.append('address', formData.address.trim());
+      if (formData.pix_account?.trim()) submitData.append('pix_account', formData.pix_account.trim());
+      if (photo) submitData.append('photo', photo);
+      await axios.post(`${API_URL}/correspondente`, submitData);
+      setMessage({ type: 'success', text: 'Correspondente criado com sucesso!' });
+      setFormData({ username: '', email: '', first_name: '', last_name: '', address: '', pix_account: '', phone: '', password: '', confirmPassword: '' });
+      setPhoto(null); setPhotoPreview(null); setErrors({});
     } catch (error) {
-      console.error('❌ Erro:', error);
-
       let errorMessage = 'Erro ao criar correspondente';
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.details?.[0]) {
-        errorMessage = error.response.data.details[0];
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setMessage({
-        type: 'error',
-        text: errorMessage
-      });
-    } finally {
-      setLoading(false);
-    }
+      if (error.response?.data?.message) errorMessage = error.response.data.message;
+      else if (error.response?.data?.error) errorMessage = error.response.data.error;
+      else if (error.response?.data?.details?.[0]) errorMessage = error.response.data.details[0];
+      else if (error.message) errorMessage = error.message;
+      setMessage({ type: 'error', text: errorMessage });
+    } finally { setLoading(false); }
   };
 
-  // Resetar formulário
   const resetForm = () => {
-    setFormData({
-      username: '',
-      email: '',
-      first_name: '',
-      last_name: '',
-      address: '',
-      pix_account: '',
-      phone: '',
-      password: '',
-      confirmPassword: ''
-    });
-    setPhoto(null);
-    setPhotoPreview(null);
-    setErrors({});
-    setMessage({ type: '', text: '' });
+    setFormData({ username: '', email: '', first_name: '', last_name: '', address: '', pix_account: '', phone: '', password: '', confirmPassword: '' });
+    setPhoto(null); setPhotoPreview(null); setErrors({}); setMessage({ type: '', text: '' });
   };
 
   return (
-    <div className="min-h-screen w-full bg-caixa-primary flex flex-col">
-      {/* Container principal com largura máxima expandida */}
-      <div className="flex-1 w-full px-4 py-6 md:px-6 lg:px-8 xl:px-12">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-2 flex items-center gap-3 tracking-tight">
-            <FaUser className="w-6 h-6 md:w-8 md:h-8 text-caixa-orange" />
-            Adicionar Correspondente
-          </h2>
-          <p className="text-white text-base md:text-lg font-medium">
-            Preencha os dados para cadastrar um novo correspondente no sistema
-          </p>
+    <div className="min-h-screen w-full bg-caixa-gradient">
+      <div className="w-full max-w-5xl mx-auto px-4 py-6 sm:px-6">
+
+        {/* ── Header ── */}
+        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
+            <Building className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Adicionar Correspondente</h1>
+            <p className="text-[11px] text-white/40">Preencha os dados para cadastrar um novo correspondente</p>
+          </div>
         </motion.div>
 
-        {/* Formulário expandido */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-xl p-4 md:p-6 lg:p-8 border border-caixa-primary/20 w-full"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Upload de Foto */}
-            <div className="flex flex-col items-center space-y-4 pb-6 border-b border-caixa-primary/20">
-              <div className="relative">
-                {photoPreview ? (
-                  <div className="relative">
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-caixa-primary shadow-lg"
-                    />
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      type="button"
-                      onClick={() => {
-                        setPhoto(null);
-                        setPhotoPreview(null);
-                      }}
-                      className="absolute -top-2 -right-2 bg-caixa-orange hover:bg-caixa-orange/90 text-white rounded-full p-2 transition-colors shadow-lg"
-                    >
-                      <FaTrash className="h-3 w-3" />
-                    </motion.button>
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-caixa-primary/10 border-2 border-dashed border-caixa-primary/30 flex items-center justify-center">
-                    <FaCamera className="h-8 w-8 text-caixa-primary/60" />
-                  </div>
-                )}
+        <form onSubmit={handleSubmit}>
+          <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
+
+            {/* ═══ FOTO ═══ */}
+            <FormSection icon={<Camera className="w-4 h-4 text-white" />} title="Foto do Correspondente"
+              subtitle="Imagem de perfil para identificação">
+              <div className="flex flex-col sm:flex-row items-center gap-5">
+                <div className="relative">
+                  {photoPreview ? (
+                    <div className="relative">
+                      <img src={photoPreview} alt="Preview"
+                        className="w-24 h-24 rounded-xl object-cover shadow-lg"
+                        style={{ border: '2px solid rgba(249,115,22,0.4)' }} />
+                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                        type="button" onClick={() => { setPhoto(null); setPhotoPreview(null); }}
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+                        style={{ background: ACCENT_GRADIENT }}>
+                        <Trash2 className="h-3 w-3 text-white" />
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-xl flex items-center justify-center"
+                      style={{ border: '2px dashed rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                      <Camera className="h-8 w-8 text-white/20" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-center sm:items-start gap-2">
+                  <motion.label whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    className="cursor-pointer px-5 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 shadow-lg"
+                    style={{ background: ACCENT_GRADIENT }}>
+                    <Upload className="h-3.5 w-3.5" /> Escolher Foto
+                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                  </motion.label>
+                  <p className="text-[10px] text-white/30">PNG, JPG, GIF até 5MB</p>
+                  {errors.photo && (
+                    <p className="text-red-400 text-[10px] flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />{errors.photo}
+                    </p>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex flex-col items-center space-y-2">
-                <motion.label 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="cursor-pointer bg-caixa-orange hover:bg-caixa-orange/90 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 font-medium shadow-lg"
-                >
-                  <FaUpload className="h-4 w-4" />
-                  Escolher Foto
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="hidden"
-                  />
-                </motion.label>
-                <p className="text-xs text-caixa-primary/70">
-                  PNG, JPG, GIF até 5MB
-                </p>
-                {errors.photo && (
-                  <p className="text-caixa-orange text-sm flex items-center gap-1">
-                    <FaExclamationTriangle className="h-3 w-3" />
-                    {errors.photo}
-                  </p>
-                )}
+            </FormSection>
+
+            {/* ═══ DADOS PESSOAIS ═══ */}
+            <FormSection icon={<User className="w-4 h-4 text-white" />} title="Dados Pessoais"
+              subtitle="Informações de identificação do correspondente">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <InputField label="Username" name="username" icon={User} required
+                  placeholder="Digite o username" value={formData.username}
+                  onChange={handleInputChange} error={errors.username} />
+                <InputField label="E-mail" name="email" type="email" icon={Mail} required
+                  placeholder="email@exemplo.com" value={formData.email}
+                  onChange={handleInputChange} error={errors.email} />
+                <InputField label="Nome" name="first_name" icon={User} required
+                  placeholder="Primeiro nome" value={formData.first_name}
+                  onChange={handleInputChange} error={errors.first_name} />
+                <InputField label="Sobrenome" name="last_name" icon={User} required
+                  placeholder="Sobrenome" value={formData.last_name}
+                  onChange={handleInputChange} error={errors.last_name} />
+                <InputField label="Telefone" name="phone" icon={Phone} required
+                  placeholder="(00) 00000-0000" value={formData.phone}
+                  onChange={handleInputChange} error={errors.phone} />
               </div>
-            </div>
+            </FormSection>
 
-            {/* Campos do Formulário */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-              <InputField
-                label="Username"
-                name="username"
-                icon={FaUser}
-                required
-                placeholder="Digite o username"
-                value={formData.username}
-                onChange={handleInputChange}
-                error={errors.username}
-              />
-              
-              <InputField
-                label="E-mail"
-                name="email"
-                type="email"
-                icon={FaEnvelope}
-                required
-                placeholder="Digite o e-mail"
-                value={formData.email}
-                onChange={handleInputChange}
-                error={errors.email}
-              />
-              
-              <InputField
-                label="Nome"
-                name="first_name"
-                icon={FaUser}
-                required
-                placeholder="Primeiro nome"
-                value={formData.first_name}
-                onChange={handleInputChange}
-                error={errors.first_name}
-              />
-              
-              <InputField
-                label="Sobrenome"
-                name="last_name"
-                icon={FaUser}
-                required
-                placeholder="Sobrenome"
-                value={formData.last_name}
-                onChange={handleInputChange}
-                error={errors.last_name}
-              />
-              
-              <InputField
-                label="Telefone"
-                name="phone"
-                icon={FaPhone}
-                required
-                placeholder="(00) 00000-0000"
-                value={formData.phone}
-                onChange={handleInputChange}
-                error={errors.phone}
-              />
+            {/* ═══ ENDEREÇO & PIX ═══ */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Endereço & Pagamento"
+              subtitle="Localização e dados bancários">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField label="Endereço" name="address" icon={MapPin}
+                  placeholder="Endereço completo" value={formData.address}
+                  onChange={handleInputChange} error={errors.address} />
+                <InputField label="PIX / Conta" name="pix_account" icon={Wallet}
+                  placeholder="Chave PIX ou dados da conta" value={formData.pix_account}
+                  onChange={handleInputChange} error={errors.pix_account} />
+              </div>
+            </FormSection>
 
-              <InputField
-                label="Endereço"
-                name="address"
-                icon={FaMapMarkerAlt}
-                placeholder="Endereço completo"
-                value={formData.address}
-                onChange={handleInputChange}
-                error={errors.address}
-              />
-            </div>
+            {/* ═══ SEGURANÇA ═══ */}
+            <FormSection icon={<Shield className="w-4 h-4 text-white" />} title="Segurança"
+              subtitle="Defina a senha de acesso do correspondente">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField label="Senha" name="password" type="password" icon={Lock} required
+                  placeholder="Mínimo 6 caracteres" value={formData.password}
+                  onChange={handleInputChange} error={errors.password}
+                  showPassword={showPassword} togglePassword={() => setShowPassword(!showPassword)} />
+                <InputField label="Confirmar Senha" name="confirmPassword" type="password" icon={Lock} required
+                  placeholder="Confirme a senha" value={formData.confirmPassword}
+                  onChange={handleInputChange} error={errors.confirmPassword}
+                  showPassword={showConfirmPassword} togglePassword={() => setShowConfirmPassword(!showConfirmPassword)} />
+              </div>
+            </FormSection>
 
-            {/* PIX em linha completa */}
-            <div>
-              <InputField
-                label="PIX/Conta"
-                name="pix_account"
-                icon={FaCreditCard}
-                placeholder="Chave PIX ou dados da conta"
-                value={formData.pix_account}
-                onChange={handleInputChange}
-                error={errors.pix_account}
-              />
-            </div>
-
-            {/* Senhas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <InputField
-                label="Senha"
-                name="password"
-                type="password"
-                icon={FaLock}
-                required
-                placeholder="Digite a senha"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                showPassword={showPassword}
-                togglePassword={() => setShowPassword(!showPassword)}
-              />
-              
-              <InputField
-                label="Confirmar Senha"
-                name="confirmPassword"
-                type="password"
-                icon={FaLock}
-                required
-                placeholder="Confirme a senha"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                error={errors.confirmPassword}
-                showPassword={showConfirmPassword}
-                togglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
-              />
-            </div>
-
-            {/* Botões */}
-            <div className="pt-6 border-t border-caixa-primary/20 flex flex-col md:flex-row gap-4">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={resetForm}
-                className="flex-1 py-3 px-6 rounded-xl font-semibold text-caixa-primary bg-caixa-primary/10 hover:bg-caixa-primary/20 transition-all duration-200 border-2 border-caixa-primary/30 flex items-center justify-center gap-2"
-              >
-                <FaTrash className="w-4 h-4" />
-                Limpar
+            {/* ═══ BOTÕES ═══ */}
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                type="button" onClick={resetForm}
+                className="flex-1 py-3.5 rounded-xl text-sm font-semibold text-white/60 flex items-center justify-center gap-2
+                  hover:text-white/80 transition-all duration-200"
+                style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
+                <Trash2 className="w-4 h-4" /> Limpar
               </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                disabled={loading}
-                className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-xl ${
-                  loading
-                    ? 'bg-caixa-primary/60 cursor-not-allowed text-white'
-                    : 'bg-caixa-orange hover:bg-caixa-orange/90 text-white hover:shadow-2xl'
-                }`}
-              >
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                type="submit" disabled={loading}
+                className={`flex-[2] py-3.5 rounded-xl text-sm text-white font-bold flex items-center justify-center gap-2
+                  shadow-lg shadow-[#F97316]/20 transition-all duration-200 ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-xl hover:shadow-[#F97316]/30'}`}
+                style={{ background: ACCENT_GRADIENT }}>
                 {loading ? (
-                  <>
-                    <FaSpinner className="w-5 h-5 animate-spin" />
-                    Criando...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" />Criando...</>
                 ) : (
-                  <>
-                    <FaSave className="h-5 w-5" />
-                    Criar Correspondente
-                  </>
+                  <><Save className="w-4 h-4" />Criar Correspondente<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
                 )}
               </motion.button>
-            </div>
-          </form>
-
-          {/* Mensagens */}
-          {message.text && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`mt-6 p-4 rounded-xl border-2 flex items-center gap-3 ${
-                message.type === 'success'
-                  ? 'bg-caixa-primary/10 border-caixa-primary/30 text-caixa-primary'
-                  : 'bg-caixa-orange/10 border-caixa-orange/30 text-caixa-orange'
-              }`}
-            >
-              {message.type === 'success' ? (
-                <FaCheckCircle className="h-5 w-5 flex-shrink-0" />
-              ) : (
-                <FaExclamationTriangle className="h-5 w-5 flex-shrink-0" />
-              )}
-              <span className="font-medium">{message.text}</span>
             </motion.div>
-          )}
-        </motion.div>
+
+            {/* ═══ STATUS ═══ */}
+            <AnimatePresence>
+              {message.text && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-3 p-4 rounded-xl backdrop-blur-md"
+                  style={{
+                    backgroundColor: message.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                    border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                  }}>
+                  {message.type === 'success'
+                    ? <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#10b981' }} />
+                    : <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#ef4444' }} />}
+                  <span className="text-sm font-medium" style={{
+                    color: message.type === 'success' ? '#10b981' : '#ef4444'
+                  }}>{message.text}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+          </motion.div>
+        </form>
       </div>
     </div>
   );

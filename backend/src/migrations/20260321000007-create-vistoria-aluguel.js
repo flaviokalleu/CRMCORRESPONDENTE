@@ -11,7 +11,7 @@ module.exports = {
       },
       aluguel_id: {
         type: Sequelize.INTEGER, allowNull: true,
-        references: { model: 'aluguels', key: 'id' },
+        references: { model: 'alugueis', key: 'id' },
         onUpdate: 'CASCADE', onDelete: 'SET NULL',
       },
       tipo: { type: Sequelize.STRING, allowNull: false, defaultValue: 'entrada' }, // 'entrada' ou 'saida'

@@ -1,26 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FaHome,
-  FaBed,
-  FaBath,
-  FaDollarSign,
-  FaDownload,
-  FaEdit,
-  FaTrashAlt,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaSearch,
-  FaFilter,
-  FaEye,
-  FaBuilding,
-  FaMapMarkerAlt,
-  FaCalendarAlt,
-  FaExclamationTriangle,
-  FaSpinner
-} from "react-icons/fa";
+  Home,
+  Bed,
+  Bath,
+  DollarSign,
+  Download,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Search,
+  Filter,
+  Eye,
+  Building2,
+  Calendar,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api/";
+
+const CARD = "rgba(255,255,255,0.06)";
+const BORDER = "rgba(255,255,255,0.10)";
+const INPUT_BG = "rgba(255,255,255,0.05)";
+const ACCENT_GRADIENT = "linear-gradient(135deg, #F97316, #EA580C)";
 
 const AlugueisPage = () => {
   const [alugueis, setAlugueis] = useState([]);
@@ -109,7 +112,7 @@ const AlugueisPage = () => {
     const confirmed = window.confirm(
       `Tem certeza que deseja deletar o imóvel "${aluguel?.nome_imovel}"?\n\nEsta ação não pode ser desfeita.`
     );
-    
+
     if (confirmed) {
       setActionLoading(prev => ({ ...prev, [`delete_${aluguelId}`]: true }));
       try {
@@ -133,15 +136,15 @@ const AlugueisPage = () => {
 
   // Filtrar aluguéis
   const filteredAlugueis = alugueis.filter((aluguel) => {
-    const matchesSearch = 
+    const matchesSearch =
       (aluguel.nome_imovel || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (aluguel.descricao || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = 
-      filterStatus === '' || 
+
+    const matchesStatus =
+      filterStatus === '' ||
       (filterStatus === 'disponivel' && !aluguel.alugado) ||
       (filterStatus === 'alugado' && aluguel.alugado);
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -150,125 +153,167 @@ const AlugueisPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-caixa-primary flex items-center justify-center">
+      <div className="min-h-screen bg-caixa-gradient flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-caixa-orange to-caixa-orange-light rounded-full mx-auto flex items-center justify-center mb-4 animate-pulse">
-            <FaHome className="w-8 h-8 text-white" />
+          <div
+            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 animate-pulse"
+            style={{ background: ACCENT_GRADIENT }}
+          >
+            <Home className="w-8 h-8 text-white" />
           </div>
-          <p className="text-white text-lg">Carregando imóveis para aluguel...</p>
+          <p className="text-white/80 text-lg font-medium">Carregando imóveis para aluguel...</p>
+          <Loader2 className="w-6 h-6 text-orange-400 animate-spin mx-auto mt-3" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-caixa-primary relative">
-      {/* Efeitos de Background */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-caixa-orange/30 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-caixa-orange-light/30 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-caixa-orange/20 rounded-full blur-3xl"></div>
+    <div className="min-h-screen w-full bg-caixa-gradient relative">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px]" />
+        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-orange-600/8 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-orange-500/5 rounded-full blur-[100px]" />
       </div>
 
-      {/* Container principal */}
+      {/* Main Container */}
       <div className="relative z-10 container mx-auto px-4 py-6 md:px-6 lg:px-8">
-        {/* Header */}
+        {/* Sticky Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="sticky top-0 z-20 mb-8 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 pt-2 pb-4"
+          style={{
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+          }}
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-caixa-orange to-caixa-orange-light rounded-xl flex items-center justify-center">
-              <FaBuilding className="w-6 h-6 text-white" />
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20"
+              style={{ background: ACCENT_GRADIENT }}
+            >
+              <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                 ALUGUÉIS CAIXA
               </h1>
-              <p className="text-white text-base">
-                {alugueisDisponiveis} disponíveis • {alugueisOcupados} ocupados • {alugueis.length} total
+              <p className="text-white/60 text-base">
+                <span className="text-green-400 font-semibold">{alugueisDisponiveis}</span> disponíveis
+                {" "}&bull;{" "}
+                <span className="text-red-400 font-semibold">{alugueisOcupados}</span> ocupados
+                {" "}&bull;{" "}
+                <span className="text-white/80 font-semibold">{alugueis.length}</span> total
               </p>
             </div>
           </div>
 
-          {/* Filtros e Busca */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
+          {/* Search & Filters Bar */}
+          <div
+            className="rounded-2xl p-5 backdrop-blur-xl"
+            style={{
+              background: CARD,
+              border: `1px solid ${BORDER}`,
+            }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Busca */}
+              {/* Search */}
               <div className="relative md:col-span-2">
-                <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-4 h-4" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Buscar imóveis para aluguel..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/20 border border-white/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/60 focus:outline-none focus:border-caixa-orange focus:ring-2 focus:ring-caixa-orange/20 transition-all"
+                  className="w-full rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all"
+                  style={{
+                    background: INPUT_BG,
+                    border: `1px solid ${BORDER}`,
+                  }}
                 />
               </div>
 
-              {/* Filtro por Status */}
+              {/* Status Filter */}
               <div className="relative">
-                <FaFilter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-4 h-4" />
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4 z-10" />
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full bg-white/20 border border-white/30 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-caixa-orange focus:ring-2 focus:ring-caixa-orange/20 transition-all appearance-none"
+                  className="w-full rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all appearance-none [&>option]:bg-white [&>option]:text-gray-800"
+                  style={{
+                    background: INPUT_BG,
+                    border: `1px solid ${BORDER}`,
+                  }}
                 >
-                  <option value="" className="bg-caixa-primary text-white">Todos os status</option>
-                  <option value="disponivel" className="bg-caixa-primary text-white">Disponível</option>
-                  <option value="alugado" className="bg-caixa-primary text-white">Alugado</option>
+                  <option value="">Todos os status</option>
+                  <option value="disponivel">Disponível</option>
+                  <option value="alugado">Alugado</option>
                 </select>
               </div>
 
-              {/* Estatísticas */}
-              <div className="flex items-center gap-4 text-white">
-                <div className="flex items-center gap-2">
-                  <FaEye className="w-4 h-4 text-caixa-orange" />
-                  <span className="text-sm font-semibold">Exibindo: {filteredAlugueis.length}</span>
-                </div>
+              {/* Stats */}
+              <div className="flex items-center gap-3 text-white/70">
+                <Eye className="w-4 h-4 text-orange-400" />
+                <span className="text-sm font-semibold">
+                  Exibindo: <span className="text-white">{filteredAlugueis.length}</span>
+                </span>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Mensagem de erro */}
+        {/* Error Message */}
         <AnimatePresence>
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl flex items-center gap-3"
+              className="mb-6 p-4 rounded-xl flex items-center gap-3"
+              style={{
+                background: "rgba(239,68,68,0.12)",
+                border: "1px solid rgba(239,68,68,0.25)",
+              }}
             >
-              <FaExclamationTriangle className="w-5 h-5" />
-              {error}
-              <button 
+              <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <span className="text-red-300 text-sm">{error}</span>
+              <button
                 onClick={() => setError(null)}
-                className="ml-auto text-red-400 hover:text-red-300"
+                className="ml-auto text-red-400 hover:text-red-300 transition-colors"
               >
-                ×
+                <XCircle className="w-5 h-5" />
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Grid de Aluguéis */}
+        {/* Property Cards Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
           {filteredAlugueis.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-16 text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-caixa-orange to-caixa-orange-light rounded-full mx-auto flex items-center justify-center mb-6">
-                <FaHome className="w-10 h-10 text-white" />
+            <div
+              className="rounded-2xl p-16 text-center backdrop-blur-xl"
+              style={{
+                background: CARD,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <div
+                className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20"
+                style={{ background: ACCENT_GRADIENT }}
+              >
+                <Home className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">
                 {searchTerm || filterStatus ? "Nenhum imóvel encontrado" : "Nenhum imóvel para aluguel"}
               </h3>
-              <p className="text-white/70">
-                {searchTerm || filterStatus 
+              <p className="text-white/50">
+                {searchTerm || filterStatus
                   ? "Tente ajustar os filtros de busca"
                   : "Cadastre o primeiro imóvel para aluguel"
                 }
@@ -281,105 +326,148 @@ const AlugueisPage = () => {
                   key={aluguel.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 flex flex-col overflow-hidden group relative"
+                  transition={{ delay: index * 0.05 }}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl backdrop-blur-xl hover:scale-[1.02] transition-all duration-300"
+                  style={{
+                    background: CARD,
+                    border: `1px solid ${BORDER}`,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+                  }}
                 >
                   {/* Status Badge */}
                   <div className="absolute top-3 left-3 z-10">
                     {aluguel.alugado ? (
-                      <span className="bg-red-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <FaTimesCircle className="w-3 h-3" />
+                      <span className="bg-red-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                        <XCircle className="w-3 h-3" />
                         ALUGADO
                       </span>
                     ) : (
-                      <span className="bg-green-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <FaCheckCircle className="w-3 h-3" />
+                      <span className="bg-green-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                        <CheckCircle className="w-3 h-3" />
                         DISPONÍVEL
                       </span>
                     )}
                   </div>
 
-                  {/* Imagem */}
-                  <div className="relative">
+                  {/* Image */}
+                  <div className="relative overflow-hidden">
                     {aluguel.foto_capa ? (
                       <img
                         src={`${API_URL}/uploads/alugueis/capa/${aluguel.foto_capa}`}
                         alt={aluguel.nome_imovel}
-                        className={`w-full h-48 object-cover group-hover:brightness-110 transition-all duration-300 ${
-                          aluguel.alugado ? 'brightness-75' : ''
+                        className={`w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500 ${
+                          aluguel.alugado ? 'brightness-75 grayscale-[20%]' : ''
                         }`}
                         onError={(e) => {
                           e.target.src = '/placeholder-image.jpg';
                         }}
                       />
                     ) : (
-                      <div className="w-full h-48 bg-gradient-to-br from-caixa-orange/20 to-caixa-orange-light/20 flex items-center justify-center">
-                        <FaHome className="w-12 h-12 text-white/40" />
+                      <div
+                        className="w-full h-48 flex items-center justify-center"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))",
+                        }}
+                      >
+                        <Home className="w-12 h-12 text-white/20" />
                       </div>
                     )}
+                    {/* Image overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                   </div>
 
                   <div className="flex-1 flex flex-col p-5">
-                    {/* Título */}
+                    {/* Title */}
                     <h2 className="text-lg font-bold text-white mb-2 line-clamp-2">
                       {aluguel.nome_imovel || 'Nome não informado'}
                     </h2>
 
-                    {/* Descrição */}
-                    <p className="text-white/70 text-sm mb-4 line-clamp-3">
+                    {/* Description */}
+                    <p className="text-white/50 text-sm mb-4 line-clamp-3">
                       {aluguel.descricao || 'Descrição não disponível'}
                     </p>
 
-                    {/* Características */}
+                    {/* Features */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <div className="bg-caixa-orange/20 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1">
-                        <FaBed className="w-3 h-3" />
+                      <div
+                        className="text-white/90 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                        style={{
+                          background: "rgba(249,115,22,0.15)",
+                          border: "1px solid rgba(249,115,22,0.20)",
+                        }}
+                      >
+                        <Bed className="w-3 h-3 text-orange-400" />
                         {aluguel.quartos || 0} Quartos
                       </div>
-                      <div className="bg-caixa-orange/20 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1">
-                        <FaBath className="w-3 h-3" />
+                      <div
+                        className="text-white/90 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                        style={{
+                          background: "rgba(249,115,22,0.15)",
+                          border: "1px solid rgba(249,115,22,0.20)",
+                        }}
+                      >
+                        <Bath className="w-3 h-3 text-orange-400" />
                         {aluguel.banheiro || 0} Banheiros
                       </div>
                       {aluguel.dia_vencimento && (
-                        <div className="bg-caixa-orange/20 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1">
-                          <FaCalendarAlt className="w-3 h-3" />
+                        <div
+                          className="text-white/90 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                          style={{
+                            background: "rgba(249,115,22,0.15)",
+                            border: "1px solid rgba(249,115,22,0.20)",
+                          }}
+                        >
+                          <Calendar className="w-3 h-3 text-orange-400" />
                           Vence dia {aluguel.dia_vencimento}
                         </div>
                       )}
                     </div>
 
-                    {/* Valor */}
-                    <div className="bg-white/5 rounded-xl p-3 mb-4">
+                    {/* Price */}
+                    <div
+                      className="rounded-xl p-3 mb-4"
+                      style={{
+                        background: INPUT_BG,
+                        border: `1px solid ${BORDER}`,
+                      }}
+                    >
                       <div className="flex items-center justify-center gap-2">
-                        <FaDollarSign className="w-4 h-4 text-caixa-orange" />
-                        <span className="text-caixa-orange font-bold text-lg">
+                        <DollarSign className="w-4 h-4 text-orange-400" />
+                        <span
+                          className="font-bold text-lg bg-clip-text text-transparent"
+                          style={{ backgroundImage: ACCENT_GRADIENT }}
+                        >
                           {Number(aluguel.valor_aluguel || 0).toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           })}
                         </span>
-                        <span className="text-white/60 text-sm">/mês</span>
+                        <span className="text-white/40 text-sm">/mês</span>
                       </div>
                     </div>
 
-                    {/* Botões de Ação */}
+                    {/* Action Buttons */}
                     <div className="flex flex-col gap-2 mt-auto">
-                      {/* Primeira linha de botões */}
+                      {/* First row */}
                       <div className="flex gap-2">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleDownloadAll(aluguel.id)}
                           disabled={actionLoading[`download_${aluguel.id}`]}
-                          className="flex-1 flex items-center justify-center gap-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-3 py-2 rounded-lg transition-all border border-blue-500/20 disabled:opacity-50"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg transition-all disabled:opacity-50 text-blue-400 hover:text-blue-300"
+                          style={{
+                            background: "rgba(59,130,246,0.10)",
+                            border: "1px solid rgba(59,130,246,0.20)",
+                          }}
                           title="Baixar todas as imagens"
                         >
                           {actionLoading[`download_${aluguel.id}`] ? (
-                            <FaSpinner className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <FaDownload className="w-4 h-4" />
+                            <Download className="w-4 h-4" />
                           )}
-                          <span className="text-xs">Download</span>
+                          <span className="text-xs font-medium">Download</span>
                         </motion.button>
 
                         <motion.button
@@ -387,41 +475,55 @@ const AlugueisPage = () => {
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleDelete(aluguel.id)}
                           disabled={actionLoading[`delete_${aluguel.id}`]}
-                          className="flex items-center justify-center gap-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-2 rounded-lg transition-all border border-red-500/20 disabled:opacity-50"
+                          className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all disabled:opacity-50 text-red-400 hover:text-red-300"
+                          style={{
+                            background: "rgba(239,68,68,0.10)",
+                            border: "1px solid rgba(239,68,68,0.20)",
+                          }}
                           title="Deletar imóvel"
                         >
                           {actionLoading[`delete_${aluguel.id}`] ? (
-                            <FaSpinner className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <FaTrashAlt className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           )}
                         </motion.button>
                       </div>
 
-                      {/* Segunda linha - Botão de status */}
+                      {/* Second row - Status toggle */}
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleToggleRentStatus(aluguel.id, aluguel.alugado)}
                         disabled={actionLoading[`status_${aluguel.id}`]}
-                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all border disabled:opacity-50 ${
+                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 ${
                           aluguel.alugado
-                            ? "bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/20"
-                            : "bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/20"
+                            ? "text-green-400 hover:text-green-300"
+                            : "text-red-400 hover:text-red-300"
                         }`}
+                        style={{
+                          background: aluguel.alugado
+                            ? "rgba(34,197,94,0.10)"
+                            : "rgba(239,68,68,0.10)",
+                          border: `1px solid ${
+                            aluguel.alugado
+                              ? "rgba(34,197,94,0.20)"
+                              : "rgba(239,68,68,0.20)"
+                          }`,
+                        }}
                         title={aluguel.alugado ? "Marcar como disponível" : "Marcar como alugado"}
                       >
                         {actionLoading[`status_${aluguel.id}`] ? (
                           <>
-                            <FaSpinner className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                             <span className="text-sm">Atualizando...</span>
                           </>
                         ) : (
                           <>
                             {aluguel.alugado ? (
-                              <FaCheckCircle className="w-4 h-4" />
+                              <CheckCircle className="w-4 h-4" />
                             ) : (
-                              <FaTimesCircle className="w-4 h-4" />
+                              <XCircle className="w-4 h-4" />
                             )}
                             <span className="text-sm">
                               {aluguel.alugado ? "Marcar Disponível" : "Marcar Alugado"}
