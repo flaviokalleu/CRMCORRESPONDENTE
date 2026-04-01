@@ -76,13 +76,31 @@ const ClienteAluguel = () => {
   const [textoContrato, setTextoContrato] = useState('');
   const [loadingContratoTexto, setLoadingContratoTexto] = useState(false);
   const [formContratoSimples, setFormContratoSimples] = useState({
+    // Locador
     locador_nome: '',
+    locador_cpf: '',
+    locador_rg: '',
+    locador_estado_civil: '',
+    locador_profissao: '',
+    locador_endereco: '',
     locador_telefone: '',
     locador_pix: '',
+    // Locatário
     locatario_nome: '',
     locatario_cpf: '',
+    locatario_rg: '',
+    locatario_estado_civil: '',
+    locatario_profissao: '',
     locatario_email: '',
     locatario_telefone: '',
+    // Imóvel
+    imovel_endereco: '',
+    imovel_numero: '',
+    imovel_complemento: '',
+    imovel_bairro: '',
+    imovel_cidade: '',
+    imovel_cep: '',
+    // Contrato
     valor_aluguel: '',
     dia_vencimento: '',
     data_inicio: '',
@@ -91,6 +109,11 @@ const ClienteAluguel = () => {
     multa_percentual: '2.00',
     juros_percentual: '1.00',
     foro: 'Valparaiso de Goias - GO',
+    // Testemunhas
+    testemunha1_nome: '',
+    testemunha1_cpf: '',
+    testemunha2_nome: '',
+    testemunha2_cpf: '',
   });
   const [repasses, setRepasses] = useState([]);
   const [loadingRepasses, setLoadingRepasses] = useState(false);
@@ -393,14 +416,28 @@ const ClienteAluguel = () => {
 
   const preencherFormularioSimples = (cliente) => {
     setFormContratoSimples({
-      locador_nome: cliente?.proprietario_nome || 'Conforme cadastro do administrador do sistema',
+      locador_nome: cliente?.proprietario_nome || '',
+      locador_cpf: '',
+      locador_rg: '',
+      locador_estado_civil: '',
+      locador_profissao: '',
+      locador_endereco: '',
       locador_telefone: cliente?.proprietario_telefone || '',
       locador_pix: cliente?.proprietario_pix || '',
       locatario_nome: cliente?.nome || '',
       locatario_cpf: cliente?.cpf || '',
+      locatario_rg: '',
+      locatario_estado_civil: '',
+      locatario_profissao: '',
       locatario_email: cliente?.email || '',
       locatario_telefone: cliente?.telefone || '',
-      valor_aluguel: cliente?.valor_aluguel != null ? String(cliente.valor_aluguel) : '',
+      imovel_endereco: '',
+      imovel_numero: '',
+      imovel_complemento: '',
+      imovel_bairro: '',
+      imovel_cidade: 'Valparaiso de Goias',
+      imovel_cep: '',
+      valor_aluguel: (cliente?.valor_aluguel != null && Number(cliente.valor_aluguel) > 0) ? String(cliente.valor_aluguel) : '',
       dia_vencimento: cliente?.dia_vencimento != null ? String(cliente.dia_vencimento) : '',
       data_inicio: cliente?.data_inicio_contrato || '',
       data_fim: cliente?.data_fim_contrato || '',
@@ -408,6 +445,10 @@ const ClienteAluguel = () => {
       multa_percentual: cliente?.percentual_multa != null ? String(cliente.percentual_multa) : '2.00',
       juros_percentual: cliente?.percentual_juros_mora != null ? String(cliente.percentual_juros_mora) : '1.00',
       foro: 'Valparaiso de Goias - GO',
+      testemunha1_nome: '',
+      testemunha1_cpf: '',
+      testemunha2_nome: '',
+      testemunha2_cpf: '',
     });
   };
 
@@ -421,101 +462,201 @@ const ClienteAluguel = () => {
     }
   };
 
+  const buildContratoTexto = (f) => {
+    const valor = Number.parseFloat(f.valor_aluguel || 0);
+    const valorFmt = valor > 0 ? valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '__________';
+    const valorExtenso = valor > 0 ? `R$ ${valorFmt}` : '__________';
+
+    // Calcular prazo em meses
+    let prazoMeses = '__________';
+    if (f.data_inicio && f.data_fim) {
+      try {
+        const ini = new Date(`${f.data_inicio}T00:00:00`);
+        const fim = new Date(`${f.data_fim}T00:00:00`);
+        const meses = (fim.getFullYear() - ini.getFullYear()) * 12 + (fim.getMonth() - ini.getMonth());
+        if (meses > 0) prazoMeses = String(meses);
+      } catch { /* ignora */ }
+    }
+
+    const dataInicioBR = formatarDataBR(f.data_inicio);
+    const hoje = new Date();
+    const mesNome = hoje.toLocaleDateString('pt-BR', { month: 'long' });
+    const anoAtual = hoje.getFullYear();
+    const diaAtual = hoje.getDate();
+    const cidadeForo = f.foro || 'Valparaiso de Goias - GO';
+    const [cidadeForoNome] = cidadeForo.split(' - ');
+    const ufForo = cidadeForo.includes(' - ') ? cidadeForo.split(' - ')[1] : 'GO';
+
+    // Endereço do imóvel completo
+    const enderecoImovel = [
+      f.imovel_endereco || '__________________________________________',
+      f.imovel_numero ? `n° ${f.imovel_numero}` : 'n° ______',
+      f.imovel_complemento || '',
+      f.imovel_bairro ? `Bairro ${f.imovel_bairro}` : '',
+      f.imovel_cidade || '__________',
+      f.imovel_cep ? `CEP ${f.imovel_cep}` : 'CEP __________',
+    ].filter(Boolean).join(', ');
+
+    return `# CONTRATO DE LOCAÇÃO DE IMÓVEL RESIDENCIAL
+
+**LOCADOR(A):** ${f.locador_nome || '__________________________________________'}, estado civil: ${f.locador_estado_civil || '__________'}, profissão: ${f.locador_profissao || '__________'}, RG n° ${f.locador_rg || '__________'} e CPF ${f.locador_cpf || '__________'}, residente e domiciliado(a) em ${f.locador_endereco || '__________________________________________'}, telefone: ${f.locador_telefone || '__________'}.
+
+**LOCATÁRIO(A):** ${f.locatario_nome || '__________________________________________'}, estado civil: ${f.locatario_estado_civil || '__________'}, profissão: ${f.locatario_profissao || '__________'}, RG n° ${f.locatario_rg || '__________'} e CPF ${f.locatario_cpf || '__________'}, e-mail: ${f.locatario_email || '__________'}, telefone: ${f.locatario_telefone || '__________'}, residente e domiciliado(a) no endereço do imóvel objeto do presente contrato.
+
+As partes acima mencionadas, pelo presente contrato particular, ajustam a locação de um imóvel residencial, de acordo com as cláusulas que seguem.
+
+---
+
+## CLÁUSULA PRIMEIRA — Do Objeto
+
+O objeto de locação é o imóvel residencial localizado ${enderecoImovel}.
+
+## CLÁUSULA SEGUNDA — Do Prazo
+
+O prazo da locação é de **${prazoMeses} meses**, com início em **${dataInicioBR}**, ocasião em que são entregues as chaves do imóvel ao(à) LOCATÁRIO(A).
+
+**Parágrafo Primeiro:** Se o(a) LOCATÁRIO(A) desocupar o imóvel antes do prazo estipulado, ficará obrigado(a) a pagar, a título de multa, valor equivalente a 3 (três) meses de aluguel, podendo ser isento(a) a critério do(a) LOCADOR(A) mediante termo aditivo formal.
+
+## CLÁUSULA TERCEIRA — Da Devolução do Imóvel
+
+No dia subsequente ao término do prazo, o(a) LOCATÁRIO(A), independentemente de aviso ou notificação, deverá restituir o imóvel, sob pena de pagar multa equivalente a 3 (três) meses de aluguel, salvo se, em comum acordo, o contrato for prorrogado mediante termo aditivo com reajuste.
+
+## CLÁUSULA QUARTA — Do Aluguel
+
+O valor do aluguel mensal será de **R$ ${valorFmt} (${valorExtenso})**, que deverá ser pago obrigatoriamente até o dia **${f.dia_vencimento || '__________'}** de cada mês, mediante PIX para a chave **${f.locador_pix || '__________'}** ou outra forma acordada entre as partes.
+
+**Parágrafo Primeiro:** Em caso de atraso, será aplicada automaticamente multa de **${f.multa_percentual || '2'}%** sobre o valor do aluguel, juros de mora de **${f.juros_percentual || '1'}% ao mês** e correção pelo **${f.indice_reajuste || 'IGPM'}**.
+
+**Parágrafo Segundo:** O(A) LOCATÁRIO(A) não poderá reter o pagamento do aluguel ou encargos, sob nenhuma alegação.
+
+## CLÁUSULA QUINTA — Da Rescisão por Inadimplência
+
+O atraso no pagamento do aluguel ou das despesas ordinárias por mais de 30 (trinta) dias será causa de rescisão do contrato, ficando o(a) LOCATÁRIO(A) sujeito(a) a multa equivalente a 3 (três) meses de aluguel, mais os valores devidos até então.
+
+## CLÁUSULA SEXTA — Da Cobrança
+
+Em caso de atraso, a cobrança poderá ser realizada por escritório de advocacia, ficando o(a) LOCATÁRIO(A) sujeito(a) ao pagamento de honorários advocatícios de **20% (vinte por cento)** sobre o valor do débito atualizado, independentemente de multas e demais cominações legais.
+
+## CLÁUSULA SÉTIMA — Das Despesas do Imóvel
+
+Será de responsabilidade do(a) LOCATÁRIO(A), além do aluguel, o pagamento de IPTU, condomínio, água, luz, gás, seguro contra incêndio e todas as demais despesas referentes à conservação do imóvel e eventuais taxas ou tributos que incidam sobre ele.
+
+**Parágrafo Primeiro:** O(A) LOCATÁRIO(A) obriga-se a transferir para seu nome as contas de consumo (água, luz, gás) no prazo de 30 (trinta) dias contados da assinatura deste contrato.
+
+## CLÁUSULA OITAVA — Da Devolução
+
+O(A) LOCATÁRIO(A) está obrigado(a) a devolver o imóvel nas condições em que recebeu, limpo, conservado e em pleno funcionamento, ao término do contrato, ainda que rescindido antecipadamente.
+
+**Parágrafo Primeiro:** Caso o imóvel não seja restituído nas mesmas condições, o aluguel continuará a correr até o cumprimento de todas as exigências do(a) LOCADOR(A).
+
+## CLÁUSULA NONA — Da Quitação das Contas
+
+Ao desocupar o imóvel, o(a) LOCATÁRIO(A) deverá apresentar os comprovantes de quitação de energia elétrica, água, gás, IPTU, condomínio e quaisquer outras taxas que incidam sobre o imóvel.
+
+## CLÁUSULA DÉCIMA — Do Uso Exclusivo
+
+O(A) LOCATÁRIO(A) declara que o imóvel destina-se única e exclusivamente para uso residencial. É expressamente proibido sublocar, transferir ou ceder o imóvel sem o consentimento prévio e por escrito do(a) LOCADOR(A).
+
+## CLÁUSULA DÉCIMA PRIMEIRA — Da Rescisão por Descumprimento
+
+O(A) LOCADOR(A) poderá rescindir este contrato de pleno direito, sem que assista ao(à) LOCATÁRIO(A) direito a qualquer indenização, quando ocorrer o descumprimento de qualquer cláusula.
+
+**Parágrafo Primeiro:** Tendo o(a) LOCATÁRIO(A) dado motivo à rescisão, pagará multa equivalente a 3 (três) meses de aluguel, independentemente das sanções anteriormente previstas.
+
+## CLÁUSULA DÉCIMA SEGUNDA — Das Proibições
+
+É vedado ao(à) LOCATÁRIO(A) a colocação de placas, cartazes, painéis, luminosos, antenas ou quaisquer outros elementos nas paredes externas do imóvel sem autorização prévia e expressa do(a) LOCADOR(A).
+
+## CLÁUSULA DÉCIMA TERCEIRA — Da Conservação
+
+O(A) LOCATÁRIO(A) obriga-se a zelar pela limpeza e conservação do imóvel, incluída a pintura. São vedadas reformas e quaisquer alterações no imóvel sem autorização prévia e expressa do(a) LOCADOR(A).
+
+## CLÁUSULA DÉCIMA QUARTA — Dos Defeitos e Avisos
+
+O(A) LOCATÁRIO(A) deve informar imediatamente ao(à) LOCADOR(A) o surgimento de qualquer dano ou defeito no imóvel, bem como todas as notificações de autoridades públicas recebidas, sob pena de ser responsabilizado pelos prejuízos decorrentes da omissão.
+
+## CLÁUSULA DÉCIMA QUINTA — Dos Danos
+
+O(A) LOCATÁRIO(A) deve realizar a imediata reparação dos danos causados no imóvel por si, seus dependentes, familiares ou visitantes.
+
+## CLÁUSULA DÉCIMA SEXTA — Da Vistoria
+
+É facultado ao(à) LOCADOR(A) vistoriar o imóvel, por si ou seus procuradores, sempre que achar conveniente, para verificar o cumprimento das obrigações assumidas neste contrato.
+
+## CLÁUSULA DÉCIMA SÉTIMA — Da Responsabilidade
+
+O(A) LOCADOR(A) não se responsabiliza por eventuais danos sofridos pelo(a) LOCATÁRIO(A) em caso de acidentes ocasionados por caso fortuito ou força maior.
+
+## CLÁUSULA DÉCIMA OITAVA — Das Tolerâncias
+
+Quaisquer tolerâncias ou concessões do(a) LOCADOR(A) não constituirão precedente invocável e não terão a virtude de alterar as obrigações impostas neste instrumento.
+
+## CLÁUSULA DÉCIMA NONA — Do Foro
+
+As partes elegem o foro da Comarca de **${cidadeForoNome}, ${ufForo}**, para dirimir eventuais dúvidas e outras questões, renunciando a qualquer outro, por mais privilegiado que seja.
+
+---
+
+${cidadeForoNome}, ${diaAtual} de ${mesNome} de ${anoAtual}.
+
+---
+
+_____________________________________________
+**${f.locador_nome || 'LOCADOR(A)'}**
+Locador(a)
+
+---
+
+_____________________________________________
+**${f.locatario_nome || 'LOCATÁRIO(A)'}**
+Locatário(a)
+
+---
+
+_____________________________________________
+**${f.testemunha1_nome || 'Testemunha 1'}** — CPF: ${f.testemunha1_cpf || '_______________'}
+Testemunha 1
+
+---
+
+_____________________________________________
+**${f.testemunha2_nome || 'Testemunha 2'}** — CPF: ${f.testemunha2_cpf || '_______________'}
+Testemunha 2
+
+---
+
+*Contrato gerado pelo sistema CRM IMOB em ${new Date().toLocaleString('pt-BR')}.*`;
+  };
+
   const montarContratoLeigo = () => {
     const f = formContratoSimples;
-    const valor = Number.parseFloat(f.valor_aluguel || 0);
-    const valorFmt = Number.isFinite(valor) ? valor.toFixed(2) : '0.00';
-    const hoje = new Date().toLocaleString('pt-BR');
-
-    const texto = `# CONTRATO DE LOCACAO RESIDENCIAL (PREENCHIMENTO SIMPLES)
-
-## RESUMO RAPIDO
-- **Locador:** ${f.locador_nome || '-'}
-- **Locatario:** ${f.locatario_nome || '-'}
-- **Valor do aluguel:** R$ ${valorFmt}
-- **Dia de vencimento:** ${f.dia_vencimento || '-'}
-- **Prazo:** ${formatarDataBR(f.data_inicio)} ate ${formatarDataBR(f.data_fim)}
-
-## 1. DADOS DAS PESSOAS
-- **LOCADOR:** ${f.locador_nome || '-'}
-- **Telefone LOCADOR:** ${f.locador_telefone || '-'}
-- **PIX LOCADOR:** ${f.locador_pix || '-'}
-- **LOCATARIO:** ${f.locatario_nome || '-'}
-- **CPF LOCATARIO:** ${f.locatario_cpf || '-'}
-- **E-mail LOCATARIO:** ${f.locatario_email || '-'}
-- **Telefone LOCATARIO:** ${f.locatario_telefone || '-'}
-
-## 2. PAGAMENTO
-O valor mensal do aluguel e **R$ ${valorFmt}** e deve ser pago todo dia **${f.dia_vencimento || '-'}**.
-
-Formas de pagamento: PIX, boleto ou cartao (conforme combinado).
-
-## 3. PRAZO DO CONTRATO
-Este contrato vale de **${formatarDataBR(f.data_inicio)}** ate **${formatarDataBR(f.data_fim)}**.
-
-## 4. REAJUSTE
-O aluguel pode ser reajustado 1 vez por ano pelo indice **${f.indice_reajuste || 'IGPM'}** (ou indice substituto previsto em lei).
-
-## 5. ATRASO NO PAGAMENTO
-Se atrasar:
-- Multa de **${f.multa_percentual || '2.00'}%**
-- Juros de **${f.juros_percentual || '1.00'}%** ao mes
-
-## 6. RESPONSABILIDADES DO LOCATARIO
-- Pagar em dia;
-- Cuidar do imovel;
-- Nao fazer mudancas estruturais sem autorizacao;
-- Avisar problemas no imovel;
-- Devolver o imovel em boas condicoes no fim do contrato.
-
-## 7. ENCERRAMENTO ANTECIPADO
-Se encerrar antes do prazo, podera haver multa proporcional, conforme lei e periodo restante.
-
-## 8. FORO
-Fica eleito o foro de **${f.foro || '-'}** para resolver eventuais conflitos.
-
-Valparaiso de Goias, ${new Date().toLocaleDateString('pt-BR')}
-
----
-
-**LOCADOR**
-
-**LOCATARIO - ${f.locatario_nome || '-'}**
-
----
-
-Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
-
-    setTextoContrato(texto);
+    setTextoContrato(buildContratoTexto(f));
   };
 
   const abrirEditorContrato = async (cliente) => {
     setClienteSelecionado(cliente);
     setModalContrato(true);
-    setTextoContrato('');
+    // Monta o formulário com os dados do cliente
+    const form = {
+      locador_nome: cliente?.proprietario_nome || '',
+      locador_telefone: cliente?.proprietario_telefone || '',
+      locador_pix: cliente?.proprietario_pix || '',
+      locatario_nome: cliente?.nome || '',
+      locatario_cpf: cliente?.cpf || '',
+      locatario_email: cliente?.email || '',
+      locatario_telefone: cliente?.telefone || '',
+      valor_aluguel: (cliente?.valor_aluguel != null && Number(cliente.valor_aluguel) > 0) ? String(cliente.valor_aluguel) : '',
+      dia_vencimento: cliente?.dia_vencimento != null ? String(cliente.dia_vencimento) : '',
+      data_inicio: cliente?.data_inicio_contrato || '',
+      data_fim: cliente?.data_fim_contrato || '',
+      indice_reajuste: cliente?.indice_reajuste || 'IGPM',
+      multa_percentual: cliente?.percentual_multa != null ? String(cliente.percentual_multa) : '2',
+      juros_percentual: cliente?.percentual_juros_mora != null ? String(cliente.percentual_juros_mora) : '1',
+      foro: 'Valparaiso de Goias - GO',
+    };
     preencherFormularioSimples(cliente);
-
-    try {
-      setLoadingContratoTexto(true);
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato/texto`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-      });
-      const raw = await res.text();
-      let data = {};
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        data = {};
-      }
-      if (!res.ok) throw new Error(data.error || raw || 'Erro ao carregar texto do contrato');
-      setTextoContrato(data.texto_contrato || '');
-    } catch (e) {
-      alert(e.message || 'Erro ao carregar texto do contrato');
-      setModalContrato(false);
-      setClienteSelecionado(null);
-    } finally {
-      setLoadingContratoTexto(false);
-    }
+    // Gera o texto diretamente do objeto (sem aguardar atualização de estado)
+    setTextoContrato(buildContratoTexto(form));
   };
 
   const carregarModeloContratoPadrao = async () => {
@@ -1699,13 +1840,7 @@ Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
 
             {/* ── Body ── */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-              {loadingContratoTexto ? (
-                <div className="flex items-center justify-center py-20 text-white/40 gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin text-orange-400" />
-                  <span className="text-sm">Carregando contrato...</span>
-                </div>
-              ) : (
-                <>
+              <>
                   {/* Seção Locador */}
                   <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <div className="flex items-center gap-2 mb-4">
@@ -1714,11 +1849,16 @@ Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
-                        { label: 'Nome completo', key: 'locador_nome' },
+                        { label: 'Nome completo', key: 'locador_nome', span: 2 },
+                        { label: 'CPF', key: 'locador_cpf' },
+                        { label: 'RG', key: 'locador_rg' },
+                        { label: 'Estado Civil', key: 'locador_estado_civil' },
+                        { label: 'Profissão', key: 'locador_profissao' },
+                        { label: 'Endereço Residencial', key: 'locador_endereco', span: 2 },
                         { label: 'Telefone', key: 'locador_telefone' },
                         { label: 'Chave PIX', key: 'locador_pix' },
-                      ].map(({ label, key }) => (
-                        <div key={key}>
+                      ].map(({ label, key, span }) => (
+                        <div key={key} className={span === 2 ? 'col-span-2' : ''}>
                           <label className="block text-xs text-white/40 mb-1">{label}</label>
                           <input
                             className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
@@ -1737,14 +1877,45 @@ Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
                       <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
                       <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Locatário — Inquilino</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
-                        { label: 'Nome completo', key: 'locatario_nome' },
+                        { label: 'Nome completo', key: 'locatario_nome', span: 2 },
                         { label: 'CPF', key: 'locatario_cpf' },
+                        { label: 'RG', key: 'locatario_rg' },
+                        { label: 'Estado Civil', key: 'locatario_estado_civil' },
+                        { label: 'Profissão', key: 'locatario_profissao' },
                         { label: 'E-mail', key: 'locatario_email' },
                         { label: 'Telefone', key: 'locatario_telefone' },
-                      ].map(({ label, key }) => (
-                        <div key={key}>
+                      ].map(({ label, key, span }) => (
+                        <div key={key} className={span === 2 ? 'col-span-2' : ''}>
+                          <label className="block text-xs text-white/40 mb-1">{label}</label>
+                          <input
+                            className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
+                            value={formContratoSimples[key]}
+                            onChange={(e) => setFormContratoSimples({ ...formContratoSimples, [key]: e.target.value })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seção Imóvel */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
+                      <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Imóvel Locado</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Endereço (Rua/Av)', key: 'imovel_endereco', span: 2 },
+                        { label: 'Número', key: 'imovel_numero' },
+                        { label: 'Complemento', key: 'imovel_complemento' },
+                        { label: 'Bairro', key: 'imovel_bairro' },
+                        { label: 'Cidade', key: 'imovel_cidade' },
+                        { label: 'CEP', key: 'imovel_cep' },
+                      ].map(({ label, key, span }) => (
+                        <div key={key} className={span === 2 ? 'col-span-2' : ''}>
                           <label className="block text-xs text-white/40 mb-1">{label}</label>
                           <input
                             className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
@@ -1821,13 +1992,12 @@ Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
                       placeholder="Clique em 'Montar dos campos' para gerar o texto automaticamente..."
                     />
                   </div>
-                </>
-              )}
+              </>
             </div>
 
             {/* ── Footer ── */}
             <div className="flex items-center justify-between gap-3 px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
-              <p className="text-xs text-white/30">Preencha os campos e clique em Montar para gerar o contrato</p>
+              <p className="text-xs text-white/30">Ajuste os campos acima e clique em Montar para atualizar o texto</p>
               <div className="flex gap-3">
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   onClick={fecharModais}
@@ -1836,7 +2006,7 @@ Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
                   Cancelar
                 </motion.button>
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  disabled={loadingAsaas || loadingContratoTexto || !textoContrato.trim()}
+                  disabled={loadingAsaas || !textoContrato.trim()}
                   onClick={async () => { await gerarContrato(clienteSelecionado, textoContrato); fecharModais(); }}
                   className="px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 transition-opacity"
                   style={{ background: ACCENT_GRADIENT, boxShadow: '0 4px 16px rgba(249,115,22,0.35)' }}>
