@@ -8,9 +8,17 @@ import {
 
 const API_URL = process.env.REACT_APP_API_URL;
 
+const formatCpfMask = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+};
+
 const PortalInquilinoPage = () => {
-  const [token, setToken] = useState(localStorage.getItem("portal_token") || null);
-  const [nomeInquilino, setNomeInquilino] = useState(localStorage.getItem("portal_nome") || "");
+  const [token, setToken] = useState(null);
+  const [nomeInquilino, setNomeInquilino] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
@@ -42,12 +50,10 @@ const PortalInquilinoPage = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem("portal_token", data.token);
-        localStorage.setItem("portal_nome", data.nome);
         setToken(data.token);
         setNomeInquilino(data.nome);
       } else {
-        setErro(data.error || "CPF nao encontrado");
+        setErro(data.error || "Acesso ao portal indisponivel no momento.");
       }
     } catch (error) {
       setErro("Erro de conexao. Tente novamente.");
@@ -57,8 +63,6 @@ const PortalInquilinoPage = () => {
   };
 
   const logout = () => {
-    localStorage.removeItem("portal_token");
-    localStorage.removeItem("portal_nome");
     setToken(null);
     setDados(null);
     setCobrancas([]);
@@ -140,7 +144,7 @@ const PortalInquilinoPage = () => {
           <form onSubmit={login} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Seu CPF</label>
-              <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)}
+              <input type="text" value={cpf} onChange={(e) => setCpf(formatCpfMask(e.target.value))}
                 placeholder="000.000.000-00" maxLength={14} required
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all text-lg text-center tracking-wider" />
             </div>

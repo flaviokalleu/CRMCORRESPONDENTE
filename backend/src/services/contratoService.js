@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const UPLOADS_DIR = path.resolve(__dirname, '../../uploads/contratos');
 
+const NOME_ARQUIVO_TEXTO_CONTRATO = 'contrato_editavel.txt';
+
 // Garante que o diretorio existe
 const garantirDiretorio = (dir) => {
   if (!fs.existsSync(dir)) {
@@ -13,7 +15,7 @@ const garantirDiretorio = (dir) => {
 };
 
 // Gera contrato PDF usando Puppeteer
-const gerarContratoPDF = async (clienteAluguel, aluguel) => {
+const gerarContratoPDF = async (clienteAluguel, aluguel, options = {}) => {
   const clienteDir = path.join(UPLOADS_DIR, String(clienteAluguel.id));
   garantirDiretorio(clienteDir);
 
@@ -24,103 +26,16 @@ const gerarContratoPDF = async (clienteAluguel, aluguel) => {
   const dataInicio = clienteAluguel.data_inicio_contrato || new Date().toISOString().split('T')[0];
   const dataFim = clienteAluguel.data_fim_contrato || calcularDataFim(dataInicio, 12);
 
-  const html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: 'Times New Roman', serif; font-size: 13px; line-height: 1.8; color: #222; margin: 40px 60px; }
-    h1 { text-align: center; font-size: 18px; text-transform: uppercase; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-    h2 { font-size: 14px; text-transform: uppercase; margin-top: 25px; color: #444; }
-    .dados { background: #f8f8f8; padding: 15px; border-radius: 5px; margin: 15px 0; }
-    .dados p { margin: 5px 0; }
-    .clausula { margin: 15px 0; text-align: justify; }
-    .assinatura { margin-top: 60px; display: flex; justify-content: space-between; }
-    .assinatura-box { text-align: center; width: 45%; }
-    .assinatura-box .linha { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; }
-    .rodape { text-align: center; font-size: 10px; color: #999; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Contrato de Locacao Residencial</h1>
+  const textoInformado = typeof options.textoContrato === 'string' ? options.textoContrato.trim() : '';
+  let textoContrato = textoInformado;
 
-  <h2>1. Das Partes</h2>
-  <div class="dados">
-    <p><strong>LOCADOR:</strong> Conforme cadastro do administrador do sistema</p>
-    <p><strong>LOCATARIO:</strong> ${clienteAluguel.nome}</p>
-    <p><strong>CPF:</strong> ${clienteAluguel.cpf}</p>
-    <p><strong>E-mail:</strong> ${clienteAluguel.email}</p>
-    <p><strong>Telefone:</strong> ${clienteAluguel.telefone}</p>
-  </div>
+  if (!textoContrato) {
+    textoContrato = carregarTextoContrato(clienteAluguel.id) || gerarTextoContrato(clienteAluguel, aluguel);
+  } else {
+    salvarTextoContrato(clienteAluguel.id, textoContrato);
+  }
 
-  ${aluguel ? `
-  <h2>2. Do Imovel</h2>
-  <div class="dados">
-    <p><strong>Imovel:</strong> ${aluguel.nome_imovel}</p>
-    <p><strong>Descricao:</strong> ${aluguel.descricao}</p>
-    <p><strong>Quartos:</strong> ${aluguel.quartos} | <strong>Banheiros:</strong> ${aluguel.banheiro}</p>
-  </div>
-  ` : ''}
-
-  <h2>${aluguel ? '3' : '2'}. Do Valor e Pagamento</h2>
-  <div class="clausula">
-    <p>O valor mensal do aluguel e de <strong>R$ ${parseFloat(clienteAluguel.valor_aluguel).toFixed(2)}</strong> (${valorExtenso}), com vencimento todo dia <strong>${clienteAluguel.dia_vencimento}</strong> de cada mes.</p>
-    <p>O pagamento devera ser realizado por meio dos canais disponibilizados pelo LOCADOR (PIX, boleto bancario ou cartao de credito).</p>
-  </div>
-
-  <h2>${aluguel ? '4' : '3'}. Do Prazo</h2>
-  <div class="clausula">
-    <p>O presente contrato tem vigencia de <strong>${formatarData(dataInicio)}</strong> a <strong>${formatarData(dataFim)}</strong>, podendo ser renovado mediante acordo entre as partes.</p>
-  </div>
-
-  <h2>${aluguel ? '5' : '4'}. Do Reajuste</h2>
-  <div class="clausula">
-    <p>O valor do aluguel sera reajustado anualmente pelo indice <strong>${clienteAluguel.indice_reajuste || 'IGPM'}</strong> (Indice Geral de Precos do Mercado) acumulado nos ultimos 12 meses, ou outro indice que venha a substitui-lo.</p>
-  </div>
-
-  <h2>${aluguel ? '6' : '5'}. Da Multa e Juros</h2>
-  <div class="clausula">
-    <p>Em caso de atraso no pagamento, incidira multa de <strong>${clienteAluguel.percentual_multa || 2}%</strong> sobre o valor do aluguel, acrescida de juros de mora de <strong>${clienteAluguel.percentual_juros_mora || 1}%</strong> ao mes.</p>
-  </div>
-
-  <h2>${aluguel ? '7' : '6'}. Das Obrigacoes do Locatario</h2>
-  <div class="clausula">
-    <p>a) Pagar pontualmente o aluguel e encargos nas datas estipuladas;</p>
-    <p>b) Manter o imovel em bom estado de conservacao;</p>
-    <p>c) Nao realizar modificacoes estruturais sem autorizacao previa do LOCADOR;</p>
-    <p>d) Restituir o imovel nas mesmas condicoes em que o recebeu ao termino do contrato;</p>
-    <p>e) Comunicar imediatamente ao LOCADOR qualquer dano ou problema no imovel.</p>
-  </div>
-
-  <h2>${aluguel ? '8' : '7'}. Da Rescisao</h2>
-  <div class="clausula">
-    <p>A rescisao antecipada por parte do LOCATARIO implicara no pagamento de multa equivalente a 3 (tres) alugueis vigentes, proporcional ao periodo restante do contrato.</p>
-  </div>
-
-  <h2>${aluguel ? '9' : '8'}. Do Foro</h2>
-  <div class="clausula">
-    <p>Fica eleito o foro da comarca de Valparaiso de Goias - GO para dirimir quaisquer duvidas oriundas do presente contrato.</p>
-  </div>
-
-  <p style="margin-top: 30px;">Por estarem justos e contratados, as partes assinam o presente instrumento em 2 (duas) vias de igual teor.</p>
-
-  <p style="text-align: center; margin-top: 20px;">Valparaiso de Goias, ${formatarDataCompleta(new Date())}</p>
-
-  <div class="assinatura">
-    <div class="assinatura-box">
-      <div class="linha">LOCADOR</div>
-    </div>
-    <div class="assinatura-box">
-      <div class="linha">LOCATARIO - ${clienteAluguel.nome}</div>
-    </div>
-  </div>
-
-  <div class="rodape">
-    Contrato gerado automaticamente pelo sistema CRM IMOB em ${new Date().toLocaleString('pt-BR')}
-  </div>
-</body>
-</html>`;
+  const html = construirHtmlContrato(textoContrato);
 
   let browser;
   try {
@@ -147,6 +62,336 @@ const gerarContratoPDF = async (clienteAluguel, aluguel) => {
     url_relativa: `/uploads/contratos/${clienteAluguel.id}/${nomeArquivo}`,
   };
 };
+
+const obterTextoContrato = (clienteAluguel, aluguel) => {
+  return carregarTextoContrato(clienteAluguel.id) || gerarTextoContrato(clienteAluguel, aluguel);
+};
+
+const obterModeloContratoPadrao = (clienteAluguel, aluguel) => {
+  return gerarTextoContrato(clienteAluguel, aluguel);
+};
+
+function getClienteContratoDir(clienteId) {
+  return path.join(UPLOADS_DIR, String(clienteId));
+}
+
+function getTextoContratoPath(clienteId) {
+  return path.join(getClienteContratoDir(clienteId), NOME_ARQUIVO_TEXTO_CONTRATO);
+}
+
+function salvarTextoContrato(clienteId, texto) {
+  const clienteDir = getClienteContratoDir(clienteId);
+  garantirDiretorio(clienteDir);
+  fs.writeFileSync(getTextoContratoPath(clienteId), texto, 'utf8');
+}
+
+function carregarTextoContrato(clienteId) {
+  const caminho = getTextoContratoPath(clienteId);
+  if (!fs.existsSync(caminho)) return null;
+
+  const conteudo = fs.readFileSync(caminho, 'utf8');
+  return conteudo && conteudo.trim() ? conteudo : null;
+}
+
+function gerarTextoContrato(clienteAluguel, aluguel) {
+  const valorBase = Number.parseFloat(clienteAluguel.valor_aluguel || aluguel?.valor_aluguel || 0);
+  const valorAluguel = Number.isFinite(valorBase) ? valorBase : 0;
+  const valorExtenso = valorPorExtenso(Number.isFinite(valorAluguel) ? valorAluguel : 0);
+  const dataInicio = clienteAluguel.data_inicio_contrato || new Date().toISOString().split('T')[0];
+  const dataFim = clienteAluguel.data_fim_contrato || calcularDataFim(dataInicio, 12);
+  const multa = Number.parseFloat(clienteAluguel.percentual_multa || 2).toFixed(2);
+  const juros = Number.parseFloat(clienteAluguel.percentual_juros_mora || 1).toFixed(2);
+  const diaVencimento = clienteAluguel.dia_vencimento || aluguel?.dia_vencimento || '-';
+  const indice = clienteAluguel.indice_reajuste || 'IGPM';
+
+  const locadorNome = clienteAluguel.proprietario_nome || 'Conforme cadastro do administrador do sistema';
+  const locadorTelefone = clienteAluguel.proprietario_telefone || '-';
+  const locadorPix = clienteAluguel.proprietario_pix || '-';
+  const locatarioNome = clienteAluguel.nome || '-';
+  const locatarioCpf = clienteAluguel.cpf || '-';
+  const locatarioEmail = clienteAluguel.email || '-';
+  const locatarioTelefone = clienteAluguel.telefone || '-';
+  const fiadorAtivo = Boolean(clienteAluguel.tem_fiador);
+
+  const blocoImovel = aluguel
+    ? `\n## 2. DO IMOVEL
+- **Imovel:** ${aluguel.nome_imovel || '-'}
+- **Descricao:** ${aluguel.descricao || '-'}
+- **Quartos:** ${aluguel.quartos ?? '-'}
+- **Banheiros:** ${aluguel.banheiro ?? '-'}
+`
+    : '';
+
+  const blocoFiador = fiadorAtivo
+    ? `\n## ${aluguel ? '3' : '2'}. DO FIADOR
+- **Nome:** ${clienteAluguel.fiador_nome || '-'}
+- **CPF:** ${clienteAluguel.fiador_cpf || '-'}
+- **Telefone:** ${clienteAluguel.fiador_telefone || '-'}
+- **E-mail:** ${clienteAluguel.fiador_email || '-'}
+
+O FIADOR declara ciencia integral deste contrato, obrigando-se solidariamente pelo cumprimento das obrigacoes do LOCATARIO, nos termos da legislacao civil aplicavel.
+`
+    : '';
+
+  const base = aluguel ? 3 : 2;
+  const offsetFiador = fiadorAtivo ? 1 : 0;
+  const secaoValorNumero = String(base + offsetFiador);
+  const secaoPrazoNumero = String(base + 1 + offsetFiador);
+  const secaoReajusteNumero = String(base + 2 + offsetFiador);
+  const secaoMultaNumero = String(base + 3 + offsetFiador);
+  const secaoObrigacoesNumero = String(base + 4 + offsetFiador);
+  const secaoLocadorNumero = String(base + 5 + offsetFiador);
+  const secaoRescisaoNumero = String(base + 6 + offsetFiador);
+  const secaoDisposicoesNumero = String(base + 7 + offsetFiador);
+  const secaoForoNumero = String(base + 8 + offsetFiador);
+
+  return `# CONTRATO DE LOCACAO RESIDENCIAL (LINGUAGEM SIMPLES)
+
+## RESUMO RAPIDO
+- **Quem aluga (LOCADOR):** ${locadorNome}
+- **Quem mora no imovel (LOCATARIO):** ${locatarioNome}
+- **Valor do aluguel:** R$ ${valorAluguel.toFixed(2)} (${valorExtenso})
+- **Dia de pagamento:** dia ${diaVencimento} de cada mes
+- **Prazo do contrato:** de ${formatarData(dataInicio)} ate ${formatarData(dataFim)}
+
+Este contrato foi escrito para ficar facil de entender. Em caso de duvida, as partes podem pedir orientacao juridica.
+
+## 1. QUEM SAO AS PARTES
+- **LOCADOR:** ${locadorNome}
+- **Telefone LOCADOR:** ${locadorTelefone}
+- **PIX LOCADOR:** ${locadorPix}
+- **LOCATARIO:** ${locatarioNome}
+- **CPF:** ${locatarioCpf}
+- **E-mail:** ${locatarioEmail}
+- **Telefone:** ${locatarioTelefone}
+
+## 2. DADOS DO IMOVEL
+${aluguel ? `- **Imovel:** ${aluguel.nome_imovel || '-'}
+- **Descricao:** ${aluguel.descricao || '-'}
+- **Quartos:** ${aluguel.quartos ?? '-'}
+- **Banheiros:** ${aluguel.banheiro ?? '-'}` : '- Dados do imovel nao informados.'}
+
+${fiadorAtivo ? `## 3. DADOS DO FIADOR
+- **Nome:** ${clienteAluguel.fiador_nome || '-'}
+- **CPF:** ${clienteAluguel.fiador_cpf || '-'}
+- **Telefone:** ${clienteAluguel.fiador_telefone || '-'}
+- **E-mail:** ${clienteAluguel.fiador_email || '-'}
+
+O fiador concorda em responder pelo contrato se o locatario nao cumprir com os pagamentos e obrigacoes.
+` : ''}
+
+## ${secaoValorNumero}. VALOR E FORMA DE PAGAMENTO
+O aluguel mensal sera de **R$ ${valorAluguel.toFixed(2)}** (${valorExtenso}).
+
+O vencimento sera todo dia **${diaVencimento}** de cada mes.
+
+O pagamento podera ser feito por PIX, boleto ou cartao, conforme combinado com o LOCADOR.
+
+Se o locatario nao receber boleto, mensagem ou link de pagamento, mesmo assim deve pagar no dia certo.
+
+## ${secaoPrazoNumero}. TEMPO DE VIGENCIA
+Este contrato vale de **${formatarData(dataInicio)}** ate **${formatarData(dataFim)}**.
+
+Ao final desse periodo, as partes podem renovar com novo acordo.
+
+## ${secaoReajusteNumero}. REAJUSTE DO VALOR
+Uma vez por ano, o aluguel pode ser reajustado pelo indice **${indice}** (ou outro indice que substitua legalmente).
+
+## ${secaoMultaNumero}. ATRASO NO PAGAMENTO
+Se houver atraso:
+- multa de **${multa}%** sobre o valor do aluguel;
+- juros de **${juros}%** ao mes.
+
+## ${secaoObrigacoesNumero}. O QUE O LOCATARIO PRECISA FAZER
+- Pagar o aluguel e encargos na data correta;
+- Cuidar do imovel;
+- Nao fazer obra estrutural sem autorizacao;
+- Avisar problemas no imovel assim que perceber;
+- Devolver o imovel em boas condicoes ao final do contrato, salvo desgaste natural de uso.
+
+## ${secaoLocadorNumero}. O QUE O LOCADOR PRECISA FAZER
+- Entregar o imovel em condicoes de uso;
+- Respeitar o uso tranquilo do imovel pelo locatario;
+- Informar claramente os meios de pagamento;
+- Cumprir a legislacao aplicavel.
+
+## ${secaoRescisaoNumero}. ENCERRAMENTO ANTES DO PRAZO
+Se o LOCATARIO quiser encerrar antes do prazo, pagara multa proporcional, limitada ao equivalente a 3 alugueis, conforme regra legal e periodo restante do contrato.
+
+Se houver descumprimento grave de qualquer parte, o contrato pode ser encerrado conforme a lei.
+
+## ${secaoDisposicoesNumero}. REGRAS GERAIS
+- Alteracoes neste contrato devem ser feitas por escrito;
+- Tolerancia em um momento nao significa perda de direito depois;
+- Este contrato segue a Lei do Inquilinato (Lei 8.245/1991) e o Codigo Civil.
+
+## ${secaoForoNumero}. ONDE RESOLVER CONFLITOS
+Fica escolhido o foro da comarca de Valparaiso de Goias - GO para resolver questoes deste contrato.
+
+Por estarem de acordo, as partes assinam este documento.
+
+Valparaiso de Goias, ${formatarDataCompleta(new Date())}
+
+---
+
+**LOCADOR**
+
+**LOCATARIO - ${locatarioNome}**
+
+---
+
+Contrato gerado automaticamente pelo sistema CRM IMOB em ${new Date().toLocaleString('pt-BR')}`;
+}
+
+function escaparHtml(valor) {
+  return String(valor || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function construirHtmlContrato(textoContrato) {
+  const conteudo = markdownToHtml(textoContrato);
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @page { size: A4; margin: 22mm 16mm 18mm 16mm; }
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #1f2937;
+      margin: 0;
+      word-wrap: break-word;
+    }
+    .documento {
+      width: 100%;
+    }
+    h1 {
+      font-size: 20px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      margin: 0 0 18px 0;
+      text-transform: uppercase;
+      border-bottom: 1px solid #d1d5db;
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 18px 0 8px;
+      text-transform: uppercase;
+      color: #111827;
+    }
+    p {
+      margin: 0 0 8px;
+      text-align: justify;
+    }
+    ul, ol {
+      margin: 6px 0 12px 20px;
+      padding: 0;
+    }
+    li {
+      margin: 0 0 6px;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #d1d5db;
+      margin: 18px 0;
+    }
+    strong {
+      font-weight: 700;
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+  <main class="documento">${conteudo}</main>
+</body>
+</html>`;
+}
+
+function markdownToHtml(markdown) {
+  const lines = String(markdown || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n');
+
+  const html = [];
+  let listMode = null;
+
+  const closeList = () => {
+    if (listMode) {
+      html.push(`</${listMode}>`);
+      listMode = null;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      closeList();
+      continue;
+    }
+
+    if (/^---+$/.test(line)) {
+      closeList();
+      html.push('<hr />');
+      continue;
+    }
+
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      closeList();
+      const level = headingMatch[1].length;
+      const content = renderInlineMarkdown(headingMatch[2]);
+      html.push(`<h${level}>${content}</h${level}>`);
+      continue;
+    }
+
+    const ulMatch = line.match(/^[-*]\s+(.+)$/);
+    if (ulMatch) {
+      if (listMode !== 'ul') {
+        closeList();
+        listMode = 'ul';
+        html.push('<ul>');
+      }
+      html.push(`<li>${renderInlineMarkdown(ulMatch[1])}</li>`);
+      continue;
+    }
+
+    const olMatch = line.match(/^\d+\.\s+(.+)$/);
+    if (olMatch) {
+      if (listMode !== 'ol') {
+        closeList();
+        listMode = 'ol';
+        html.push('<ol>');
+      }
+      html.push(`<li>${renderInlineMarkdown(olMatch[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+    html.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  }
+
+  closeList();
+  return html.join('');
+}
+
+function renderInlineMarkdown(text) {
+  let value = escaparHtml(text);
+  value = value.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  value = value.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  return value;
+}
 
 // Calcula reajuste anual
 const calcularReajuste = (clienteAluguel, indiceAnual) => {
@@ -234,6 +479,8 @@ function valorPorExtenso(valor) {
 
 module.exports = {
   gerarContratoPDF,
+  obterTextoContrato,
+  obterModeloContratoPadrao,
   calcularReajuste,
   verificarContratosReajuste,
 };

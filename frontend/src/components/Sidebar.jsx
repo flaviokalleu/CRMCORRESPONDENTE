@@ -222,11 +222,11 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
 
   // Menu items memoizados — só recriam se roles mudarem
   const menu = useMemo(() => {
-    const items = { add: [], list: [], extra: [] };
+    const items = { add: [], list: [], extra: [], secondary: [] };
 
     items.extra.push({ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
-    items.extra.push({ to: "/visitas", icon: CalendarCheck, label: "Visitas" });
-    items.extra.push({ to: "/propostas", icon: FileText, label: "Propostas" });
+    items.secondary.push({ to: "/visitas", icon: CalendarCheck, label: "Visitas" });
+    items.secondary.push({ to: "/propostas", icon: FileText, label: "Propostas" });
 
     if (hasRole("corretor")) {
       items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
@@ -263,7 +263,6 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
 
       [
         { to: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" },
-        { to: "/dashboard/alugueis", icon: LayoutDashboard, label: "Dashboard Alugueis" },
       ].forEach((i) => { if (!items.extra.some((e) => e.to === i.to)) items.extra.push(i); });
 
       // Itens de aluguel
@@ -383,6 +382,14 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
               items={menu.list}
               pathname={pathname}
             />
+          </div>
+        )}
+
+        {menu.secondary.length > 0 && (
+          <div className="mt-2 space-y-0.5">
+            {menu.secondary.map((item) => (
+              <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
+            ))}
           </div>
         )}
 

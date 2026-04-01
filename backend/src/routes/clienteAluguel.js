@@ -2,11 +2,23 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const { ClienteAluguel, CobrancaAluguel, Aluguel } = require('../models');
+const { ClienteAluguel, CobrancaAluguel, Aluguel, sequelize } = require('../models');
 const asaasService = require('../services/asaasService');
 const { calcularScoreInquilino } = require('../services/scoreInquilinoService');
 
 const router = express.Router();
+
+let clienteAluguelColumnsCache = null;
+
+async function getClienteAluguelColumns() {
+  if (clienteAluguelColumnsCache) return clienteAluguelColumnsCache;
+
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable('cliente_aluguels').catch(() => ({}));
+  clienteAluguelColumnsCache = Object.keys(table);
+
+  return clienteAluguelColumnsCache;
+}
 
 // ── Upload config for inquilino documents ──────────────────────────────────
 const inquilinoUploadDir = path.join(__dirname, '../../uploads/clientes');
@@ -125,7 +137,15 @@ router.post('/clientealuguel', inquilinoUpload, async (req, res) => {
 // 2. Rota para listar todos os clientes
 router.get('/clientealuguel', async (req, res) => {
   try {
-    const clienteAlugueis = await ClienteAluguel.findAll();
+    const existingColumns = await getClienteAluguelColumns();
+    const safeAttributes = Object.keys(ClienteAluguel.rawAttributes)
+      .filter((column) => existingColumns.includes(column));
+
+    const clienteAlugueis = await ClienteAluguel.findAll({
+      attributes: safeAttributes,
+      order: [['id', 'DESC']],
+    });
+
     res.status(200).json(clienteAlugueis);
   } catch (error) {
     console.error("Erro ao listar alugueis:", error);

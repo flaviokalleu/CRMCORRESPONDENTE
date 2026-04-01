@@ -211,46 +211,15 @@ class PDFService {
   }
 
   // ✅ MÉTODO DE EMERGÊNCIA: Preservar PDF sem reprocessar
-  async preserveOriginalPdf(pdfBytes, fileName, destDir) {
-    console.log(`🚨 Método de emergência: preservando PDF original sem reprocessar`);
-    
+  async preserveOriginalPdf(pdfBytes, fileName) {
+    console.log(`🚨 Método de emergência: mantendo apenas uma versão compactada do PDF`);
+
     try {
-      // Salvar o arquivo original com um nome especial
-      const originalPath = path.join(destDir, `original_${fileName}`);
-      fs.writeFileSync(originalPath, pdfBytes);
-      console.log(`� PDF original preservado em: ${originalPath}`);
-      
-      // Criar um PDF de referência
-      const refPdf = await PDFDocument.create();
-      const page = refPdf.addPage();
-      const { height } = page.getSize();
-      
-      page.drawText(`Documento Preservado: ${fileName}`, {
-        x: 50,
-        y: height - 50,
-        size: 14
-      });
-      
-      page.drawText(`O documento original foi preservado devido a incompatibilidades`, {
-        x: 50,
-        y: height - 80,
-        size: 10
-      });
-      
-      page.drawText(`de formato. Consulte o arquivo original em:`, {
-        x: 50,
-        y: height - 100,
-        size: 10
-      });
-      
-      page.drawText(`${originalPath}`, {
-        x: 50,
-        y: height - 120,
-        size: 8
-      });
-      
-      return refPdf;
-      
+      const originalPdf = await this.tryLoadPdf(pdfBytes, fileName);
+      const compactPdf = await PDFDocument.create();
+      const copiedPages = await compactPdf.copyPages(originalPdf, originalPdf.getPageIndices());
+      copiedPages.forEach((page) => compactPdf.addPage(page));
+      return compactPdf;
     } catch (error) {
       console.error(`❌ Falha no método de emergência: ${error.message}`);
       return null;
@@ -458,10 +427,13 @@ class PDFService {
 
     // Helper para converter imagem em PDF com compressão
     const imageToPdfBuffer = async (imgPath) => {
-      // Reduzir qualidade e tamanho para economizar espaço
+      // Gera uma única versão otimizada com boa qualidade visual.
+      const targetWidth = this.config.imageConversionSettings.maxWidth || 1200;
+      const targetQuality = this.config.imageConversionSettings.quality || 85;
+
       const imageBuffer = await sharp(imgPath)
-        .resize({ width: 1200, fit: 'inside' })
-        .jpeg({ quality: 70 })
+        .resize({ width: targetWidth, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: targetQuality, mozjpeg: true })
         .toBuffer();
       const pdfDoc = await PDFDocument.create();
       const img = await pdfDoc.embedJpg(imageBuffer);
@@ -741,7 +713,7 @@ class PDFService {
               console.warn(`⚠️ Método especial falhou, tentando método de emergência...`);
               
               // Último recurso: método de emergência
-              const emergencyPdf = await this.preserveOriginalPdf(pdfBytes, sanitizedName, destDir);
+              const emergencyPdf = await this.preserveOriginalPdf(pdfBytes, sanitizedName);
               if (emergencyPdf) {
                 const emergencyPages = await mergedPdf.copyPages(emergencyPdf, emergencyPdf.getPageIndices());
                 emergencyPages.forEach((page) => mergedPdf.addPage(page));
@@ -924,13 +896,6 @@ class PDFService {
     
     // ✅ SALVAMENTO COM VALIDAÇÃO EXTRA
     try {
-      // Fazer backup se já existe um arquivo
-      const backupPath = destPath + '.backup';
-      if (fs.existsSync(destPath)) {
-        console.log(`📋 Fazendo backup do arquivo existente...`);
-        fs.copyFileSync(destPath, backupPath);
-      }
-      
       // Salvar o novo arquivo
       fs.writeFileSync(destPath, mergedPdfBytes);
       console.log(`💾 PDF final salvo com ${finalPageCount} páginas em: ${destPath}`);
@@ -984,22 +949,9 @@ class PDFService {
           console.log(`✅ Verificação completa: PDF salvo está íntegro`);
         }
         
-        // Remover backup se tudo deu certo
-        if (fs.existsSync(backupPath)) {
-          fs.unlinkSync(backupPath);
-          console.log(`🧹 Backup removido (salvamento bem-sucedido)`);
-        }
-        
       } catch (finalTestError) {
         console.error(`❌ ERRO CRÍTICO: Arquivo salvo não pode ser carregado! ${finalTestError.message}`);
-        
-        // Restaurar backup se existir
-        if (fs.existsSync(backupPath)) {
-          console.log(`🔄 Restaurando backup devido ao erro...`);
-          fs.copyFileSync(backupPath, destPath);
-          fs.unlinkSync(backupPath);
-        }
-        
+
         return null;
       }
       

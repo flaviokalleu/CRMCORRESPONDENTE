@@ -71,7 +71,27 @@ const ClienteAluguel = () => {
   const [modalCobrancaAvulsa, setModalCobrancaAvulsa] = useState(false);
   const [modalCobrancas, setModalCobrancas] = useState(false);
   const [modalEditar, setModalEditar] = useState(false);
+  const [modalContrato, setModalContrato] = useState(false);
   const [modalRepasses, setModalRepasses] = useState(false);
+  const [textoContrato, setTextoContrato] = useState('');
+  const [loadingContratoTexto, setLoadingContratoTexto] = useState(false);
+  const [formContratoSimples, setFormContratoSimples] = useState({
+    locador_nome: '',
+    locador_telefone: '',
+    locador_pix: '',
+    locatario_nome: '',
+    locatario_cpf: '',
+    locatario_email: '',
+    locatario_telefone: '',
+    valor_aluguel: '',
+    dia_vencimento: '',
+    data_inicio: '',
+    data_fim: '',
+    indice_reajuste: 'IGPM',
+    multa_percentual: '2.00',
+    juros_percentual: '1.00',
+    foro: 'Valparaiso de Goias - GO',
+  });
   const [repasses, setRepasses] = useState([]);
   const [loadingRepasses, setLoadingRepasses] = useState(false);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
@@ -217,11 +237,13 @@ const ClienteAluguel = () => {
     setModalCobrancaAvulsa(false);
     setModalCobrancas(false);
     setModalEditar(false);
+    setModalContrato(false);
     setModalRepasses(false);
     setClienteSelecionado(null);
     setPagamentoParaDeletar(null);
     setCobrancaCriada(null);
     setRepasses([]);
+    setTextoContrato('');
   };
 
   const abrirModalRepasses = async (cliente) => {
@@ -369,16 +391,201 @@ const ClienteAluguel = () => {
     alert('Link copiado!');
   };
 
-  const gerarContrato = async (cliente) => {
+  const preencherFormularioSimples = (cliente) => {
+    setFormContratoSimples({
+      locador_nome: cliente?.proprietario_nome || 'Conforme cadastro do administrador do sistema',
+      locador_telefone: cliente?.proprietario_telefone || '',
+      locador_pix: cliente?.proprietario_pix || '',
+      locatario_nome: cliente?.nome || '',
+      locatario_cpf: cliente?.cpf || '',
+      locatario_email: cliente?.email || '',
+      locatario_telefone: cliente?.telefone || '',
+      valor_aluguel: cliente?.valor_aluguel != null ? String(cliente.valor_aluguel) : '',
+      dia_vencimento: cliente?.dia_vencimento != null ? String(cliente.dia_vencimento) : '',
+      data_inicio: cliente?.data_inicio_contrato || '',
+      data_fim: cliente?.data_fim_contrato || '',
+      indice_reajuste: cliente?.indice_reajuste || 'IGPM',
+      multa_percentual: cliente?.percentual_multa != null ? String(cliente.percentual_multa) : '2.00',
+      juros_percentual: cliente?.percentual_juros_mora != null ? String(cliente.percentual_juros_mora) : '1.00',
+      foro: 'Valparaiso de Goias - GO',
+    });
+  };
+
+  const formatarDataBR = (valor) => {
+    if (!valor) return '-';
+    try {
+      const d = new Date(`${valor}T00:00:00`);
+      return d.toLocaleDateString('pt-BR');
+    } catch {
+      return valor;
+    }
+  };
+
+  const montarContratoLeigo = () => {
+    const f = formContratoSimples;
+    const valor = Number.parseFloat(f.valor_aluguel || 0);
+    const valorFmt = Number.isFinite(valor) ? valor.toFixed(2) : '0.00';
+    const hoje = new Date().toLocaleString('pt-BR');
+
+    const texto = `# CONTRATO DE LOCACAO RESIDENCIAL (PREENCHIMENTO SIMPLES)
+
+## RESUMO RAPIDO
+- **Locador:** ${f.locador_nome || '-'}
+- **Locatario:** ${f.locatario_nome || '-'}
+- **Valor do aluguel:** R$ ${valorFmt}
+- **Dia de vencimento:** ${f.dia_vencimento || '-'}
+- **Prazo:** ${formatarDataBR(f.data_inicio)} ate ${formatarDataBR(f.data_fim)}
+
+## 1. DADOS DAS PESSOAS
+- **LOCADOR:** ${f.locador_nome || '-'}
+- **Telefone LOCADOR:** ${f.locador_telefone || '-'}
+- **PIX LOCADOR:** ${f.locador_pix || '-'}
+- **LOCATARIO:** ${f.locatario_nome || '-'}
+- **CPF LOCATARIO:** ${f.locatario_cpf || '-'}
+- **E-mail LOCATARIO:** ${f.locatario_email || '-'}
+- **Telefone LOCATARIO:** ${f.locatario_telefone || '-'}
+
+## 2. PAGAMENTO
+O valor mensal do aluguel e **R$ ${valorFmt}** e deve ser pago todo dia **${f.dia_vencimento || '-'}**.
+
+Formas de pagamento: PIX, boleto ou cartao (conforme combinado).
+
+## 3. PRAZO DO CONTRATO
+Este contrato vale de **${formatarDataBR(f.data_inicio)}** ate **${formatarDataBR(f.data_fim)}**.
+
+## 4. REAJUSTE
+O aluguel pode ser reajustado 1 vez por ano pelo indice **${f.indice_reajuste || 'IGPM'}** (ou indice substituto previsto em lei).
+
+## 5. ATRASO NO PAGAMENTO
+Se atrasar:
+- Multa de **${f.multa_percentual || '2.00'}%**
+- Juros de **${f.juros_percentual || '1.00'}%** ao mes
+
+## 6. RESPONSABILIDADES DO LOCATARIO
+- Pagar em dia;
+- Cuidar do imovel;
+- Nao fazer mudancas estruturais sem autorizacao;
+- Avisar problemas no imovel;
+- Devolver o imovel em boas condicoes no fim do contrato.
+
+## 7. ENCERRAMENTO ANTECIPADO
+Se encerrar antes do prazo, podera haver multa proporcional, conforme lei e periodo restante.
+
+## 8. FORO
+Fica eleito o foro de **${f.foro || '-'}** para resolver eventuais conflitos.
+
+Valparaiso de Goias, ${new Date().toLocaleDateString('pt-BR')}
+
+---
+
+**LOCADOR**
+
+**LOCATARIO - ${f.locatario_nome || '-'}**
+
+---
+
+Contrato gerado automaticamente pelo sistema CRM IMOB em ${hoje}`;
+
+    setTextoContrato(texto);
+  };
+
+  const abrirEditorContrato = async (cliente) => {
+    setClienteSelecionado(cliente);
+    setModalContrato(true);
+    setTextoContrato('');
+    preencherFormularioSimples(cliente);
+
+    try {
+      setLoadingContratoTexto(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato/texto`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) throw new Error(data.error || raw || 'Erro ao carregar texto do contrato');
+      setTextoContrato(data.texto_contrato || '');
+    } catch (e) {
+      alert(e.message || 'Erro ao carregar texto do contrato');
+      setModalContrato(false);
+      setClienteSelecionado(null);
+    } finally {
+      setLoadingContratoTexto(false);
+    }
+  };
+
+  const carregarModeloContratoPadrao = async () => {
+    if (!clienteSelecionado) return;
+    try {
+      setLoadingContratoTexto(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${clienteSelecionado.id}/contrato/texto?modelo=padrao`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
+      }
+      if (!res.ok) throw new Error(data.error || raw || 'Erro ao carregar modelo padrao');
+      setTextoContrato(data.texto_contrato || '');
+    } catch (e) {
+      alert(e.message || 'Erro ao carregar modelo padrao');
+    } finally {
+      setLoadingContratoTexto(false);
+    }
+  };
+
+  const gerarContrato = async (cliente, textoPersonalizado = '') => {
     setLoadingAsaas(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, { method: 'POST' });
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ texto_contrato: textoPersonalizado }),
+      });
       if (res.ok) {
-        const data = await res.json();
         alert('Contrato gerado! Baixando...');
-        window.open(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, '_blank');
+        const downloadRes = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+        });
+        if (!downloadRes.ok) {
+          const rawDownload = await downloadRes.text();
+          let downloadData = {};
+          try {
+            downloadData = rawDownload ? JSON.parse(rawDownload) : {};
+          } catch {
+            downloadData = {};
+          }
+          throw new Error(downloadData.error || rawDownload || 'Erro ao baixar contrato');
+        }
+
+        const blob = await downloadRes.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `contrato_${cliente.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
       } else {
-        alert('Erro ao gerar contrato');
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = {};
+        }
+        alert(data.error || raw || 'Erro ao gerar contrato');
       }
     } catch (e) { alert('Erro ao gerar contrato'); }
     finally { setLoadingAsaas(false); }
@@ -872,7 +1079,7 @@ const ClienteAluguel = () => {
                                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                                   className="text-white/60 hover:text-white p-1.5 rounded-lg transition-all"
                                   style={{ background: CARD }}
-                                  onClick={() => gerarContrato(cliente)} title="Gerar Contrato">
+                                  onClick={() => abrirEditorContrato(cliente)} title="Editar e Gerar Contrato">
                                   <FileSignature className="w-3.5 h-3.5" />
                                 </motion.button>
                                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -1452,6 +1659,191 @@ const ClienteAluguel = () => {
                 style={{ background: 'linear-gradient(135deg, #0891B2, #0E7490)' }}>
                 Fechar
               </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      {/* ════════════════════════════════════════════
+          MODAL: Editar Contrato
+         ════════════════════════════════════════════ */}
+      {modalContrato && clienteSelecionado && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(5,10,22,0.85)', backdropFilter: 'blur(8px)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.97, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+            style={{ background: 'linear-gradient(180deg, #0f1e38 0%, #0B1426 100%)', border: '1px solid rgba(249,115,22,0.25)', boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)' }}
+          >
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(249,115,22,0.08)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
+                  <FileSignature className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white leading-none">Editar Contrato</h2>
+                  <p className="text-orange-300/70 text-xs mt-0.5">{clienteSelecionado.nome}</p>
+                </div>
+              </div>
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                onClick={fecharModais}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <X className="w-4 h-4" />
+              </motion.button>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {loadingContratoTexto ? (
+                <div className="flex items-center justify-center py-20 text-white/40 gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-orange-400" />
+                  <span className="text-sm">Carregando contrato...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Seção Locador */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
+                      <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Locador — Proprietário</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { label: 'Nome completo', key: 'locador_nome' },
+                        { label: 'Telefone', key: 'locador_telefone' },
+                        { label: 'Chave PIX', key: 'locador_pix' },
+                      ].map(({ label, key }) => (
+                        <div key={key}>
+                          <label className="block text-xs text-white/40 mb-1">{label}</label>
+                          <input
+                            className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
+                            value={formContratoSimples[key]}
+                            onChange={(e) => setFormContratoSimples({ ...formContratoSimples, [key]: e.target.value })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seção Locatário */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
+                      <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Locatário — Inquilino</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { label: 'Nome completo', key: 'locatario_nome' },
+                        { label: 'CPF', key: 'locatario_cpf' },
+                        { label: 'E-mail', key: 'locatario_email' },
+                        { label: 'Telefone', key: 'locatario_telefone' },
+                      ].map(({ label, key }) => (
+                        <div key={key}>
+                          <label className="block text-xs text-white/40 mb-1">{label}</label>
+                          <input
+                            className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
+                            value={formContratoSimples[key]}
+                            onChange={(e) => setFormContratoSimples({ ...formContratoSimples, [key]: e.target.value })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seção Valores e Prazo */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
+                      <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Valores e Prazo</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Valor do Aluguel (R$)', key: 'valor_aluguel', type: 'text' },
+                        { label: 'Dia de Vencimento', key: 'dia_vencimento', type: 'text' },
+                        { label: 'Multa por Atraso (%)', key: 'multa_percentual', type: 'text' },
+                        { label: 'Juros ao Mês (%)', key: 'juros_percentual', type: 'text' },
+                        { label: 'Início do Contrato', key: 'data_inicio', type: 'date' },
+                        { label: 'Fim do Contrato', key: 'data_fim', type: 'date' },
+                        { label: 'Índice de Reajuste', key: 'indice_reajuste', type: 'text', span: 2, placeholder: 'Ex: IGPM, IPCA' },
+                      ].map(({ label, key, type, span, placeholder }) => (
+                        <div key={key} className={span === 2 ? 'col-span-2' : ''}>
+                          <label className="block text-xs text-white/40 mb-1">{label}</label>
+                          <input
+                            type={type}
+                            placeholder={placeholder}
+                            className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-orange-500/60 transition-all"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', colorScheme: 'dark' }}
+                            value={formContratoSimples[key]}
+                            onChange={(e) => setFormContratoSimples({ ...formContratoSimples, [key]: e.target.value })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seção Texto do Contrato */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1 h-4 rounded-full" style={{ background: ACCENT_GRADIENT }} />
+                        <span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Texto do Contrato</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={montarContratoLeigo}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+                          style={{ background: ACCENT_GRADIENT }}>
+                          <FileSignature className="w-3.5 h-3.5" />
+                          Montar dos campos
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={carregarModeloContratoPadrao}
+                          disabled={loadingContratoTexto}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/70 hover:text-white transition-all disabled:opacity-40"
+                          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                          Modelo padrão
+                        </motion.button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={textoContrato}
+                      onChange={(e) => setTextoContrato(e.target.value)}
+                      rows={10}
+                      className="w-full rounded-xl px-4 py-3 text-sm text-white/80 leading-relaxed focus:outline-none focus:ring-1 focus:ring-orange-500/40 resize-none transition-all"
+                      style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      placeholder="Clique em 'Montar dos campos' para gerar o texto automaticamente..."
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── Footer ── */}
+            <div className="flex items-center justify-between gap-3 px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+              <p className="text-xs text-white/30">Preencha os campos e clique em Montar para gerar o contrato</p>
+              <div className="flex gap-3">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={fecharModais}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  Cancelar
+                </motion.button>
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  disabled={loadingAsaas || loadingContratoTexto || !textoContrato.trim()}
+                  onClick={async () => { await gerarContrato(clienteSelecionado, textoContrato); fecharModais(); }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 disabled:opacity-50 transition-opacity"
+                  style={{ background: ACCENT_GRADIENT, boxShadow: '0 4px 16px rgba(249,115,22,0.35)' }}>
+                  {loadingAsaas ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
+                  Gerar PDF
+                </motion.button>
+              </div>
             </div>
           </motion.div>
         </motion.div>

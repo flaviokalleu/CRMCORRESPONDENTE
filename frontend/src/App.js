@@ -34,7 +34,6 @@ import LandingPage from './pages/LandingPage';
 import LembretesPage from './pages/Lembretes';
 import AcessosList from './pages/AcessosList';
 import ClientesAluguel from './pages/ClienteAluguelPage';
-import DashboardAlugueisPage from './pages/DashboardAlugueisPage';
 import PortalInquilinoPage from './pages/PortalInquilinoPage';
 import RelatorioPage from './pages/RelatorioPage';
 import PublicPropertyList from './pages/PublicImoveisPage';
@@ -475,11 +474,7 @@ const AppContent = () => {
 
           <Route
             path="/dashboard/alugueis"
-            element={
-              <ProtectedRoute>
-                <DashboardAlugueisPage />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/dashboard" replace />}
           />
 
           {/* Portal do Inquilino (rota publica) */}

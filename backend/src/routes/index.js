@@ -97,6 +97,7 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
 
   // ===== TODAS AS ROTAS DA APLICAÇÃO =====
   app.use('/api/auth', authRoutes);
+  app.use('/api', portalInquilinoRoutes); // manter no topo para evitar conflito com rotas dinâmicas
   app.use('/api/protected', protectedRoutes);
   app.use('/api', dashboardAluguelRoutes); // ANTES do dashboardRoutes para evitar conflito
   app.use('/api/dashboard', dashboardRoutes);
@@ -120,8 +121,10 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api', contratoAluguelRoutes);
   app.use('/api', contratoRoutes);
   app.use('/api', proprietariosRoutes);
-  app.use('/api', portalInquilinoRoutes);
-  app.use('/api', authenticateToken, resolveTenant, repasseRoutes);
+  app.use('/api', (req, res, next) => {
+    if (!req.path.startsWith('/repasses')) return next();
+    authenticateToken(req, res, () => resolveTenant(req, res, next));
+  }, repasseRoutes);
   app.use('/api', vistoriaRoutes);
   app.use('/api', chamadoRoutes);
   app.use('/api/laudos', laudosRoutes);

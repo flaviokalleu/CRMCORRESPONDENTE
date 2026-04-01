@@ -2,10 +2,33 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
-const { ClienteAluguel, CobrancaAluguel, Aluguel } = require('../models');
+const { ClienteAluguel, CobrancaAluguel, Aluguel, Tenant, sequelize } = require('../models');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET_KEY || 'portal-inquilino-secret';
+
+let clienteAluguelHasTenantIdCache = null;
+let clienteAluguelContratoSchemaCache = null;
+
+async function clienteAluguelHasTenantId() {
+  if (clienteAluguelHasTenantIdCache !== null) return clienteAluguelHasTenantIdCache;
+  const table = await sequelize.getQueryInterface().describeTable('cliente_aluguels').catch(() => ({}));
+  clienteAluguelHasTenantIdCache = !!table.tenant_id;
+  return clienteAluguelHasTenantIdCache;
+}
+
+async function getClienteAluguelContratoSchema() {
+  if (clienteAluguelContratoSchemaCache) return clienteAluguelContratoSchemaCache;
+
+  const table = await sequelize.getQueryInterface().describeTable('cliente_aluguels').catch(() => ({}));
+  clienteAluguelContratoSchemaCache = {
+    hasContratoDocumentos: !!table.contrato_documentos,
+    hasContratoPath: !!table.contrato_path,
+    hasTenantId: !!table.tenant_id,
+  };
+
+  return clienteAluguelContratoSchemaCache;
+}
 
 // Middleware de autenticacao do portal (JWT separado)
 const authenticateInquilino = (req, res, next) => {
@@ -38,8 +61,14 @@ router.post('/portal/login', async (req, res) => {
 
     const cpfLimpo = cpf.replace(/\D/g, '');
 
+    const hasTenantId = await clienteAluguelHasTenantId();
+    const attributes = hasTenantId
+      ? ['id', 'nome', 'email', 'cpf', 'tenant_id']
+      : ['id', 'nome', 'email', 'cpf'];
+
     const cliente = await ClienteAluguel.findOne({
       where: { cpf: cpfLimpo },
+      attributes,
     });
 
     // Tenta tambem com CPF formatado
@@ -47,12 +76,25 @@ router.post('/portal/login', async (req, res) => {
       where: {
         cpf: cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4'),
       },
+      attributes,
     });
 
     const clienteFinal = cliente || clienteFormatado;
 
     if (!clienteFinal) {
       return res.status(404).json({ error: 'CPF nao encontrado. Verifique o numero informado.' });
+    }
+
+    // Respeita configuração por empresa quando tenant_id existir no schema.
+    if (hasTenantId && clienteFinal.tenant_id) {
+      const tenant = await Tenant.findByPk(clienteFinal.tenant_id, {
+        attributes: ['id', 'configuracoes'],
+      });
+
+      const portalPermitido = tenant?.configuracoes?.permitir_portal_inquilino !== false;
+      if (!portalPermitido) {
+        return res.status(403).json({ error: 'Portal do inquilino desativado para esta empresa.' });
+      }
     }
 
     // Gerar token do portal (24h)
@@ -173,19 +215,83 @@ router.get('/portal/recibo/:id/pdf', authenticateInquilino, async (req, res) => 
 // GET /api/portal/contrato — Baixa contrato vigente
 router.get('/portal/contrato', authenticateInquilino, async (req, res) => {
   try {
+    const schema = await getClienteAluguelContratoSchema();
+    const attributes = ['id'];
+    if (schema.hasContratoDocumentos) attributes.push('contrato_documentos');
+    if (schema.hasContratoPath) attributes.push('contrato_path');
+    if (schema.hasTenantId) attributes.push('tenant_id');
+
+    const cliente = await ClienteAluguel.findByPk(req.inquilino.cliente_aluguel_id, { attributes });
+    if (!cliente) {
+      return res.status(404).json({ error: 'Inquilino nao encontrado' });
+    }
+
+    const backendRoot = path.resolve(__dirname, '../..');
+    const uploadsRoot = path.resolve(backendRoot, 'uploads');
+
+    const resolveFilePath = (rawPath) => {
+      if (!rawPath) return null;
+
+      const normalizedRawDocPath = String(rawPath).trim().replace(/\\/g, '/');
+      const relativeDocPath = normalizedRawDocPath
+        .replace(/^\/?uploads\//i, '')
+        .replace(/^\/+/, '');
+
+      const candidatePaths = [
+        path.resolve(uploadsRoot, relativeDocPath),
+        path.resolve(backendRoot, relativeDocPath),
+        path.resolve(backendRoot, normalizedRawDocPath),
+      ];
+
+      return candidatePaths.find((candidate) => candidate.startsWith(backendRoot) && fs.existsSync(candidate)) || null;
+    };
+
+    // 1) Prioriza contrato do próprio cadastro (documentos anexados no contrato).
+    if (schema.hasContratoDocumentos && Array.isArray(cliente.contrato_documentos) && cliente.contrato_documentos.length > 0) {
+      const documentosOrdenados = [...cliente.contrato_documentos].sort((a, b) => {
+        const da = new Date(a?.data_upload || 0).getTime();
+        const db = new Date(b?.data_upload || 0).getTime();
+        return db - da;
+      });
+
+      for (const doc of documentosOrdenados) {
+        const filePath = resolveFilePath(doc?.path);
+        if (filePath) {
+          const nomeArquivo = doc?.nome_arquivo || doc?.nome || path.basename(filePath);
+          return res.download(filePath, nomeArquivo);
+        }
+      }
+    }
+
+    // 2) Fallback: campo legado contrato_path do próprio inquilino.
+    if (schema.hasContratoPath && cliente.contrato_path) {
+      const filePath = resolveFilePath(cliente.contrato_path);
+      if (filePath) {
+        return res.download(filePath, path.basename(filePath));
+      }
+    }
+
+    // 3) Último fallback: contratos gerados em pasta por inquilino.
     const clienteDir = path.resolve(__dirname, `../../uploads/contratos/${req.inquilino.cliente_aluguel_id}`);
 
     if (!fs.existsSync(clienteDir)) {
       return res.status(404).json({ error: 'Nenhum contrato encontrado' });
     }
 
-    const arquivos = fs.readdirSync(clienteDir).filter(f => f.endsWith('.pdf')).sort().reverse();
+    const arquivos = fs.readdirSync(clienteDir)
+      .filter((f) => f.toLowerCase().endsWith('.pdf'))
+      .map((f) => ({
+        nome: f,
+        caminho: path.join(clienteDir, f),
+        mtime: fs.statSync(path.join(clienteDir, f)).mtimeMs,
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
 
     if (arquivos.length === 0) {
       return res.status(404).json({ error: 'Nenhum contrato encontrado' });
     }
 
-    res.download(path.join(clienteDir, arquivos[0]), arquivos[0]);
+    res.download(arquivos[0].caminho, arquivos[0].nome);
   } catch (error) {
     console.error('Erro ao baixar contrato do portal:', error);
     res.status(500).json({ error: 'Erro ao baixar contrato' });

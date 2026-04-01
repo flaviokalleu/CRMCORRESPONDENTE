@@ -373,10 +373,31 @@ router.get('/contratos/documento/:docId/download', async (req, res) => {
       return res.status(404).json({ error: 'Documento nao encontrado' });
     }
 
-    const filePath = path.join(__dirname, '../../uploads', documento.path);
+    const backendRoot = path.resolve(__dirname, '../..');
+    const uploadsRoot = path.resolve(backendRoot, 'uploads');
+    const rawDocPath = String(documento.path || '').trim();
+    const normalizedRawDocPath = rawDocPath.replace(/\\/g, '/');
+    const relativeDocPath = normalizedRawDocPath
+      .replace(/^\/?uploads\//i, '')
+      .replace(/^\/+/, '');
 
-    // Validar se arquivo existe
-    if (!fs.existsSync(filePath)) {
+    const candidatePaths = [
+      path.resolve(uploadsRoot, relativeDocPath),
+      path.resolve(backendRoot, relativeDocPath),
+      path.resolve(backendRoot, normalizedRawDocPath),
+    ];
+
+    const filePath = candidatePaths.find((candidate) => {
+      const safeInsideBackend = candidate.startsWith(backendRoot);
+      return safeInsideBackend && fs.existsSync(candidate);
+    });
+
+    if (!filePath) {
+      console.warn('Arquivo de contrato nao encontrado', {
+        docId,
+        rawDocPath,
+        candidatePaths,
+      });
       return res.status(404).json({ error: 'Arquivo nao encontrado no servidor' });
     }
 

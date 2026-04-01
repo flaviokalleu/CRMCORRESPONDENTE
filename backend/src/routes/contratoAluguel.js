@@ -1,16 +1,39 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { ClienteAluguel, Aluguel } = require('../models');
+const { ClienteAluguel, Aluguel, sequelize } = require('../models');
 const contratoService = require('../services/contratoService');
 const asaasService = require('../services/asaasService');
 
 const router = express.Router();
 
-// POST /api/clientealuguel/:id/contrato — Gera contrato PDF
-router.post('/clientealuguel/:id/contrato', async (req, res) => {
+let clienteAluguelColumnsCache = null;
+
+async function getClienteAluguelColumns() {
+  if (clienteAluguelColumnsCache) return clienteAluguelColumnsCache;
+
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable('cliente_aluguels').catch(() => ({}));
+  clienteAluguelColumnsCache = Object.keys(table);
+
+  return clienteAluguelColumnsCache;
+}
+
+async function findClienteByIdSchemaSafe(id) {
+  const existingColumns = await getClienteAluguelColumns();
+  const safeAttributes = Object.keys(ClienteAluguel.rawAttributes)
+    .filter((column) => existingColumns.includes(column));
+
+  return ClienteAluguel.findOne({
+    where: { id },
+    attributes: safeAttributes,
+  });
+}
+
+// GET /api/clientealuguel/:id/contrato/texto — Obtem texto do contrato editavel
+router.get('/clientealuguel/:id/contrato/texto', async (req, res) => {
   try {
-    const cliente = await ClienteAluguel.findByPk(req.params.id);
+    const cliente = await findClienteByIdSchemaSafe(req.params.id);
     if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
 
     let aluguel = null;
@@ -18,7 +41,33 @@ router.post('/clientealuguel/:id/contrato', async (req, res) => {
       aluguel = await Aluguel.findByPk(cliente.aluguel_id);
     }
 
-    const resultado = await contratoService.gerarContratoPDF(cliente, aluguel);
+    const forcarPadrao = String(req.query?.modelo || '').toLowerCase() === 'padrao';
+    const texto = forcarPadrao
+      ? contratoService.obterModeloContratoPadrao(cliente, aluguel)
+      : contratoService.obterTextoContrato(cliente, aluguel);
+
+    res.status(200).json({ texto_contrato: texto });
+  } catch (error) {
+    console.error('Erro ao obter texto do contrato:', error);
+    res.status(500).json({ error: 'Erro ao obter texto do contrato' });
+  }
+});
+
+// POST /api/clientealuguel/:id/contrato — Gera contrato PDF
+router.post('/clientealuguel/:id/contrato', async (req, res) => {
+  try {
+    const cliente = await findClienteByIdSchemaSafe(req.params.id);
+    if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
+
+    let aluguel = null;
+    if (cliente.aluguel_id) {
+      aluguel = await Aluguel.findByPk(cliente.aluguel_id);
+    }
+
+    const textoContrato = typeof req.body?.texto_contrato === 'string' ? req.body.texto_contrato : '';
+    const resultado = await contratoService.gerarContratoPDF(cliente, aluguel, {
+      textoContrato,
+    });
 
     res.status(200).json({
       message: 'Contrato gerado com sucesso',
@@ -59,7 +108,7 @@ router.get('/clientealuguel/:id/contrato', async (req, res) => {
 // GET /api/clientealuguel/:id/reajuste — Simula reajuste
 router.get('/clientealuguel/:id/reajuste', async (req, res) => {
   try {
-    const cliente = await ClienteAluguel.findByPk(req.params.id);
+    const cliente = await findClienteByIdSchemaSafe(req.params.id);
     if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
 
     const indiceAnual = req.query.indice ? parseFloat(req.query.indice) : null;
@@ -75,7 +124,7 @@ router.get('/clientealuguel/:id/reajuste', async (req, res) => {
 // POST /api/clientealuguel/:id/reajuste/aplicar — Aplica reajuste
 router.post('/clientealuguel/:id/reajuste/aplicar', async (req, res) => {
   try {
-    const cliente = await ClienteAluguel.findByPk(req.params.id);
+    const cliente = await findClienteByIdSchemaSafe(req.params.id);
     if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
 
     const { indice } = req.body;
