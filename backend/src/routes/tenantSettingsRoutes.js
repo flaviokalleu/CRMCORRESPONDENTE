@@ -157,4 +157,94 @@ router.post('/settings/logo', logoUpload.single('logo'), async (req, res) => {
   }
 });
 
+// ===== GET /settings/asaas — Retorna config Asaas (chave mascarada) =====
+router.get('/settings/asaas', async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.tenantId, {
+      attributes: ['id', 'slug', 'asaas_api_key', 'asaas_webhook_token']
+    });
+    if (!tenant) return res.status(404).json({ error: 'Organização não encontrada' });
+
+    const apiKey = tenant.asaas_api_key;
+    const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 8000}`;
+
+    res.json({
+      asaas_api_key_configured: !!apiKey,
+      // Mostra apenas os últimos 6 caracteres para confirmação visual
+      asaas_api_key_preview: apiKey ? `****${apiKey.slice(-6)}` : null,
+      asaas_webhook_token: tenant.asaas_webhook_token || null,
+      webhook_url: `${BACKEND_URL}/api/asaas/webhook/${tenant.slug}`,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar config Asaas:', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ===== PUT /settings/asaas — Salva chave Asaas e webhook token do tenant =====
+router.put('/settings/asaas', async (req, res) => {
+  try {
+    if (!req.user.is_administrador && !req.user.is_super_admin) {
+      return res.status(403).json({ error: 'Acesso negado — apenas administradores' });
+    }
+
+    const tenant = await Tenant.findByPk(req.tenantId);
+    if (!tenant) return res.status(404).json({ error: 'Organização não encontrada' });
+
+    const { asaas_api_key, asaas_webhook_token } = req.body;
+    const updateData = {};
+
+    // Só atualiza se vieram novos valores — string vazia apaga
+    if (asaas_api_key !== undefined) {
+      updateData.asaas_api_key = asaas_api_key || null;
+    }
+    if (asaas_webhook_token !== undefined) {
+      updateData.asaas_webhook_token = asaas_webhook_token || null;
+    }
+
+    await tenant.update(updateData);
+
+    // Testa a conexão se a chave foi atualizada
+    let testeConexao = null;
+    if (asaas_api_key) {
+      const asaasService = require('../services/asaasService');
+      testeConexao = await asaasService.testarConexao(asaas_api_key);
+    }
+
+    const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 8000}`;
+    res.json({
+      message: 'Configurações Asaas salvas com sucesso',
+      asaas_api_key_configured: !!(asaas_api_key || tenant.asaas_api_key),
+      asaas_webhook_token: updateData.asaas_webhook_token ?? tenant.asaas_webhook_token,
+      webhook_url: `${BACKEND_URL}/api/asaas/webhook/${tenant.slug}`,
+      teste_conexao: testeConexao,
+    });
+  } catch (error) {
+    console.error('Erro ao salvar config Asaas:', error);
+    res.status(500).json({ error: 'Erro interno ao salvar configurações Asaas' });
+  }
+});
+
+// ===== POST /settings/asaas/testar — Testa a chave Asaas do tenant =====
+router.post('/settings/asaas/testar', async (req, res) => {
+  try {
+    const tenant = await Tenant.findByPk(req.tenantId, {
+      attributes: ['asaas_api_key']
+    });
+    if (!tenant) return res.status(404).json({ error: 'Organização não encontrada' });
+
+    const apiKey = req.body.asaas_api_key || tenant.asaas_api_key;
+    if (!apiKey) {
+      return res.status(400).json({ error: 'Nenhuma chave Asaas configurada' });
+    }
+
+    const asaasService = require('../services/asaasService');
+    const resultado = await asaasService.testarConexao(apiKey);
+    res.json(resultado);
+  } catch (error) {
+    console.error('Erro ao testar conexão Asaas:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

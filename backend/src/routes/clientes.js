@@ -185,11 +185,14 @@ const cleanupAllTempFiles = async (req) => {
 };
 
 // Enviar notificação WhatsApp
-const sendWhatsAppNotification = async (endpoint, data) => {
+const sendWhatsAppNotification = async (endpoint, data, tenantId) => {
   try {
     const response = await axios.post(`${WHATSAPP_BASE_URL}${endpoint}`, data, {
       timeout: 10000,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
+      }
     });
     
     console.log(`📱 WhatsApp enviado para ${endpoint}:`, response.data.message);
@@ -501,7 +504,7 @@ router.post('/clientes',
         conjuge_valor_renda: clienteData.conjuge_valor_renda,
         conjuge_renda_tipo: clienteData.conjuge_renda_tipo,
         conjuge_data_admissao: clienteData.conjuge_data_admissao
-      });
+      }, req.tenantId || req.user?.tenant_id);
 
       // ✅ NOTIFICAR CORRESPONDENTES SOBRE NOVO CLIENTE
       let notificacaoCorrespondentes = null;
@@ -702,7 +705,7 @@ router.put('/clientes/:id',
           usuarioAlterou: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
           telefoneUsuarioResponsavel: usuarioResponsavel?.telefone,
           valorRenda: fieldsToUpdate.valor_renda
-        });
+        }, req.tenantId || req.user?.tenant_id);
       }
 
       // ✅ PREPARAR LISTA DE ALTERAÇÕES PARA NOTIFICAÇÃO
@@ -1065,7 +1068,7 @@ router.patch('/clientes/:id/status', authenticateToken, async (req, res) => {
       statusNovo: status,
       usuarioAlterou: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
       telefoneUsuarioResponsavel: usuarioResponsavel?.telefone
-    });
+    }, req.tenantId || req.user?.tenant_id);
 
     // ✅ NOTIFICAR CORRESPONDENTES SOBRE MUDANÇA DE STATUS
     let notificacaoCorrespondentes = null;
@@ -1673,7 +1676,7 @@ const notificarCorrespondentes = async (tipoNotificacao, dadosCliente, usuarioRe
         }
 
         // ✅ Enviar notificação sem restrições de rate limiting
-        const resultado = await sendWhatsAppNotification(endpoint, dadosNotificacao);
+        const resultado = await sendWhatsAppNotification(endpoint, dadosNotificacao, req.tenantId || req.user?.tenant_id);
         notificacoes.push({
           correspondente: correspondente.username,
           telefone: correspondente.telefone,

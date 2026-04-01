@@ -102,93 +102,126 @@ class WhatsAppSessionService {
   }
 
   /**
-   * Limpa sessões antigas (mais de 30 dias)
-   * @returns {number} - Número de sessões removidas
+   * Cria uma nova sessão no banco (estado inicial limpo).
+   * Se force=true, remove a sessão existente antes de criar.
    */
-  static async cleanOldSessions() {
+  static async createSession(sessionId, force = false) {
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const deleted = await WhatsappSession.destroy({
-        where: {
-          updatedAt: {
-            [require('sequelize').Op.lt]: thirtyDaysAgo
-          }
-        }
-      });
-
-      if (deleted > 0) {
-        console.log(`✅ ${deleted} sessões antigas removidas`);
+      if (force) {
+        await this.deleteSession(sessionId);
       }
-      
-      return deleted;
-    } catch (error) {
-      console.error('❌ Erro ao limpar sessões antigas:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Migra sessões do sistema de arquivos para o banco de dados
-   * @param {string} sessionDir - Diretório das sessões
-   */
-  static async migrateFromFiles(sessionDir) {
-    try {
-      if (!fs.existsSync(sessionDir)) {
-        console.log('⚠️ Diretório de sessões não existe');
-        return;
-      }
-
-      const files = fs.readdirSync(sessionDir);
-      const sessionFiles = files.filter(file => file.startsWith('creds.') || file === 'creds.json');
-      
-      for (const file of sessionFiles) {
-        try {
-          const filePath = path.join(sessionDir, file);
-          const sessionData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-          
-          // Usar nome do arquivo como sessionId (sem extensão)
-          const sessionId = file.replace('.json', '').replace('creds.', '') || 'default';
-          
-          await this.saveSession(sessionId, sessionData);
-          console.log(`✅ Sessão migrada: ${file} -> ${sessionId}`);
-        } catch (error) {
-          console.error(`❌ Erro ao migrar sessão ${file}:`, error);
-        }
-      }
-
-      console.log('✅ Migração de sessões concluída');
-    } catch (error) {
-      console.error('❌ Erro na migração de sessões:', error);
-    }
-  }
-
-  /**
-   * Backup de sessão para arquivo (fallback)
-   * @param {string} sessionId - ID da sessão
-   * @param {string} backupDir - Diretório de backup
-   */
-  static async backupSession(sessionId, backupDir) {
-    try {
-      const sessionData = await this.loadSession(sessionId);
-      if (!sessionData) {
-        console.log(`⚠️ Sessão ${sessionId} não encontrada para backup`);
+      const exists = await this.sessionExists(sessionId);
+      if (exists && !force) {
+        console.log(`⚠️ Sessão ${sessionId} já existe`);
         return false;
       }
-
-      if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir, { recursive: true });
-      }
-
-      const backupFile = path.join(backupDir, `${sessionId}.json`);
-      fs.writeFileSync(backupFile, JSON.stringify(sessionData, null, 2));
-      
-      console.log(`✅ Backup da sessão ${sessionId} criado em ${backupFile}`);
+      await WhatsappSession.upsert({
+        id: sessionId,
+        data: { creds: {}, keys: {} },
+        status: 'inactive',
+        isAuthenticated: false,
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      });
+      console.log(`✅ Sessão ${sessionId} criada no banco`);
       return true;
     } catch (error) {
-      console.error(`❌ Erro ao fazer backup da sessão ${sessionId}:`, error);
+      console.error(`❌ Erro ao criar sessão ${sessionId}:`, error.message);
       return false;
+    }
+  }
+
+  /**
+   * Reseta uma sessão (apaga credenciais e cria registro limpo).
+   */
+  static async resetSession(sessionId) {
+    try {
+      await this.deleteSession(sessionId);
+      await this.createSession(sessionId, false);
+      console.log(`🔄 Sessão ${sessionId} resetada`);
+    } catch (error) {
+      console.error(`❌ Erro ao resetar sessão ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Retorna informações de metadados da sessão (sem os dados de auth).
+   */
+  static async getSessionInfo(sessionId) {
+    try {
+      const session = await WhatsappSession.findByPk(sessionId, {
+        attributes: ['id', 'status', 'phoneNumber', 'lastActivity', 'isAuthenticated', 'createdAt', 'updatedAt'],
+      });
+      if (!session) return null;
+      return {
+        id: session.id,
+        status: session.status,
+        phoneNumber: session.phoneNumber,
+        lastActivity: session.lastActivity,
+        isAuthenticated: session.isAuthenticated,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+      };
+    } catch (error) {
+      console.error(`❌ Erro ao obter info da sessão ${sessionId}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Lista todas as sessões ativas (inclui metadados, sem os dados de auth).
+   */
+  static async listSessions() {
+    try {
+      const sessions = await WhatsappSession.findAll({
+        attributes: ['id', 'status', 'phoneNumber', 'lastActivity', 'isAuthenticated', 'createdAt', 'updatedAt'],
+        order: [['updatedAt', 'DESC']],
+      });
+      console.log(`✅ ${sessions.length} sessões encontradas no banco`);
+      return sessions.map((s) => ({
+        id: s.id,
+        status: s.status,
+        phoneNumber: s.phoneNumber,
+        lastActivity: s.lastActivity,
+        isAuthenticated: s.isAuthenticated,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+      }));
+    } catch (error) {
+      console.error('❌ Erro ao listar sessões:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Lista sessões com status 'active' (para auto-reconexão na inicialização).
+   */
+  static async listActiveSessions() {
+    try {
+      const sessions = await WhatsappSession.findAll({
+        where: { status: 'active' },
+        attributes: ['id', 'status', 'phoneNumber'],
+        order: [['updatedAt', 'DESC']],
+      });
+      return sessions.map((s) => ({ id: s.id, status: s.status, phoneNumber: s.phoneNumber }));
+    } catch (error) {
+      console.error('❌ Erro ao listar sessões ativas:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Marca todas as sessões como inativas (usado na inicialização do servidor).
+   */
+  static async markAllInactive() {
+    try {
+      await WhatsappSession.update(
+        { status: 'inactive', isAuthenticated: false },
+        { where: { status: ['active', 'connecting'] } }
+      );
+    } catch (error) {
+      console.error('❌ Erro ao marcar sessões como inativas:', error.message);
     }
   }
 }

@@ -18,11 +18,18 @@ module.exports = function(sequelize, DataTypes) {
     phone: {
       type: DataTypes.STRING(255),
       allowNull: true
+    },
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
   }, {
     sequelize,
     tableName: 'proprietario',
     timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    underscored: false,
     indexes: [
       {
         name: "PRIMARY",

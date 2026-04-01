@@ -124,6 +124,7 @@ router.post('/', async (req, res) => {
                     timeout: 10000, // 10 segundos de timeout
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-Tenant-Id': String(req.tenantId || req.user?.tenant_id || ''),
                     }
                 });
 

@@ -250,7 +250,7 @@ router.post('/webhook', async (req, res) => {
       if (pagamentoLocal.criador?.telefone && !pagamentoLocal.criador.is_administrador) {
         console.log('📱 Enviando notificação para corretor criador...');
         try {
-          await notificarCriadorPagamentoAprovado(pagamentoLocal.criador, pagamentoLocal, pagamentoMP);
+          await notificarCriadorPagamentoAprovado(pagamentoLocal.criador, pagamentoLocal, pagamentoMP, req.tenantId || req.user?.tenant_id);
         } catch (criadorError) {
           console.error('❌ Erro ao notificar corretor criador:', criadorError);
         }
@@ -330,7 +330,7 @@ router.post('/webhook/test', async (req, res) => {
 router.use(authenticateToken);
 
 // ✅ FUNÇÃO PARA ENVIAR WHATSAPP VIA BAILEYS
-const enviarWhatsAppViaBaileys = async (telefone, mensagem) => {
+const enviarWhatsAppViaBaileys = async (telefone, mensagem, tenantId) => {
   try {
     console.log('📱 Enviando WhatsApp via Baileys para:', telefone);
     console.log('🔗 URL do WhatsApp API:', `${WHATSAPP_API_URL}/send-message`);
@@ -338,7 +338,8 @@ const enviarWhatsAppViaBaileys = async (telefone, mensagem) => {
     const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
       },
       body: JSON.stringify({
         phone: telefone,
@@ -362,12 +363,13 @@ const enviarWhatsAppViaBaileys = async (telefone, mensagem) => {
 };
 
 // ✅ FUNÇÃO PARA VERIFICAR STATUS DO WHATSAPP
-const verificarStatusWhatsApp = async () => {
+const verificarStatusWhatsApp = async (tenantId) => {
   try {
     const response = await fetch(`${WHATSAPP_API_URL}/status`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
       }
     });
 
@@ -674,7 +676,7 @@ router.post('/boleto', async (req, res) => {
       // 📱 ENVIAR WHATSAPP AUTOMATICAMENTE PARA O CLIENTE
       if (enviar_whatsapp) {
         console.log('📱 Enviando boleto via WhatsApp para cliente...');
-        const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'boleto');
+        const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'boleto', req.tenantId || req.user?.tenant_id);
         
         if (resultadoWhatsApp.success) {
           await pagamento.update({
@@ -884,7 +886,7 @@ router.post('/pix', async (req, res) => {
       // 📱 ENVIAR WHATSAPP AUTOMATICAMENTE PARA O CLIENTE
       if (enviar_whatsapp) {
         console.log('📱 Enviando PIX via WhatsApp para cliente...');
-        const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'pix');
+        const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'pix', req.tenantId || req.user?.tenant_id);
         
         if (resultadoWhatsApp.success) {
           await pagamento.update({
@@ -1070,7 +1072,7 @@ router.post('/universal', async (req, res) => {
 
     if (enviar_whatsapp) {
       console.log('📱 Enviando via WhatsApp...');
-      const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'universal');
+      const resultadoWhatsApp = await enviarWhatsAppParaCliente(cliente, pagamento, 'universal', req.tenantId || req.user?.tenant_id);
       
       if (resultadoWhatsApp.success) {
         await pagamento.update({
@@ -1118,7 +1120,7 @@ router.post('/universal', async (req, res) => {
 });
 
 // ✅ FUNÇÃO PARA ENVIAR WHATSAPP DIRETAMENTE PARA O CLIENTE
-const enviarWhatsAppParaCliente = async (cliente, pagamento, tipo = 'boleto') => {
+const enviarWhatsAppParaCliente = async (cliente, pagamento, tipo = 'boleto', tenantId) => {
   try {
     if (!cliente.telefone) {
       console.log('⚠️ Cliente não possui telefone cadastrado');
@@ -1131,7 +1133,8 @@ const enviarWhatsAppParaCliente = async (cliente, pagamento, tipo = 'boleto') =>
     const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8000'}/api/whatsapp/enviar-pagamento`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
       },
       body: JSON.stringify({
         telefone: cliente.telefone,
@@ -1233,7 +1236,7 @@ router.post('/:id/enviar-whatsapp', async (req, res) => {
     }
 
     // ✅ VERIFICAR STATUS DO WHATSAPP ANTES DE ENVIAR
-    const whatsappConectado = await verificarStatusWhatsApp();
+    const whatsappConectado = await verificarStatusWhatsApp(req.tenantId || req.user?.tenant_id);
     
     if (!whatsappConectado) {
       return res.status(400).json({ 
@@ -1254,7 +1257,7 @@ router.post('/:id/enviar-whatsapp', async (req, res) => {
       }
 
       const mensagem = criarMensagemPagamento(pagamento, pagamento.cliente, pagamento.tipo);
-      const resultado = await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem);
+      const resultado = await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem, req.tenantId || req.user?.tenant_id);
       
       if (resultado.success) {
         await pagamento.update({
@@ -1752,7 +1755,7 @@ router.post('/verificar-status', async (req, res) => {
 });
 
 // ✅ FUNÇÃO PARA NOTIFICAR CORRETOR QUE CRIOU O PAGAMENTO
-const notificarCriadorPagamentoAprovado = async (criador, pagamento, pagamentoMP) => {
+const notificarCriadorPagamentoAprovado = async (criador, pagamento, pagamentoMP, tenantId) => {
   try {
     if (!criador.telefone) {
       console.log('⚠️ Corretor criador não possui telefone');
@@ -1787,7 +1790,8 @@ const notificarCriadorPagamentoAprovado = async (criador, pagamento, pagamentoMP
     const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
       },
       body: JSON.stringify({
         phone: criador.telefone,
@@ -1887,7 +1891,7 @@ router.post('/:id/reenviar-notificacoes', async (req, res) => {
     if (notificar_criador && pagamento.criador?.telefone && !pagamento.criador.is_administrador) {
       console.log('📱 Notificando corretor criador sobre pagamento aprovado...');
       try {
-        resultados.criador = await notificarCriadorPagamentoAprovado(pagamento.criador, pagamento, pagamentoMPSimulado);
+        resultados.criador = await notificarCriadorPagamentoAprovado(pagamento.criador, pagamento, pagamentoMPSimulado, req.tenantId || req.user?.tenant_id);
       } catch (error) {
         console.error('❌ Erro ao notificar corretor criador:', error);
         resultados.criador = { success: false, error: error.message };

@@ -79,11 +79,14 @@ function criarMensagemPagamento(pagamento, cliente, tipo = 'boleto') {
 
 // ===== FUNÇÕES DE COMUNICAÇÃO =====
 
-async function enviarWhatsAppViaBaileys(telefone, mensagem) {
+async function enviarWhatsAppViaBaileys(telefone, mensagem, tenantId) {
   try {
     const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
+      },
       body: JSON.stringify({ phone: telefone, message: mensagem })
     });
     const result = await response.json();
@@ -93,9 +96,15 @@ async function enviarWhatsAppViaBaileys(telefone, mensagem) {
   }
 }
 
-async function verificarStatusWhatsApp() {
+async function verificarStatusWhatsApp(tenantId) {
   try {
-    const response = await fetch(`${WHATSAPP_API_URL}/status`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+    const response = await fetch(`${WHATSAPP_API_URL}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
+      }
+    });
     const result = await response.json();
     return result.isAuthenticated || false;
   } catch (error) {
@@ -103,11 +112,14 @@ async function verificarStatusWhatsApp() {
   }
 }
 
-async function enviarWhatsAppParaCliente(cliente, pagamento, tipo) {
+async function enviarWhatsAppParaCliente(cliente, pagamento, tipo, tenantId) {
   try {
     const response = await fetch(`${WHATSAPP_API_URL}/enviar-pagamento`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
+      },
       body: JSON.stringify({
         clienteId: cliente.id,
         clienteNome: cliente.nome,
@@ -130,7 +142,7 @@ async function enviarEmailParaCliente(cliente, pagamento, tipo) {
   return { success: true, message: `Email de ${tipo} enviado para ${cliente.email} (simulado)` };
 }
 
-async function notificarCriadorPagamentoAprovado(criador, pagamento, pagamentoMP) {
+async function notificarCriadorPagamentoAprovado(criador, pagamento, pagamentoMP, tenantId) {
   try {
     if (!criador || !criador.telefone) return { success: false, error: 'Criador sem telefone' };
     const telefoneFormatado = formatPhoneNumber(criador.telefone);
@@ -141,7 +153,7 @@ async function notificarCriadorPagamentoAprovado(criador, pagamento, pagamentoMP
     mensagem += `💳 *Método:* ${pagamentoMP?.payment_method_id || 'N/A'}\n⏰ *Aprovado em:* ${new Date().toLocaleString('pt-BR')}\n\n`;
     mensagem += `_Notificação automática do sistema_`;
 
-    return await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem);
+    return await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem, tenantId);
   } catch (error) {
     return { success: false, error: error.message };
   }

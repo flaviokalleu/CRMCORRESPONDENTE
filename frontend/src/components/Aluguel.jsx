@@ -16,9 +16,11 @@ import {
   Calendar,
   AlertTriangle,
   Loader2,
+  FileText,
 } from "lucide-react";
+import ContratoTab from "./ContratoTab";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api/";
+const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:5000/api/").replace(/\/+$/, "");
 
 const CARD = "rgba(255,255,255,0.06)";
 const BORDER = "rgba(255,255,255,0.10)";
@@ -32,12 +34,20 @@ const AlugueisPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState(""); // '', 'disponivel', 'alugado'
   const [actionLoading, setActionLoading] = useState({});
+  const [activeTab, setActiveTab] = useState("imoveis");
+
+  useEffect(() => {
+    // Evita que o Fast Refresh preserve a aba "Contrato" e esconda a lista.
+    setActiveTab("imoveis");
+  }, []);
 
   useEffect(() => {
     const fetchAlugueis = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/alugueis`);
+        const response = await fetch(`${API_URL}/alugueis`, {
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error("Erro ao buscar aluguéis");
         }
@@ -58,7 +68,9 @@ const AlugueisPage = () => {
   const handleDownloadAll = async (aluguelId) => {
     setActionLoading(prev => ({ ...prev, [`download_${aluguelId}`]: true }));
     try {
-      const response = await fetch(`${API_URL}/alugueis/${aluguelId}/download`);
+      const response = await fetch(`${API_URL}/alugueis/${aluguelId}/download`, {
+        cache: "no-store",
+      });
       if (!response.ok) {
         throw new Error("Erro ao baixar o arquivo ZIP");
       }
@@ -210,58 +222,89 @@ const AlugueisPage = () => {
             </div>
           </div>
 
+          <div className="mb-5 flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab("imoveis")}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                activeTab === "imoveis"
+                  ? "text-white bg-orange-500/20 border-orange-400/40"
+                  : "text-white/70 bg-white/5 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Imóveis
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("contratos")}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                activeTab === "contratos"
+                  ? "text-white bg-orange-500/20 border-orange-400/40"
+                  : "text-white/70 bg-white/5 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Contrato
+              </span>
+            </button>
+          </div>
+
           {/* Search & Filters Bar */}
-          <div
-            className="rounded-2xl p-5 backdrop-blur-xl"
-            style={{
-              background: CARD,
-              border: `1px solid ${BORDER}`,
-            }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Search */}
-              <div className="relative md:col-span-2">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar imóveis para aluguel..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all"
-                  style={{
-                    background: INPUT_BG,
-                    border: `1px solid ${BORDER}`,
-                  }}
-                />
-              </div>
+          {activeTab === "imoveis" && (
+            <div
+              className="rounded-2xl p-5 backdrop-blur-xl"
+              style={{
+                background: CARD,
+                border: `1px solid ${BORDER}`,
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search */}
+                <div className="relative md:col-span-2">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar imóveis para aluguel..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all"
+                    style={{
+                      background: INPUT_BG,
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  />
+                </div>
 
-              {/* Status Filter */}
-              <div className="relative">
-                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4 z-10" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all appearance-none [&>option]:bg-white [&>option]:text-gray-800"
-                  style={{
-                    background: INPUT_BG,
-                    border: `1px solid ${BORDER}`,
-                  }}
-                >
-                  <option value="">Todos os status</option>
-                  <option value="disponivel">Disponível</option>
-                  <option value="alugado">Alugado</option>
-                </select>
-              </div>
+                {/* Status Filter */}
+                <div className="relative">
+                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4 z-10" />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all appearance-none [&>option]:bg-white [&>option]:text-gray-800"
+                    style={{
+                      background: INPUT_BG,
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <option value="">Todos os status</option>
+                    <option value="disponivel">Disponível</option>
+                    <option value="alugado">Alugado</option>
+                  </select>
+                </div>
 
-              {/* Stats */}
-              <div className="flex items-center gap-3 text-white/70">
-                <Eye className="w-4 h-4 text-orange-400" />
-                <span className="text-sm font-semibold">
-                  Exibindo: <span className="text-white">{filteredAlugueis.length}</span>
-                </span>
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-white/70">
+                  <Eye className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm font-semibold">
+                    Exibindo: <span className="text-white">{filteredAlugueis.length}</span>
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </motion.div>
 
         {/* Error Message */}
@@ -289,11 +332,13 @@ const AlugueisPage = () => {
           )}
         </AnimatePresence>
 
+        {activeTab === "contratos" && <ContratoTab />}
+
         {/* Property Cards Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className={`mb-8 ${activeTab === "imoveis" ? "" : "hidden"}`}
         >
           {filteredAlugueis.length === 0 ? (
             <div
@@ -353,7 +398,7 @@ const AlugueisPage = () => {
                   <div className="relative overflow-hidden">
                     {aluguel.foto_capa ? (
                       <img
-                        src={`${API_URL}/uploads/alugueis/capa/${aluguel.foto_capa}`}
+                        src={`${API_URL}/uploads/${aluguel.foto_capa}`}
                         alt={aluguel.nome_imovel}
                         className={`w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500 ${
                           aluguel.alugado ? 'brightness-75 grayscale-[20%]' : ''

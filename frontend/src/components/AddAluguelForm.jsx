@@ -140,15 +140,13 @@ const AddAluguelForm = ({ onSuccess }) => {
     formDataToSend.append("quartos", formData.quartos);
     formDataToSend.append("banheiro", formData.banheiro);
     formDataToSend.append("dia_vencimento", formData.dia_vencimento);
-    if (fotoCapa) formDataToSend.append("fotoCapa", fotoCapa);
+    if (fotoCapa) formDataToSend.append("foto_capa", fotoCapa);
     if (fotoAdicional) {
-      Array.from(fotoAdicional).forEach((file) => formDataToSend.append("fotoAdicional", file));
+      Array.from(fotoAdicional).forEach((file) => formDataToSend.append("fotos_adicionais", file));
     }
 
     try {
-      await axios.post(`${API_URL}/alugueis`, formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await axios.post(`${API_URL}/alugueis`, formDataToSend);
       setSuccess(true);
       setFormData({ nome_imovel: "", descricao: "", valor_aluguel: "", quartos: "", banheiro: "", dia_vencimento: "" });
       setFotoCapa(null); setFotoAdicional(null);

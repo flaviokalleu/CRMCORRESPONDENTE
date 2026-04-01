@@ -23,7 +23,6 @@ import {
   Crown,
   Sparkles,
   Building,
-  Calculator,
   CalendarCheck,
   FileText,
 } from "lucide-react";
@@ -226,7 +225,6 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
     const items = { add: [], list: [], extra: [] };
 
     items.extra.push({ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
-    items.extra.push({ to: "/simulador", icon: Calculator, label: "Simulador" });
     items.extra.push({ to: "/visitas", icon: CalendarCheck, label: "Visitas" });
     items.extra.push({ to: "/propostas", icon: FileText, label: "Propostas" });
 
@@ -251,7 +249,6 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
         { to: "/corretores/adicionar", icon: UserCog, label: "Adicionar Corretor" },
         { to: "/correspondentes/adicionar", icon: ShieldCheck, label: "Adicionar Correspondente" },
         { to: "/imoveis/adicionar", icon: Building2, label: "Adicionar Imóvel" },
-        { to: "/pagamentos/criar", icon: CreditCard, label: "Criar Pagamento" },
       ].forEach((i) => { if (!items.add.some((e) => e.to === i.to)) items.add.push(i); });
 
       [
@@ -272,7 +269,8 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
       // Itens de aluguel
       items.list.push(
         { to: "/alugueis", icon: Building2, label: "Imoveis Aluguel" },
-        { to: "/clientes-aluguel", icon: Users, label: "Inquilinos" }
+        { to: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
+        { to: "/contratos/lista", icon: FileText, label: "Contratos" }
       );
       items.add.push(
         { to: "/alugueis/adicionar", icon: Building2, label: "Adicionar Imovel Aluguel" }
@@ -284,7 +282,6 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
       items.extra.push({ to: "/super-admin", icon: Crown, label: "Super Admin" });
     }
     if (hasRole("administrador")) {
-      items.extra.push({ to: "/minha-assinatura", icon: Sparkles, label: "Minha Assinatura" });
       items.extra.push({ to: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" });
     }
 

@@ -45,6 +45,7 @@ import LaudosPage from './pages/LaudosPage';
 import SimuladorPage from './pages/SimuladorPage';
 import VisitasPage from './pages/VisitasPage';
 import PropostasPage from './pages/PropostasPage';
+import ContratosList from './pages/ContratosList';
 
 // ✅ NOVAS IMPORTAÇÕES - PAGAMENTOS
 import CriarPagamento from './components/Pagamentos/CriarPagamento';
@@ -441,6 +442,16 @@ const AppContent = () => {
               <AdminOnlyRoute>
                 <ListaPagamentos />
               </AdminOnlyRoute>
+            } 
+          />
+
+          {/* Rotas de Contratos */}
+          <Route 
+            path="/contratos/lista" 
+            element={
+              <ProtectedRoute>
+                <ContratosList />
+              </ProtectedRoute>
             } 
           />
 

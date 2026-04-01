@@ -40,6 +40,7 @@ async function updateTenant(req, res) {
     if (!result) return res.status(404).json({ error: 'Organização não encontrada' });
     res.json(result);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     console.error('Erro ao atualizar tenant:', error);
     res.status(500).json({ error: 'Erro ao atualizar organização' });
   }

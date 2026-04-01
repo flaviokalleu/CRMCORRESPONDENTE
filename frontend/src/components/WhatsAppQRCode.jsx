@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { io } from "socket.io-client";
 import {
   MessageCircle,
   Wifi,
   WifiOff,
-  QrCode,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -24,6 +24,15 @@ import {
   ToggleRight,
 } from "lucide-react";
 import QRCodeLib from "qrcode";
+import { useAuth } from "../context/AuthContext";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("authToken");
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 // ─── Session Manager (inline, redesigned) ────────────────────────────────────
 
@@ -47,6 +56,7 @@ const SessionManager = () => {
       setError("");
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/whatsapp/sessions`
+        , { headers: getAuthHeaders() }
       );
       const data = await response.json();
       if (data.success) {
@@ -74,7 +84,7 @@ const SessionManager = () => {
         `${process.env.REACT_APP_API_URL}/whatsapp/session/create`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             sessionId: newSessionId.trim(),
             forceCreate,
@@ -105,7 +115,7 @@ const SessionManager = () => {
       setError("");
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/whatsapp/session/${sessionToDelete.id}?force=${forceDelete}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getAuthHeaders() }
       );
       const data = await response.json();
       if (data.success) {
@@ -132,7 +142,7 @@ const SessionManager = () => {
         `${process.env.REACT_APP_API_URL}/whatsapp/session/switch`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ sessionId }),
         }
       );
@@ -156,7 +166,7 @@ const SessionManager = () => {
       setError("");
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/whatsapp/sessions/cleanup`,
-        { method: "POST" }
+        { method: "POST", headers: getAuthHeaders() }
       );
       const data = await response.json();
       if (data.success) {
@@ -174,8 +184,7 @@ const SessionManager = () => {
 
   useEffect(() => {
     loadSessions();
-    const interval = setInterval(loadSessions, 30000);
-    return () => clearInterval(interval);
+    // Sem interval: atualize manualmente pelo botão Atualizar
   }, []);
 
   useEffect(() => {
@@ -446,6 +455,7 @@ const SessionManager = () => {
 // ─── Main WhatsAppQRCode Component ───────────────────────────────────────────
 
 const WhatsAppQRCode = () => {
+  const { user } = useAuth();
   const [qrCode, setQrCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -457,58 +467,100 @@ const WhatsAppQRCode = () => {
   const [currentSessionId, setCurrentSessionId] = useState("default");
   const [showSessionManager, setShowSessionManager] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const [idle, setIdle] = useState(true); // Começa em idle — esperando o usuário clicar
-  const intervalRef = useRef(null);
+  const [idle, setIdle] = useState(true);
+  const socketRef = useRef(null);
+  const empresaLabel = user?.tenant_nome || user?.tenantName || user?.empresa_nome || user?.company_name || "sua empresa";
 
-  // Checar status atual (silencioso, sem loading visual)
-  const checkStatus = useCallback(async () => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/qr-code`);
-      if (!response.ok) return;
-      const data = await response.json();
+  // Mapeia eventos do socket para o estado do componente
+  const handleWhatsAppEvent = useCallback((data) => {
+    if (data.sessionId) setCurrentSessionId(data.sessionId);
 
-      if (data.blocked) {
-        setBlocked(true);
-        setIdle(false);
-        setIsConnected(false);
-      } else if (data.authenticated) {
+    if (data.type === 'qr') {
+      setQrCode(data.qrCode || "");
+      setConnecting(false);
+      setBlocked(false);
+      setIdle(false);
+      setIsConnected(false);
+    } else if (data.type === 'status') {
+      if (data.status === 'ready') {
         setIsConnected(true);
-        setBlocked(false);
-        setIdle(false);
         setQrCode("");
-        setError("");
-      } else if (data.hasQrCode && data.qrCode) {
-        setQrCode(data.qrCode);
-        setIsConnected(false);
+        setQrImage("");
+        setConnecting(false);
+        setIdle(false);
         setBlocked(false);
-        setIdle(false);
-      } else if (data.idle) {
-        setIdle(true);
+        setError("");
+      } else if (data.status === 'disconnected') {
         setIsConnected(false);
-      } else if (data.isInitializing) {
-        setIdle(false);
-        setConnecting(true);
+        setQrCode("");
+        setQrImage("");
+        setIdle(true);
+        setConnecting(false);
       }
-
-      if (data.sessionInfo) setSessionInfo(data.sessionInfo);
-      if (data.sessionId) setCurrentSessionId(data.sessionId);
-    } catch {
-      // Silencia erros de polling
+    } else if (data.type === 'error') {
+      setError(data.message || 'Erro na conexão');
+      setConnecting(false);
+      setIdle(true);
     }
   }, []);
 
-  // Checar status no mount (UMA vez) — sem inicializar nada
+  // Checar status inicial (UMA vez) — sem inicializar nada
+  const checkStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/qr-code`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+
+      if (data.sessionId) setCurrentSessionId(data.sessionId);
+      if (data.sessionInfo) setSessionInfo(data.sessionInfo);
+
+      if (data.blocked) {
+        setBlocked(true); setIdle(false); setIsConnected(false);
+      } else if (data.authenticated) {
+        setIsConnected(true); setBlocked(false); setIdle(false); setQrCode(""); setError("");
+      } else if (data.hasQrCode && data.qrCode) {
+        setQrCode(data.qrCode); setIsConnected(false); setBlocked(false); setIdle(false); setConnecting(false);
+      } else if (data.idle) {
+        setIdle(true); setIsConnected(false);
+      } else if (data.isInitializing) {
+        setIdle(false); setConnecting(true);
+      }
+    } catch {
+      // ignora
+    }
+  }, []);
+
+  // Conexão Socket.IO — substitui todo o polling
   useEffect(() => {
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:8000';
+    const socket = io(socketUrl, { withCredentials: true, transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('[WA] Socket conectado:', socket.id);
+      if (user?.tenant_id) {
+        socket.emit('subscribe:whatsapp', { tenantId: user.tenant_id });
+      }
+    });
+
+    socket.on('whatsapp:update', (data) => {
+      // Filtro de segurança: ignora eventos de outros tenants
+      if (user?.tenant_id && data.tenantId && Number(data.tenantId) !== Number(user.tenant_id)) return;
+      handleWhatsAppEvent(data);
+    });
+
+    socket.on('disconnect', () => console.log('[WA] Socket desconectado'));
+
+    // Busca estado atual uma única vez (socket não repete eventos passados)
     checkStatus();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Polling — só ativo quando tem QR ou está conectado
-  useEffect(() => {
-    if (idle || blocked) return; // Não pollar em idle ou bloqueado
-
-    intervalRef.current = setInterval(checkStatus, 4000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [idle, blocked, checkStatus]);
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [user?.tenant_id, handleWhatsAppEvent, checkStatus]);
 
   // Gerar imagem do QR
   useEffect(() => {
@@ -532,7 +584,7 @@ const WhatsAppQRCode = () => {
       setBlocked(false);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/connect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ sessionId: currentSessionId }),
       });
       const data = await response.json();
@@ -553,7 +605,10 @@ const WhatsAppQRCode = () => {
     try {
       setLoading(true);
       setError("");
-      await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/reset`, { method: "POST" });
+      await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/reset`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
       setBlocked(false);
       setIsConnected(false);
       setQrCode("");
@@ -572,7 +627,7 @@ const WhatsAppQRCode = () => {
       setLoading(true);
       await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/disconnect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ deleteSession: false }),
       });
       setIsConnected(false);
@@ -625,7 +680,7 @@ const WhatsAppQRCode = () => {
             WhatsApp
           </h1>
           <p className="text-white/60 text-sm mt-1">
-            Conecte seu WhatsApp para enviar e receber mensagens pelo sistema
+            Conecte o WhatsApp da empresa {empresaLabel} para enviar e receber mensagens pelo sistema
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -649,7 +704,7 @@ const WhatsAppQRCode = () => {
         <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-5 border border-white/10">
           <h2 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
             <Settings size={20} className="text-caixa-orange" />
-            Gerenciar Sessoes
+            Sessões da Empresa
           </h2>
           <SessionManager />
         </div>
@@ -752,6 +807,13 @@ const WhatsAppQRCode = () => {
             </div>
             <p className="text-white font-semibold text-lg mt-6">Conectando ao WhatsApp...</p>
             <p className="text-white/60 text-sm mt-1">Buscando a versão mais recente e gerando QR Code</p>
+            <button
+              onClick={handleReset}
+              className="mt-6 inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-xl px-5 py-2 text-sm font-medium transition-colors"
+            >
+              <RefreshCw size={14} />
+              Cancelar e tentar novamente
+            </button>
           </div>
 
         ) : isConnected ? (
@@ -787,7 +849,7 @@ const WhatsAppQRCode = () => {
               </div>
               <p className="text-white/40 text-xs mt-3 flex items-center gap-1">
                 <RefreshCw size={10} />
-                Atualiza automaticamente a cada 4 segundos
+                Atualiza em tempo real via socket
               </p>
             </div>
             <div className="flex-1 w-full lg:max-w-sm">
@@ -821,7 +883,7 @@ const WhatsAppQRCode = () => {
             </div>
             <h2 className="text-white text-xl font-bold mb-2">WhatsApp Desconectado</h2>
             <p className="text-white/60 text-sm text-center max-w-md mb-8">
-              Clique no botão abaixo para gerar o QR Code e conectar seu WhatsApp ao sistema.
+              Clique no botão abaixo para gerar o QR Code e conectar o WhatsApp da empresa {empresaLabel} ao sistema.
             </p>
             <button
               onClick={handleConnect}

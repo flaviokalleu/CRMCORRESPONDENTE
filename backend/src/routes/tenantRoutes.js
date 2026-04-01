@@ -43,38 +43,61 @@ router.post('/register', async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
+    const rollbackAndRespond = async (status, error) => {
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
+
+      return res.status(status).json({ error });
+    };
+
     const {
-      // Dados da empresa
-      empresa_nome,
-      empresa_slug,
-      empresa_cnpj,
-      empresa_email,
-      empresa_telefone,
-      // Dados do admin
-      admin_first_name,
-      admin_last_name,
-      admin_email,
-      admin_password,
-      admin_telefone,
-      // Plano
-      plan_slug
-    } = req.body;
+      empresa = {},
+      admin = {},
+      plan_id,
+      plan_slug: rawPlanSlug,
+      // Dados da empresa (formato legado)
+      empresa_nome: legacyEmpresaNome,
+      empresa_slug: legacyEmpresaSlug,
+      empresa_cnpj: legacyEmpresaCnpj,
+      empresa_email: legacyEmpresaEmail,
+      empresa_telefone: legacyEmpresaTelefone,
+      // Dados do admin (formato legado)
+      admin_first_name: legacyAdminFirstName,
+      admin_last_name: legacyAdminLastName,
+      admin_email: legacyAdminEmail,
+      admin_password: legacyAdminPassword,
+      admin_telefone: legacyAdminTelefone
+    } = req.body || {};
+
+    const empresa_nome = legacyEmpresaNome || empresa.nome;
+    const empresa_slug = legacyEmpresaSlug || empresa.slug;
+    const empresa_cnpj = legacyEmpresaCnpj || empresa.cnpj;
+    const empresa_email = legacyEmpresaEmail || empresa.email;
+    const empresa_telefone = legacyEmpresaTelefone || empresa.telefone;
+
+    const admin_first_name = legacyAdminFirstName || admin.first_name;
+    const admin_last_name = legacyAdminLastName || admin.last_name;
+    const admin_email = legacyAdminEmail || admin.email;
+    const admin_password = legacyAdminPassword || admin.password;
+    const admin_telefone = legacyAdminTelefone || admin.telefone;
+    const selectedPlanIdentifier = rawPlanSlug || plan_id;
 
     // Validações
     if (!empresa_nome || !empresa_slug || !empresa_email) {
-      return res.status(400).json({ error: 'Nome, slug e email da empresa são obrigatórios' });
+      return rollbackAndRespond(400, 'Nome, slug e email da empresa são obrigatórios');
     }
     if (!admin_email || !admin_password) {
-      return res.status(400).json({ error: 'Email e senha do administrador são obrigatórios' });
+      return rollbackAndRespond(400, 'Email e senha do administrador são obrigatórios');
     }
     if (admin_password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
+      return rollbackAndRespond(400, 'Senha deve ter pelo menos 6 caracteres');
     }
 
     // Validar slug (apenas letras minúsculas, números e hífens)
     const slugRegex = /^[a-z0-9-]+$/;
     if (!slugRegex.test(empresa_slug)) {
-      return res.status(400).json({ error: 'Slug deve conter apenas letras minúsculas, números e hífens' });
+      return rollbackAndRespond(400, 'Slug deve conter apenas letras minúsculas, números e hífens');
     }
 
     // Verificar duplicatas
@@ -85,13 +108,13 @@ router.post('/register', async (req, res) => {
     ]);
 
     if (existingSlug) {
-      return res.status(409).json({ error: 'Este slug já está em uso. Escolha outro.' });
+      return rollbackAndRespond(409, 'Este slug já está em uso. Escolha outro.');
     }
     if (existingEmail) {
-      return res.status(409).json({ error: 'Este email de empresa já está cadastrado.' });
+      return rollbackAndRespond(409, 'Este email de empresa já está cadastrado.');
     }
     if (existingUser) {
-      return res.status(409).json({ error: 'Este email de administrador já está cadastrado.' });
+      return rollbackAndRespond(409, 'Este email de administrador já está cadastrado.');
     }
 
     // 1. Criar tenant
@@ -122,7 +145,19 @@ router.post('/register', async (req, res) => {
     }, { transaction });
 
     // 3. Criar assinatura
-    let plan = await Plan.findOne({ where: { slug: plan_slug || 'free' }, transaction });
+    let plan = null;
+
+    if (selectedPlanIdentifier) {
+      const isNumericPlanId = /^\d+$/.test(String(selectedPlanIdentifier));
+
+      plan = await Plan.findOne({
+        where: isNumericPlanId
+          ? { id: Number(selectedPlanIdentifier) }
+          : { slug: String(selectedPlanIdentifier) },
+        transaction
+      });
+    }
+
     if (!plan) {
       plan = await Plan.findOne({ where: { slug: 'free' }, transaction });
     }
@@ -194,7 +229,10 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
     console.error('Erro ao registrar tenant:', error);
     res.status(500).json({ error: 'Erro ao criar organização. Tente novamente.' });
   }

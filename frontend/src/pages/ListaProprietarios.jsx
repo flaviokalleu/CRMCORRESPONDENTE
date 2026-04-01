@@ -1,13 +1,13 @@
 import React from "react";
-import MainLayout from "../layouts/MainLayout"; // Certifique-se de que o caminho está correto
-import ListaImoveisPublico from "../components/ListaImoveisPublico"; // Atualize o caminho para ListaImoveisPublico
+import MainLayout from "../layouts/MainLayout";
+import ListaProprietarios from "../components/ListaProprietarios";
 
-const PublicImoveisPage = () => {
+const ListaProprietariosPage = () => {
   return (
     <MainLayout>
-      <ListaImoveisPublico />
+      <ListaProprietarios />
     </MainLayout>
   );
 };
 
-export default PublicImoveisPage;
+export default ListaProprietariosPage;

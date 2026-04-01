@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -29,8 +30,15 @@ import {
   Brain,
   Shield,
   Search,
-  Filter
+  Filter,
+  ArrowRightLeft,
+  Send,
+  RotateCcw,
+  Key,
+  Percent,
+  User
 } from "lucide-react";
+import FormInquilino from "./FormInquilino";
 
 /* ── Design Tokens ── */
 const CARD = 'rgba(255,255,255,0.06)';
@@ -55,12 +63,17 @@ const inputStyle = `w-full rounded-xl px-4 py-3 text-white placeholder-white/40
   transition-all duration-300 [&>option]:bg-white [&>option]:text-gray-800`;
 
 const ClienteAluguel = () => {
+  const location = useLocation();
   const [clientes, setClientes] = useState([]);
-  const [modalAberto, setModalAberto] = useState(false);
+  const [modalAberto, setModalAberto] = useState(!!(location.state?.abrirModal));
   const [modalPagamento, setModalPagamento] = useState(false);
   const [modalConfirmacao, setModalConfirmacao] = useState(false);
   const [modalCobrancaAvulsa, setModalCobrancaAvulsa] = useState(false);
   const [modalCobrancas, setModalCobrancas] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
+  const [modalRepasses, setModalRepasses] = useState(false);
+  const [repasses, setRepasses] = useState([]);
+  const [loadingRepasses, setLoadingRepasses] = useState(false);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [pagamentoParaDeletar, setPagamentoParaDeletar] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -203,9 +216,55 @@ const ClienteAluguel = () => {
     setModalConfirmacao(false);
     setModalCobrancaAvulsa(false);
     setModalCobrancas(false);
+    setModalEditar(false);
+    setModalRepasses(false);
     setClienteSelecionado(null);
     setPagamentoParaDeletar(null);
     setCobrancaCriada(null);
+    setRepasses([]);
+  };
+
+  const abrirModalRepasses = async (cliente) => {
+    setClienteSelecionado(cliente);
+    setModalRepasses(true);
+    setLoadingRepasses(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/repasses?cliente_aluguel_id=${cliente.id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      const data = await res.json();
+      setRepasses(Array.isArray(data.repasses) ? data.repasses : Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Erro ao carregar repasses:', e);
+      setRepasses([]);
+    } finally {
+      setLoadingRepasses(false);
+    }
+  };
+
+  const retentarRepasse = async (repasseId) => {
+    setLoadingRepasses(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/repasses/${repasseId}/transferir`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRepasses(prev => prev.map(r => r.id === repasseId ? { ...r, transfer_status: data.transfer_status || 'REALIZADO' } : r));
+      } else {
+        alert(data.error || 'Erro ao retentar repasse');
+      }
+    } catch (e) {
+      alert('Erro ao retentar repasse');
+    } finally {
+      setLoadingRepasses(false);
+    }
+  };
+
+  const abrirEditar = (cliente) => {
+    setClienteSelecionado(cliente);
+    setModalEditar(true);
   };
 
   const registrarPagamento = async () => {
@@ -678,6 +737,22 @@ const ClienteAluguel = () => {
                       </motion.button>
                     </div>
 
+                    {/* Repasses + Edit buttons */}
+                    <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        className="text-white/80 font-medium py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                        style={{ background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.25)' }}
+                        onClick={() => abrirModalRepasses(cliente)}>
+                        <ArrowRightLeft className="w-4 h-4 text-cyan-400" /><span className="text-cyan-300">Repasses</span>
+                      </motion.button>
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        className="text-white/80 font-medium py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                        style={glassCard}
+                        onClick={() => abrirEditar(cliente)}>
+                        <Edit className="w-4 h-4 text-orange-400" />Editar
+                      </motion.button>
+                    </div>
+
                     {/* Sync button */}
                     {!cliente.asaas_subscription_status && (
                       <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -811,6 +886,18 @@ const ClienteAluguel = () => {
                                   style={{ background: CARD }}
                                   onClick={() => recalcularScore(cliente)} disabled={loadingAsaas} title="Recalcular Score IA">
                                   <Brain className="w-3.5 h-3.5" />
+                                </motion.button>
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                  className="text-cyan-400/80 hover:text-cyan-300 p-1.5 rounded-lg transition-all"
+                                  style={{ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)' }}
+                                  onClick={() => abrirModalRepasses(cliente)} title="Repasses PIX">
+                                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                                </motion.button>
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                  className="text-orange-400/80 hover:text-orange-300 p-1.5 rounded-lg transition-all"
+                                  style={{ background: CARD }}
+                                  onClick={() => abrirEditar(cliente)} title="Editar Inquilino">
+                                  <Edit className="w-3.5 h-3.5" />
                                 </motion.button>
                               </div>
                             </td>
@@ -1189,6 +1276,205 @@ const ClienteAluguel = () => {
             </div>
           </motion.div>
         </motion.div>
+      )}
+      {/* ════════════════════════════════════════════
+          MODAL: Repasses PIX
+         ════════════════════════════════════════════ */}
+      {modalRepasses && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+            className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl shadow-black/40 flex flex-col"
+            style={{ ...glassCard, background: 'rgba(11,20,38,0.97)' }}>
+
+            {/* Header */}
+            <div className="p-6" style={{ background: 'linear-gradient(135deg, #0891B2, #0E7490)' }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ArrowRightLeft className="w-5 h-5 text-white" />
+                    <h2 className="text-xl font-bold text-white">Repasses PIX</h2>
+                  </div>
+                  <p className="text-white/70 text-sm">{clienteSelecionado?.nome}</p>
+                </div>
+                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={fecharModais}
+                  className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-all duration-200">
+                  <X className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              {/* Proprietário info strip */}
+              {clienteSelecionado?.proprietario_pix && (
+                <div className="mt-4 rounded-xl p-3 flex flex-wrap gap-4" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                  {clienteSelecionado.proprietario_nome && (
+                    <div className="flex items-center gap-1.5 text-sm text-white/80">
+                      <User className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>{clienteSelecionado.proprietario_nome}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-sm text-white/80">
+                    <Key className="w-3.5 h-3.5 text-cyan-300" />
+                    <span>{clienteSelecionado.proprietario_pix}</span>
+                  </div>
+                  {clienteSelecionado.taxa_administracao != null && (
+                    <div className="flex items-center gap-1.5 text-sm text-white/80">
+                      <Percent className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>Taxa: {clienteSelecionado.taxa_administracao}%</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingRepasses ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+                </div>
+              ) : repasses.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+                    style={{ background: 'rgba(6,182,212,0.12)' }}>
+                    <ArrowRightLeft className="w-10 h-10 text-cyan-400/40" />
+                  </div>
+                  <p className="text-white/40 text-center">Nenhum repasse registrado</p>
+                  <p className="text-white/25 text-center text-sm mt-1">Os repasses aparecem automaticamente apos confirmação de pagamento no Asaas</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {repasses.map((r, i) => {
+                    const statusColors = {
+                      REALIZADO:   'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+                      PENDENTE:    'bg-yellow-500/15 text-yellow-400 border-yellow-500/25',
+                      PROCESSANDO: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
+                      FALHOU:      'bg-red-500/15 text-red-400 border-red-500/25',
+                      SEM_PIX:     'bg-gray-500/15 text-gray-400 border-gray-500/25',
+                    };
+                    const statusLabels = {
+                      REALIZADO:   'Realizado',
+                      PENDENTE:    'Pendente',
+                      PROCESSANDO: 'Processando',
+                      FALHOU:      'Falhou',
+                      SEM_PIX:     'Sem PIX',
+                    };
+                    const statusColor = statusColors[r.transfer_status] || statusColors.PENDENTE;
+                    const canRetry = r.transfer_status === 'FALHOU' || r.transfer_status === 'SEM_PIX';
+
+                    return (
+                      <motion.div key={r.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                        className="rounded-xl p-4" style={glassCard}>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex-1 space-y-2">
+                            {/* Status + date */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+                                {statusLabels[r.transfer_status] || r.transfer_status}
+                              </span>
+                              {r.created_at && (
+                                <span className="text-xs text-white/40 flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(r.created_at).toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
+                            </div>
+                            {/* Valores */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                              <div>
+                                <p className="text-white/40 text-xs mb-0.5">Aluguel</p>
+                                <p className="text-white font-semibold flex items-center gap-1">
+                                  <DollarSign className="w-3 h-3 text-orange-400" />
+                                  {Number(r.valor_aluguel).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-white/40 text-xs mb-0.5">Repasse</p>
+                                <p className="text-emerald-400 font-semibold flex items-center gap-1">
+                                  <Send className="w-3 h-3" />
+                                  {Number(r.valor_repasse).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </p>
+                              </div>
+                              {r.valor_taxa != null && (
+                                <div>
+                                  <p className="text-white/40 text-xs mb-0.5">Taxa admin</p>
+                                  <p className="text-orange-400 font-semibold flex items-center gap-1">
+                                    <Percent className="w-3 h-3" />
+                                    {Number(r.valor_taxa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                  </p>
+                                </div>
+                              )}
+                              {r.comissao_corretor != null && Number(r.comissao_corretor) > 0 && (
+                                <div>
+                                  <p className="text-white/40 text-xs mb-0.5">Comissão corretor</p>
+                                  <p className="text-blue-400 font-semibold flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {Number(r.comissao_corretor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {/* Error msg */}
+                            {r.transfer_error && (
+                              <p className="text-red-400/70 text-xs bg-red-500/10 rounded-lg px-3 py-1.5">
+                                {r.transfer_error}
+                              </p>
+                            )}
+                            {/* Transfer ID */}
+                            {r.asaas_transfer_id && (
+                              <p className="text-white/30 text-xs">ID Asaas: {r.asaas_transfer_id}</p>
+                            )}
+                          </div>
+                          {/* Retry button */}
+                          {canRetry && (
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                              onClick={() => retentarRepasse(r.id)}
+                              disabled={loadingRepasses}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-white transition-all"
+                              style={{ background: 'linear-gradient(135deg, #0891B2, #0E7490)' }}>
+                              {loadingRepasses
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <RotateCcw className="w-4 h-4" />}
+                              Retentar
+                            </motion.button>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={fecharModais}
+                className="w-full text-white font-medium py-3 px-4 rounded-xl transition-all duration-200"
+                style={{ background: 'linear-gradient(135deg, #0891B2, #0E7490)' }}>
+                Fechar
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      {/* ════════════════════════════════════════════
+          MODAL: Editar Inquilino
+         ════════════════════════════════════════════ */}
+      {modalEditar && clienteSelecionado && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-start justify-center z-50 overflow-y-auto py-8 px-4">
+          <div className="w-full max-w-3xl">
+            <FormInquilino
+              isEditing
+              clienteId={clienteSelecionado.id}
+              initialData={clienteSelecionado}
+              onBack={() => setModalEditar(false)}
+              onSuccess={async () => {
+                setModalEditar(false);
+                setClienteSelecionado(null);
+                await carregarClientes();
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

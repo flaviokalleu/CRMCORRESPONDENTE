@@ -8,6 +8,20 @@ import { fetchTenants, fetchPlans, fetchTenantDetails, createTenant, updateTenan
 import { Modal, statusBadge, formatCurrency, inputCls, MODULE_META, ModuleToggle } from "./shared";
 
 const OrganizacoesTab = () => {
+  const createInitialState = {
+    nome: "",
+    slug: "",
+    email: "",
+    cnpj: "",
+    telefone: "",
+    plan_id: "",
+    admin_first_name: "",
+    admin_last_name: "",
+    admin_email: "",
+    admin_password: "",
+    admin_telefone: ""
+  };
+
   const [tenants, setTenants] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +41,7 @@ const OrganizacoesTab = () => {
   const [newCiclo, setNewCiclo] = useState("mensal");
   const [actionLoading, setActionLoading] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ nome: "", slug: "", email: "", cnpj: "", telefone: "", plan_id: "" });
+  const [createForm, setCreateForm] = useState(createInitialState);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -92,15 +106,28 @@ const OrganizacoesTab = () => {
   // ── Create ──
   const handleCreate = async () => {
     setCreateError("");
-    if (!createForm.nome || !createForm.slug || !createForm.email) {
-      setCreateError("Nome, slug e email são obrigatórios");
+    if (!createForm.nome || !createForm.slug || !createForm.email || !createForm.admin_email || !createForm.admin_password) {
+      setCreateError("Preencha empresa e acesso do administrador");
+      return;
+    }
+    if (createForm.admin_password.length < 6) {
+      setCreateError("A senha do administrador deve ter pelo menos 6 caracteres");
       return;
     }
     try {
       setCreateLoading(true);
-      await createTenant({ ...createForm, plan_id: createForm.plan_id ? parseInt(createForm.plan_id) : undefined });
+      await createTenant({
+        ...createForm,
+        nome: createForm.nome.trim(),
+        slug: createForm.slug.trim().toLowerCase(),
+        email: createForm.email.trim(),
+        admin_first_name: createForm.admin_first_name.trim(),
+        admin_last_name: createForm.admin_last_name.trim(),
+        admin_email: createForm.admin_email.trim(),
+        plan_id: createForm.plan_id ? parseInt(createForm.plan_id) : undefined
+      });
       setCreateOpen(false);
-      setCreateForm({ nome: "", slug: "", email: "", cnpj: "", telefone: "", plan_id: "" });
+      setCreateForm(createInitialState);
       loadTenants();
     } catch (err) {
       setCreateError(err.response?.data?.error || "Erro ao criar empresa");
@@ -133,6 +160,11 @@ const OrganizacoesTab = () => {
         nome: data.nome || "", email: data.email || "", cnpj: data.cnpj || "",
         telefone: data.telefone || "", endereco: data.endereco || "", cidade: data.cidade || "",
         estado: data.estado || "", cep: data.cep || "", dominio_customizado: data.dominio_customizado || "",
+        admin_first_name: data.admin_user?.first_name || "",
+        admin_last_name: data.admin_user?.last_name || "",
+        admin_email: data.admin_user?.email || "",
+        admin_telefone: data.admin_user?.telefone || "",
+        admin_password: "",
         use_custom_modules: data.use_custom_modules || false,
         max_clientes: data.max_clientes ?? "", max_usuarios: data.max_usuarios ?? "",
         max_imoveis: data.max_imoveis ?? "", max_alugueis: data.max_alugueis ?? "",
@@ -156,13 +188,36 @@ const OrganizacoesTab = () => {
   const handleEditSave = async () => {
     if (!selectedTenant) return;
     setEditError("");
+    const trimmedCompanyEmail = editForm.email?.trim();
+    const trimmedAdminEmail = editForm.admin_email?.trim();
+
+    if (!editForm.nome?.trim() || !trimmedCompanyEmail) {
+      setEditError("Nome e email da empresa são obrigatórios");
+      return;
+    }
+    if (editForm.admin_email !== undefined && !trimmedAdminEmail) {
+      setEditError("Email do administrador é obrigatório");
+      return;
+    }
+    if (editForm.admin_password && editForm.admin_password.length < 6) {
+      setEditError("A nova senha do administrador deve ter pelo menos 6 caracteres");
+      return;
+    }
     try {
       setEditLoading(true);
       const { _tenant, ...payload } = editForm;
+      payload.nome = payload.nome?.trim();
+      payload.email = trimmedCompanyEmail;
+      if (payload.admin_email !== undefined) payload.admin_email = trimmedAdminEmail;
+      if (payload.admin_first_name !== undefined) payload.admin_first_name = payload.admin_first_name?.trim();
+      if (payload.admin_last_name !== undefined) payload.admin_last_name = payload.admin_last_name?.trim();
       ['max_clientes', 'max_usuarios', 'max_imoveis', 'max_alugueis', 'max_storage_mb', 'max_file_size_mb'].forEach(f => {
         if (payload[f] === "" || payload[f] === undefined) payload[f] = null;
         else payload[f] = parseInt(payload[f]);
       });
+      if (!payload.admin_password) {
+        delete payload.admin_password;
+      }
       await updateTenant(selectedTenant.id, payload);
       setEditOpen(false);
       loadTenants();
@@ -342,12 +397,12 @@ const OrganizacoesTab = () => {
       </Modal>
 
       {/* Create Tenant Modal */}
-      <Modal open={createOpen} onClose={() => { setCreateOpen(false); setCreateError(""); }} title="Nova Empresa" wide>
+      <Modal open={createOpen} onClose={() => { setCreateOpen(false); setCreateError(""); setCreateForm(createInitialState); }} title="Nova Empresa" wide>
         <div className="space-y-4">
           {createError && <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"><AlertTriangle size={16} /> {createError}</div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="block text-sm text-gray-400 mb-1">Nome da Empresa *</label><input type="text" value={createForm.nome} onChange={(e) => handleNomeChange(e.target.value)} placeholder="Ex: Imobiliária Brasil" className={inputCls} /></div>
-            <div><label className="block text-sm text-gray-400 mb-1">Slug *</label><input type="text" value={createForm.slug} onChange={(e) => setCreateForm((f) => ({ ...f, slug: e.target.value }))} placeholder="imobiliaria-brasil" className={inputCls} />{createForm.slug && <p className="text-xs text-gray-500 mt-1">{createForm.slug}.crmimob.com.br</p>}</div>
+            <div><label className="block text-sm text-gray-400 mb-1">Slug *</label><input type="text" value={createForm.slug} onChange={(e) => setCreateForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} placeholder="imobiliaria-brasil" className={inputCls} />{createForm.slug && <p className="text-xs text-gray-500 mt-1">{createForm.slug}.crmimob.com.br</p>}</div>
             <div><label className="block text-sm text-gray-400 mb-1">Email *</label><input type="email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))} placeholder="contato@empresa.com" className={inputCls} /></div>
             <div><label className="block text-sm text-gray-400 mb-1">CNPJ</label><input type="text" value={createForm.cnpj} onChange={(e) => setCreateForm((f) => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" className={inputCls} /></div>
             <div><label className="block text-sm text-gray-400 mb-1">Telefone</label><input type="text" value={createForm.telefone} onChange={(e) => setCreateForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" className={inputCls} /></div>
@@ -357,9 +412,14 @@ const OrganizacoesTab = () => {
                 {plans.map((p) => <option key={p.id} value={p.id} className="bg-caixa-secondary">{p.nome} — {formatCurrency(p.preco_mensal)}/mês</option>)}
               </select>
             </div>
+            <div><label className="block text-sm text-gray-400 mb-1">Nome do Admin</label><input type="text" value={createForm.admin_first_name} onChange={(e) => setCreateForm((f) => ({ ...f, admin_first_name: e.target.value }))} placeholder="João" className={inputCls} /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">Sobrenome do Admin</label><input type="text" value={createForm.admin_last_name} onChange={(e) => setCreateForm((f) => ({ ...f, admin_last_name: e.target.value }))} placeholder="Silva" className={inputCls} /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">Email do Admin *</label><input type="email" value={createForm.admin_email} onChange={(e) => setCreateForm((f) => ({ ...f, admin_email: e.target.value }))} placeholder="admin@empresa.com" className={inputCls} /></div>
+            <div><label className="block text-sm text-gray-400 mb-1">Telefone do Admin</label><input type="text" value={createForm.admin_telefone} onChange={(e) => setCreateForm((f) => ({ ...f, admin_telefone: e.target.value }))} placeholder="(00) 00000-0000" className={inputCls} /></div>
+            <div className="sm:col-span-2"><label className="block text-sm text-gray-400 mb-1">Senha do Admin *</label><input type="password" value={createForm.admin_password} onChange={(e) => setCreateForm((f) => ({ ...f, admin_password: e.target.value }))} placeholder="Mínimo 6 caracteres" className={inputCls} /></div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button onClick={() => { setCreateOpen(false); setCreateError(""); }} className="px-4 py-2 rounded-lg text-gray-400 hover:text-white transition-colors">Cancelar</button>
+            <button onClick={() => { setCreateOpen(false); setCreateError(""); setCreateForm(createInitialState); }} className="px-4 py-2 rounded-lg text-gray-400 hover:text-white transition-colors">Cancelar</button>
             <button onClick={handleCreate} disabled={createLoading} className="px-4 py-2 bg-caixa-orange text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium">
               {createLoading && <Loader2 size={16} className="animate-spin" />} Criar Empresa
             </button>
@@ -394,6 +454,14 @@ const OrganizacoesTab = () => {
               <div><label className="block text-sm text-gray-400 mb-1">Estado</label><input type="text" value={editForm.estado || ""} onChange={e => setEditForm(f => ({...f, estado: e.target.value}))} maxLength={2} placeholder="GO" className={inputCls} /></div>
               <div><label className="block text-sm text-gray-400 mb-1">CEP</label><input type="text" value={editForm.cep || ""} onChange={e => setEditForm(f => ({...f, cep: e.target.value}))} placeholder="00000-000" className={inputCls} /></div>
               <div><label className="block text-sm text-gray-400 mb-1">Domínio Customizado</label><input type="text" value={editForm.dominio_customizado || ""} onChange={e => setEditForm(f => ({...f, dominio_customizado: e.target.value}))} placeholder="crm.empresa.com.br" className={inputCls} /></div>
+              <div className="sm:col-span-2 pt-2 border-t border-white/10 mt-2">
+                <p className="text-sm font-semibold text-gray-300 mb-3">Administrador da Empresa</p>
+              </div>
+              <div><label className="block text-sm text-gray-400 mb-1">Nome do Admin</label><input type="text" value={editForm.admin_first_name || ""} onChange={e => setEditForm(f => ({...f, admin_first_name: e.target.value}))} className={inputCls} /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">Sobrenome do Admin</label><input type="text" value={editForm.admin_last_name || ""} onChange={e => setEditForm(f => ({...f, admin_last_name: e.target.value}))} className={inputCls} /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">Email do Admin</label><input type="email" value={editForm.admin_email || ""} onChange={e => setEditForm(f => ({...f, admin_email: e.target.value}))} className={inputCls} /></div>
+              <div><label className="block text-sm text-gray-400 mb-1">Telefone do Admin</label><input type="text" value={editForm.admin_telefone || ""} onChange={e => setEditForm(f => ({...f, admin_telefone: e.target.value}))} className={inputCls} /></div>
+              <div className="sm:col-span-2"><label className="block text-sm text-gray-400 mb-1">Nova Senha do Admin</label><input type="password" value={editForm.admin_password || ""} onChange={e => setEditForm(f => ({...f, admin_password: e.target.value}))} placeholder="Preencha apenas para alterar" className={inputCls} /></div>
             </div>
           )}
 

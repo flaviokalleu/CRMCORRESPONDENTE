@@ -14,6 +14,11 @@ import {
   CheckCircle,
   AlertCircle,
   X,
+  Zap,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
 import { useAuth } from "../context/AuthContext";
@@ -51,6 +56,22 @@ const ConfiguracoesTenantPage = () => {
     tema_escuro: true,
   });
 
+  // Estados para integração Asaas
+  const [asaasConfig, setAsaasConfig] = useState({
+    asaas_api_key: "",
+    asaas_webhook_token: "",
+    asaas_api_key_configured: false,
+    asaas_api_key_preview: null,
+    webhook_url: "",
+  });
+  const [savingAsaas, setSavingAsaas] = useState(false);
+  const [testandoAsaas, setTestandoAsaas] = useState(false);
+  const [asaasTesteResult, setAsaasTesteResult] = useState(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [showWebhookToken, setShowWebhookToken] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [asaasMsg, setAsaasMsg] = useState({ type: "", text: "" });
+
   const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem("authToken");
     return { headers: { Authorization: `Bearer ${token}` } };
@@ -85,6 +106,31 @@ const ConfiguracoesTenantPage = () => {
         if (data.logo) {
           setLogoPreview(`${API_URL}/uploads/${data.logo}`);
         }
+
+        // Construir URL do webhook imediatamente a partir do slug
+        const builtWebhookUrl = data.slug
+          ? `${API_URL.replace(/\/api\/?$/, '')}/api/asaas/webhook/${data.slug}`
+          : '';
+
+        if (builtWebhookUrl) {
+          setAsaasConfig((prev) => ({ ...prev, webhook_url: builtWebhookUrl }));
+        }
+
+        // Carregar config Asaas
+        try {
+          const asaasRes = await axios.get(
+            `${API_URL}/tenant-settings/settings/asaas`,
+            getAuthHeaders()
+          );
+          setAsaasConfig((prev) => ({
+            ...prev,
+            ...asaasRes.data,
+            asaas_api_key: "",
+            asaas_webhook_token: asaasRes.data.asaas_webhook_token || "",
+            // Prefere a URL do backend; se ausente usa a construída localmente
+            webhook_url: asaasRes.data.webhook_url || builtWebhookUrl || prev.webhook_url,
+          }));
+        } catch {}
       } catch (error) {
         console.error("Erro ao carregar configurações:", error);
         setMessage({
@@ -160,7 +206,6 @@ const ConfiguracoesTenantPage = () => {
       await axios.post(`${API_URL}/tenant-settings/settings/logo`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -172,6 +217,60 @@ const ConfiguracoesTenantPage = () => {
     } finally {
       setUploadingLogo(false);
     }
+  };
+
+  const handleSaveAsaas = async () => {
+    setSavingAsaas(true);
+    setAsaasMsg({ type: "", text: "" });
+    setAsaasTesteResult(null);
+    try {
+      const payload = {};
+      if (asaasConfig.asaas_api_key) payload.asaas_api_key = asaasConfig.asaas_api_key;
+      if (asaasConfig.asaas_webhook_token !== undefined) payload.asaas_webhook_token = asaasConfig.asaas_webhook_token;
+
+      const res = await axios.put(
+        `${API_URL}/tenant-settings/settings/asaas`,
+        payload,
+        getAuthHeaders()
+      );
+      const d = res.data;
+      setAsaasConfig((prev) => ({
+        ...prev,
+        asaas_api_key: "",
+        asaas_api_key_configured: d.asaas_api_key_configured,
+        asaas_api_key_preview: d.asaas_api_key_preview ?? prev.asaas_api_key_preview,
+        webhook_url: d.webhook_url || prev.webhook_url,
+      }));
+      if (d.teste_conexao) setAsaasTesteResult(d.teste_conexao);
+      setAsaasMsg({ type: "success", text: "Integração Asaas salva com sucesso!" });
+    } catch (error) {
+      setAsaasMsg({ type: "error", text: error.response?.data?.error || "Erro ao salvar." });
+    } finally {
+      setSavingAsaas(false);
+    }
+  };
+
+  const handleTestarAsaas = async () => {
+    setTestandoAsaas(true);
+    setAsaasTesteResult(null);
+    try {
+      const res = await axios.post(
+        `${API_URL}/tenant-settings/settings/asaas/testar`,
+        asaasConfig.asaas_api_key ? { asaas_api_key: asaasConfig.asaas_api_key } : {},
+        getAuthHeaders()
+      );
+      setAsaasTesteResult(res.data);
+    } catch (error) {
+      setAsaasTesteResult({ success: false, error: error.response?.data?.error || error.message });
+    } finally {
+      setTestandoAsaas(false);
+    }
+  };
+
+  const copiarWebhookUrl = () => {
+    navigator.clipboard.writeText(asaasConfig.webhook_url);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
   };
 
   const estados = [
@@ -504,6 +603,143 @@ const ConfiguracoesTenantPage = () => {
                 </button>
               </div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Seção: Integração Asaas */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-[#0f1d32] border border-white/10 rounded-2xl p-6 mb-6"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-lg font-semibold text-white">Integração Asaas</h2>
+            {asaasConfig.asaas_api_key_configured && (
+              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">Configurado</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mb-6">Cobranças e repasses automáticos via PIX usando sua conta própria do Asaas.</p>
+
+          {/* Mensagem feedback Asaas */}
+          {asaasMsg.text && (
+            <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 text-sm ${
+              asaasMsg.type === "success"
+                ? "bg-green-500/10 border border-green-500/30 text-green-400"
+                : "bg-red-500/10 border border-red-500/30 text-red-400"
+            }`}>
+              {asaasMsg.type === "success" ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+              {asaasMsg.text}
+            </div>
+          )}
+
+          <div className="space-y-5">
+            {/* URL do Webhook */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                URL do Webhook <span className="text-xs text-gray-500">(registre esta URL no painel Asaas)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={asaasConfig.webhook_url}
+                  placeholder="Aguardando carregamento das configurações..."
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#0a1628] border border-white/10 text-gray-300 text-sm font-mono cursor-default placeholder-gray-600"
+                />
+                <button
+                  onClick={copiarWebhookUrl}
+                  disabled={!asaasConfig.webhook_url}
+                  className="px-3 py-2.5 rounded-xl bg-[#162a4a] border border-white/10 text-gray-300 hover:text-white transition-colors disabled:opacity-40"
+                  title="Copiar URL"
+                >
+                  {copiedUrl ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                Chave de API do Asaas
+                {asaasConfig.asaas_api_key_configured && (
+                  <span className="ml-2 text-xs text-gray-500">(atual: {asaasConfig.asaas_api_key_preview})</span>
+                )}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={asaasConfig.asaas_api_key}
+                  onChange={(e) => setAsaasConfig((p) => ({ ...p, asaas_api_key: e.target.value }))}
+                  placeholder={asaasConfig.asaas_api_key_configured ? "\u2022\u2022\u2022\u2022 (deixe em branco para manter)" : "$aact_..."}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#162a4a] border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors text-sm font-mono"
+                />
+                <button
+                  onClick={() => setShowApiKey((v) => !v)}
+                  className="px-3 py-2.5 rounded-xl bg-[#162a4a] border border-white/10 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Webhook Token */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                Token do Webhook <span className="text-xs text-gray-500">(opcional — para validar chamadas do Asaas)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type={showWebhookToken ? "text" : "password"}
+                  value={asaasConfig.asaas_webhook_token}
+                  onChange={(e) => setAsaasConfig((p) => ({ ...p, asaas_webhook_token: e.target.value }))}
+                  placeholder="Token secreto para validar o webhook"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#162a4a] border border-white/10 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors text-sm font-mono"
+                />
+                <button
+                  onClick={() => setShowWebhookToken((v) => !v)}
+                  className="px-3 py-2.5 rounded-xl bg-[#162a4a] border border-white/10 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showWebhookToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Resultado do teste */}
+            {asaasTesteResult && (
+              <div className={`p-3 rounded-xl text-sm ${
+                asaasTesteResult.success
+                  ? "bg-green-500/10 border border-green-500/30 text-green-400"
+                  : "bg-red-500/10 border border-red-500/30 text-red-400"
+              }`}>
+                {asaasTesteResult.success ? (
+                  <span>Conexão OK — Saldo disponível: <strong>R$ {parseFloat(asaasTesteResult.balance?.balance ?? 0).toFixed(2)}</strong></span>
+                ) : (
+                  <span>Falha: {JSON.stringify(asaasTesteResult.error)}</span>
+                )}
+              </div>
+            )}
+
+            {/* Botões Asaas */}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={handleTestarAsaas}
+                disabled={testandoAsaas}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                {testandoAsaas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                Testar Conexão
+              </button>
+              <button
+                onClick={handleSaveAsaas}
+                disabled={savingAsaas}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white font-semibold hover:bg-cyan-700 transition-colors text-sm disabled:opacity-50"
+              >
+                {savingAsaas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar Integração
+              </button>
+            </div>
           </div>
         </motion.div>
 

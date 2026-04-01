@@ -4,71 +4,222 @@ const path = require('path');
 const whaileys = require('whaileys');
 const makeWASocket = whaileys.default;
 const { DisconnectReason, fetchLatestWaWebVersion } = whaileys;
-const SimpleFileAuthAdapter = require('../services/simpleFileAuthAdapter');
-const WhatsAppFileSessionManager = require('../services/whatsappFileSessionManager');
+const authenticateToken = require('../middleware/authenticateToken');
+const BaileysAuthStateAdapter = require('../services/baileysAuthStateAdapter');
+const WhatsAppSessionService = require('../services/whatsappSessionService');
 
 const router = express.Router();
 
-// Variáveis globais
+const DEFAULT_SESSION_ID = 'default';
+const MAX_RECONNECT_ATTEMPTS = 5;
+// sessionManager removido — toda gestão de sessões usa WhatsAppSessionService (banco de dados)
+const tenantRuntimes = new Map();
+
+// Variáveis globais legadas mantidas por compatibilidade com blocos antigos do arquivo.
 let sock = null;
 let qrCodeData = null;
 let isAuthenticated = false;
 let isInitializing = false;
-let currentSessionId = 'default';
+let currentSessionId = DEFAULT_SESSION_ID;
 let authStateAdapter = null;
-let sessionManager = new WhatsAppFileSessionManager();
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
 let connectionBlocked = false; // true quando 405 ou limite de tentativas atingido
 
-// ✅ IMPORT WSS DO SERVER
-let wss = null;
-try {
-  const serverModule = require('../server');
-  wss = serverModule.wss;
-} catch (error) {
-  console.log('⚠️ WSS não disponível no momento da inicialização');
-}
+const { getSocketIO } = require('../socket');
 
-// Função para broadcast WebSocket
+// Função para broadcast via Socket.IO (rooms por tenant)
 const broadcast = (data) => {
-  const message = JSON.stringify({
-    ...data,
-    timestamp: new Date().toISOString()
-  });
-
-  if (wss && wss.clients) {
-    wss.clients.forEach((client) => {
-      if (client.readyState === 1) { // WebSocket.OPEN
-        try {
-          client.send(message);
-          console.log('📡 Mensagem WebSocket enviada:', data.type);
-        } catch (error) {
-          console.error('❌ Erro ao enviar WebSocket:', error.message);
-        }
-      }
-    });
+  try {
+    const io = getSocketIO();
+    const payload = { ...data, timestamp: new Date().toISOString() };
+    if (data.tenantId) {
+      io.to(`whatsapp:${data.tenantId}`).emit('whatsapp:update', payload);
+    } else {
+      io.emit('whatsapp:update', payload);
+    }
+    console.log('📡 Socket.IO emitido:', data.type, '| tenant:', data.tenantId);
+  } catch (err) {
+    // Socket.IO ainda não está pronto (boot inicial)
+    console.log('⚠️ broadcast ignorado (socket não pronto):', err.message);
   }
 };
 
+const sanitizeSessionId = (sessionId = DEFAULT_SESSION_ID) => {
+  const normalized = String(sessionId || DEFAULT_SESSION_ID)
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  return normalized || DEFAULT_SESSION_ID;
+};
+
+const getTenantSessionPrefix = (tenantId) => `tenant_${tenantId}__`;
+
+const buildStoredSessionId = (tenantId, sessionId = DEFAULT_SESSION_ID) => {
+  return `${getTenantSessionPrefix(tenantId)}${sanitizeSessionId(sessionId)}`;
+};
+
+const toPublicSessionId = (tenantId, storedSessionId) => {
+  const prefix = getTenantSessionPrefix(tenantId);
+  if (!storedSessionId) return DEFAULT_SESSION_ID;
+  if (storedSessionId.startsWith(prefix)) {
+    return storedSessionId.slice(prefix.length) || DEFAULT_SESSION_ID;
+  }
+  return storedSessionId;
+};
+
+const createTenantRuntime = (tenantId) => ({
+  tenantId,
+  sock: null,
+  qrCodeData: null,
+  isAuthenticated: false,
+  isInitializing: false,
+  currentSessionId: buildStoredSessionId(tenantId, DEFAULT_SESSION_ID),
+  authStateAdapter: null,
+  reconnectAttempts: 0,
+  connectionBlocked: false,
+});
+
+const getTenantRuntime = (tenantId) => {
+  const numericTenantId = Number(tenantId);
+
+  if (!tenantRuntimes.has(numericTenantId)) {
+    tenantRuntimes.set(numericTenantId, createTenantRuntime(numericTenantId));
+  }
+
+  return tenantRuntimes.get(numericTenantId);
+};
+
+const getCurrentPublicSessionId = (tenantId, runtime) => {
+  return toPublicSessionId(tenantId, runtime.currentSessionId);
+};
+
+const getRequestSessionIds = (req, sessionId = DEFAULT_SESSION_ID) => {
+  const publicSessionId = sanitizeSessionId(sessionId);
+  return {
+    publicSessionId,
+    storedSessionId: buildStoredSessionId(req.tenantId, publicSessionId),
+  };
+};
+
+const getTenantContext = (req) => {
+  const runtime = getTenantRuntime(req.tenantId);
+
+  return {
+    runtime,
+    sock: runtime.sock,
+    qrCodeData: runtime.qrCodeData,
+    isAuthenticated: runtime.isAuthenticated,
+    isInitializing: runtime.isInitializing,
+    currentSessionId: getCurrentPublicSessionId(req.tenantId, runtime),
+    authStateAdapter: runtime.authStateAdapter,
+    connectionBlocked: runtime.connectionBlocked,
+  };
+};
+
+const resetTenantRuntimeState = (runtime) => {
+  runtime.sock = null;
+  runtime.qrCodeData = null;
+  runtime.isAuthenticated = false;
+  runtime.isInitializing = false;
+  runtime.reconnectAttempts = 0;
+  runtime.connectionBlocked = false;
+};
+
+const disconnectTenantRuntime = async (runtime, { deleteSession = false } = {}) => {
+  const activeSessionId = runtime.currentSessionId;
+  const adapter = runtime.authStateAdapter || new BaileysAuthStateAdapter(activeSessionId);
+
+  if (runtime.sock) {
+    try {
+      await runtime.sock.logout();
+    } catch (error) {
+      console.log('⚠️ Erro no logout:', error.message);
+    }
+  }
+
+  resetTenantRuntimeState(runtime);
+
+  try {
+    await adapter.markAsDisconnected();
+  } catch (error) {
+    console.log('⚠️ Erro ao marcar sessão como desconectada:', error.message);
+  }
+
+  if (deleteSession) {
+    try {
+      await adapter.deleteSession();
+    } catch (error) {
+      console.log('⚠️ Erro ao remover sessão:', error.message);
+    }
+    runtime.currentSessionId = buildStoredSessionId(runtime.tenantId, DEFAULT_SESSION_ID);
+    runtime.authStateAdapter = null;
+  } else {
+    runtime.authStateAdapter = adapter;
+  }
+
+  return activeSessionId;
+};
+
+const optionalAuthenticateToken = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return next();
+  }
+
+  return authenticateToken(req, res, next);
+};
+
+const resolveWhatsAppTenant = (req, res, next) => {
+  const headerTenantId = Number.parseInt(req.headers['x-tenant-id'], 10);
+
+  if (req.user?.is_super_admin && Number.isInteger(headerTenantId) && headerTenantId > 0) {
+    req.tenantId = headerTenantId;
+    return next();
+  }
+
+  if (req.user?.tenant_id) {
+    req.tenantId = req.user.tenant_id;
+    return next();
+  }
+
+  if (Number.isInteger(headerTenantId) && headerTenantId > 0) {
+    req.tenantId = headerTenantId;
+    return next();
+  }
+
+  return res.status(400).json({
+    success: false,
+    error: 'Tenant não informado',
+  });
+};
+
+const isCurrentSocketRuntime = (runtime, tenantSock, storedSessionId) => {
+  return runtime.sock === tenantSock && runtime.currentSessionId === storedSessionId;
+};
+
+router.use(optionalAuthenticateToken);
+router.use(resolveWhatsAppTenant);
+
 // Função para inicializar o cliente Baileys com arquivos
-const initializeWhatsAppClient = async (sessionId = 'default') => {
-  if (isInitializing) {
-    console.log('⏳ Cliente já está sendo inicializado...');
+const initializeWhatsAppClient = async (tenantId, storedSessionId = buildStoredSessionId(tenantId, DEFAULT_SESSION_ID)) => {
+  const runtime = getTenantRuntime(tenantId);
+  const publicSessionId = toPublicSessionId(tenantId, storedSessionId);
+
+  if (runtime.isInitializing) {
+    console.log(`⏳ Cliente da organização ${tenantId} já está sendo inicializado...`);
     return;
   }
 
-  isInitializing = true;
-  isAuthenticated = false;
-  qrCodeData = null;
-  currentSessionId = sessionId;
+  runtime.isInitializing = true;
+  runtime.isAuthenticated = false;
+  runtime.qrCodeData = null;
+  runtime.currentSessionId = storedSessionId;
 
   try {
-    console.log(`🚀 Inicializando cliente WhatsApp com sessão: ${sessionId}`);
+    console.log(`🚀 Inicializando cliente WhatsApp para tenant ${tenantId} com sessão: ${publicSessionId}`);
     
-    // Criar adaptador para arquivos
-    authStateAdapter = new SimpleFileAuthAdapter(sessionId);
-    await authStateAdapter.markAsConnecting();
+    // Criar adaptador de banco de dados
+    runtime.authStateAdapter = new BaileysAuthStateAdapter(storedSessionId);
+    await runtime.authStateAdapter.markAsConnecting();
 
     // Buscar versão mais recente do WhatsApp Web automaticamente
     let waVersion;
@@ -81,110 +232,163 @@ const initializeWhatsAppClient = async (sessionId = 'default') => {
       console.log(`⚠️ Usando versão fallback: ${waVersion.join('.')}`);
     }
 
-    // Usar sistema de arquivos padrão
-    const { state, saveCreds } = await authStateAdapter.useFileAuthState();
-    sock = makeWASocket({
+    // Carregar estado de autenticação do banco de dados
+    const { state, saveCreds } = await runtime.authStateAdapter.useDBAuthState();
+    const tenantSock = makeWASocket({
       auth: state,
       version: waVersion,
       browser: ['CRM IMOB', 'Chrome', '22.0'],
     });
+    runtime.sock = tenantSock;
 
-    sock.ev.on('creds.update', saveCreds);
+    // Timeout de segurança: se após 35s ainda não houve QR nem conexão, libera o estado
+    const initTimeoutId = setTimeout(() => {
+      const liveRuntime = getTenantRuntime(tenantId);
+      if (isCurrentSocketRuntime(liveRuntime, tenantSock, storedSessionId) && liveRuntime.isInitializing) {
+        console.log(`⏰ Timeout de inicialização para tenant ${tenantId}. Resetando estado...`);
+        resetTenantRuntimeState(liveRuntime);
+        try { tenantSock.end(); } catch {}
+        broadcast({
+          tenantId,
+          sessionId: publicSessionId,
+          type: 'error',
+          message: 'Timeout ao gerar QR Code. Tente novamente.',
+        });
+      }
+    }, 35000);
 
-    sock.ev.on('connection.update', async (update) => {
+    tenantSock.ev.on('creds.update', saveCreds);
+
+    tenantSock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
+      const liveRuntime = getTenantRuntime(tenantId);
       
       if (qr) {
-        qrCodeData = qr;
+        if (!isCurrentSocketRuntime(liveRuntime, tenantSock, storedSessionId)) {
+          return;
+        }
+
+        clearTimeout(initTimeoutId);
+        liveRuntime.isInitializing = false; // QR pronto — não é mais 'inicializando'
+        liveRuntime.qrCodeData = qr;
         console.log('\u001b[32mQR Code para autenticação:\u001b[0m', qr);
         broadcast({
           type: 'qr',
+          tenantId,
           qrCode: qr,
           message: 'QR Code disponível para escaneamento',
-          sessionId: currentSessionId
+          sessionId: publicSessionId
         });
       }
       
       if (connection === 'open') {
-        isAuthenticated = true;
-        isInitializing = false;
-        qrCodeData = null;
-        reconnectAttempts = 0;
-        connectionBlocked = false;
+        if (!isCurrentSocketRuntime(liveRuntime, tenantSock, storedSessionId)) {
+          return;
+        }
+
+        clearTimeout(initTimeoutId);
+        liveRuntime.isAuthenticated = true;
+        liveRuntime.isInitializing = false;
+        liveRuntime.qrCodeData = null;
+        liveRuntime.reconnectAttempts = 0;
+        liveRuntime.connectionBlocked = false;
 
         // Extrair número do telefone se disponível
-        const phoneNumber = sock.user?.id?.replace(/:\d+@.*/, '') || null;
+        const phoneNumber = tenantSock.user?.id?.replace(/:\d+@.*/, '') || null;
         
         // Marcar sessão como autenticada no banco
-        if (authStateAdapter) {
-          await authStateAdapter.markAsAuthenticated(phoneNumber);
+        if (liveRuntime.authStateAdapter) {
+          await liveRuntime.authStateAdapter.markAsAuthenticated(phoneNumber);
         }
         
         broadcast({
           type: 'status',
+          tenantId,
           status: 'ready',
           message: 'WhatsApp conectado e pronto',
-          sessionId: currentSessionId,
+          sessionId: publicSessionId,
           phoneNumber
         });
         
-        console.log(`✅ WhatsApp conectado - Sessão: ${currentSessionId}, Telefone: ${phoneNumber}`);
+        console.log(`✅ WhatsApp conectado - Tenant: ${tenantId}, Sessão: ${publicSessionId}, Telefone: ${phoneNumber}`);
       } 
       else if (connection === 'close') {
-        isAuthenticated = false;
-        isInitializing = false;
-        qrCodeData = null;
+        const isCurrentRuntime = isCurrentSocketRuntime(liveRuntime, tenantSock, storedSessionId);
+
+        if (isCurrentRuntime) {
+          liveRuntime.isAuthenticated = false;
+          liveRuntime.isInitializing = false;
+          liveRuntime.qrCodeData = null;
+        }
         
         // Marcar sessão como desconectada no banco
-        if (authStateAdapter) {
-          await authStateAdapter.markAsDisconnected();
+        const adapter = liveRuntime.authStateAdapter && liveRuntime.currentSessionId === storedSessionId
+          ? liveRuntime.authStateAdapter
+          : new BaileysAuthStateAdapter(storedSessionId);
+
+        await adapter.markAsDisconnected();
+        if (isCurrentRuntime) {
+          liveRuntime.authStateAdapter = adapter;
         }
         
         if (update.lastDisconnect?.error) {
           console.error('❌ Detalhe do erro de conexão:', update.lastDisconnect.error);
           
           // Marcar como erro se for um erro real
-          if (authStateAdapter) {
-            await authStateAdapter.markAsError();
-          }
+          await adapter.markAsError();
         }
         
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 405;
 
-        broadcast({
-          type: 'status',
-          status: 'disconnected',
-          message: 'WhatsApp desconectado',
-          sessionId: currentSessionId
-        });
+        if (isCurrentRuntime) {
+          broadcast({
+            type: 'status',
+            tenantId,
+            status: 'disconnected',
+            message: 'WhatsApp desconectado',
+            sessionId: publicSessionId
+          });
+        }
 
-        if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          reconnectAttempts++;
-          const delay = Math.min(5000 * reconnectAttempts, 30000); // backoff: 5s, 10s, 15s... max 30s
-          console.log(`🔄 Tentando reconectar... (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}, aguardando ${delay/1000}s)`);
-          setTimeout(() => initializeWhatsAppClient(currentSessionId), delay);
-        } else if (statusCode === 405) {
+        if (isCurrentRuntime && shouldReconnect && liveRuntime.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          liveRuntime.reconnectAttempts++;
+          liveRuntime.isInitializing = true; // mantém spinner no frontend durante o delay
+          const delay = Math.min(5000 * liveRuntime.reconnectAttempts, 30000); // backoff: 5s, 10s, 15s... max 30s
+          console.log(`🔄 Tentando reconectar tenant ${tenantId}... (tentativa ${liveRuntime.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}, aguardando ${delay / 1000}s)`);
+          setTimeout(() => {
+            const rt = getTenantRuntime(tenantId);
+            rt.isInitializing = false; // libera o guard para o próximo init
+            initializeWhatsAppClient(tenantId, storedSessionId);
+          }, delay);
+        } else if (isCurrentRuntime && statusCode === 405) {
           console.log('🚫 Erro 405 — WhatsApp bloqueou a conexão. Não reconectando. Tente novamente mais tarde ou escaneie um novo QR Code.');
-          reconnectAttempts = 0;
-          connectionBlocked = true;
-        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          liveRuntime.reconnectAttempts = 0;
+          liveRuntime.connectionBlocked = true;
+        } else if (isCurrentRuntime && liveRuntime.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
           console.log(`🛑 Limite de ${MAX_RECONNECT_ATTEMPTS} tentativas de reconexão atingido. Parando reconexão automática.`);
-          reconnectAttempts = 0;
-          connectionBlocked = true;
-        } else {
+          liveRuntime.reconnectAttempts = 0;
+          liveRuntime.connectionBlocked = true;
+        } else if (isCurrentRuntime) {
           console.log('🚪 Usuário fez logout — não reconectando');
-          reconnectAttempts = 0;
+          liveRuntime.reconnectAttempts = 0;
         }
       }
     });
 
-    sock.ev.on('connection.error', (err) => {
+    tenantSock.ev.on('connection.error', (err) => {
       console.error('❌ Evento connection.error:', err);
     });
 
-    sock.ev.on('messages.upsert', (m) => {
+    tenantSock.ev.on('messages.upsert', (m) => {
+      const liveRuntime = getTenantRuntime(tenantId);
+      if (!isCurrentSocketRuntime(liveRuntime, tenantSock, storedSessionId)) {
+        return;
+      }
+
       broadcast({
+        tenantId,
+        sessionId: publicSessionId,
         type: 'messageReceived',
         data: m
       });
@@ -193,9 +397,10 @@ const initializeWhatsAppClient = async (sessionId = 'default') => {
     console.log('✅ Cliente Baileys iniciado!');
   } catch (error) {
     console.error('❌ Erro ao inicializar cliente Baileys:', error);
-    isInitializing = false;
-    sock = null;
+    resetTenantRuntimeState(runtime);
     broadcast({
+      tenantId,
+      sessionId: publicSessionId,
       type: 'error',
       message: 'Erro ao inicializar: ' + error.message
     });
@@ -279,10 +484,13 @@ const formatPhoneNumber = (phone) => {
 // Rota para obter QR Code (não inicializa automaticamente — só retorna estado atual)
 router.get('/qr-code', async (req, res) => {
   try {
+    const { sock, isAuthenticated, connectionBlocked, isInitializing, qrCodeData, currentSessionId } = getTenantContext(req);
+
     if (isAuthenticated && sock) {
       return res.json({
         authenticated: true,
         hasQrCode: false,
+        sessionId: currentSessionId,
         message: 'WhatsApp já está conectado'
       });
     }
@@ -291,8 +499,21 @@ router.get('/qr-code', async (req, res) => {
       return res.json({
         authenticated: false,
         hasQrCode: false,
+        sessionId: currentSessionId,
         message: 'Conexão bloqueada pelo WhatsApp. Limpe a sessão e tente novamente.',
         blocked: true
+      });
+    }
+
+    // Verificar QR ANTES de isInitializing: o QR pode já estar pronto enquanto
+    // isInitializing ainda é true (Baileys emite o QR antes de indicar 'open')
+    if (qrCodeData) {
+      return res.json({
+        authenticated: false,
+        hasQrCode: true,
+        sessionId: currentSessionId,
+        qrCode: qrCodeData,
+        message: 'QR Code disponível para escaneamento'
       });
     }
 
@@ -300,17 +521,9 @@ router.get('/qr-code', async (req, res) => {
       return res.json({
         authenticated: false,
         hasQrCode: false,
+        sessionId: currentSessionId,
         message: 'Gerando QR Code, aguarde...',
         isInitializing: true
-      });
-    }
-
-    if (qrCodeData) {
-      return res.json({
-        authenticated: false,
-        hasQrCode: true,
-        qrCode: qrCodeData,
-        message: 'QR Code disponível para escaneamento'
       });
     }
 
@@ -318,6 +531,7 @@ router.get('/qr-code', async (req, res) => {
     return res.json({
       authenticated: false,
       hasQrCode: false,
+      sessionId: currentSessionId,
       message: 'Clique em "Conectar WhatsApp" para gerar o QR Code.',
       idle: true
     });
@@ -335,28 +549,44 @@ router.get('/qr-code', async (req, res) => {
 router.post('/connect', async (req, res) => {
   try {
     const { sessionId } = req.body || {};
+    const runtime = getTenantRuntime(req.tenantId);
+    const requestedSessionId = sessionId || getCurrentPublicSessionId(req.tenantId, runtime);
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, requestedSessionId);
 
-    if (isAuthenticated && sock) {
-      return res.json({ success: true, message: 'Já está conectado.' });
+    if (runtime.isAuthenticated && runtime.sock && runtime.currentSessionId === storedSessionId) {
+      return res.json({ success: true, sessionId: publicSessionId, message: 'Já está conectado.' });
     }
 
-    if (isInitializing) {
-      return res.json({ success: true, message: 'Já está inicializando, aguarde...' });
+    // Se está inicializando mas ainda não tem QR Code, considera stuck e força reinicialização
+    if (runtime.isInitializing && runtime.qrCodeData) {
+      return res.json({ success: true, sessionId: publicSessionId, message: 'Já está inicializando, aguarde...' });
+    }
+    if (runtime.isInitializing && !runtime.qrCodeData) {
+      console.log(`⚠️ Tenant ${req.tenantId} preso em isInitializing sem QR. Forçando reset...`);
+      resetTenantRuntimeState(runtime);
+      if (runtime.sock) { try { runtime.sock.end(); } catch {} runtime.sock = null; }
     }
 
-    connectionBlocked = false;
-    reconnectAttempts = 0;
+    if (runtime.sock && runtime.currentSessionId !== storedSessionId) {
+      await disconnectTenantRuntime(runtime);
+    }
 
-    initializeWhatsAppClient(sessionId || 'default');
+    runtime.connectionBlocked = false;
+    runtime.reconnectAttempts = 0;
+
+    await initializeWhatsAppClient(req.tenantId, storedSessionId);
 
     // Aguardar um pouco para o QR aparecer
     await new Promise(resolve => setTimeout(resolve, 4000));
 
+    const updatedRuntime = getTenantRuntime(req.tenantId);
+
     res.json({
       success: true,
-      hasQrCode: !!qrCodeData,
-      qrCode: qrCodeData || null,
-      message: qrCodeData ? 'QR Code gerado! Escaneie com o WhatsApp.' : 'Inicializando, aguarde...'
+      sessionId: publicSessionId,
+      hasQrCode: !!updatedRuntime.qrCodeData,
+      qrCode: updatedRuntime.qrCodeData || null,
+      message: updatedRuntime.qrCodeData ? 'QR Code gerado! Escaneie com o WhatsApp.' : 'Inicializando, aguarde...'
     });
   } catch (error) {
     console.error('❌ Erro ao conectar:', error);
@@ -367,6 +597,7 @@ router.post('/connect', async (req, res) => {
 // Rota para verificar status
 router.get('/status', async (req, res) => {
   try {
+    const { sock, isAuthenticated, qrCodeData, isInitializing, currentSessionId, authStateAdapter } = getTenantContext(req);
     let isConnected = false;
     let sessionInfo = null;
 
@@ -410,13 +641,16 @@ router.get('/status', async (req, res) => {
 // Rota para resetar bloqueio e tentar nova conexão
 router.post('/reset', async (req, res) => {
   try {
-    connectionBlocked = false;
-    reconnectAttempts = 0;
-    sock = null;
-    qrCodeData = null;
-    isAuthenticated = false;
-    isInitializing = false;
-    console.log('🔄 Reset manual realizado — pronto para nova conexão');
+    const { runtime, currentSessionId } = getTenantContext(req);
+    const storedSessionId = runtime.currentSessionId;
+
+    await disconnectTenantRuntime(runtime);
+    await new BaileysAuthStateAdapter(storedSessionId).resetSession();
+
+    runtime.currentSessionId = storedSessionId;
+    runtime.authStateAdapter = null;
+
+    console.log(`🔄 Reset manual realizado para tenant ${req.tenantId}, sessão ${currentSessionId}`);
     res.json({ success: true, message: 'Reset realizado. Tente conectar novamente.' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -427,39 +661,13 @@ router.post('/reset', async (req, res) => {
 router.post('/disconnect', async (req, res) => {
   try {
     const { deleteSession = false } = req.body;
-    
-    // Sempre encerra o cliente antes de remover a sessão
-    if (sock) {
-      console.log('🔌 Desconectando cliente...');
-      try {
-        await sock.logout();
-      } catch (e) {
-        console.log('⚠️ Erro no logout:', e.message);
-      }
-      sock = null;
-    }
-    
-    isAuthenticated = false;
-    qrCodeData = null;
-    isInitializing = false;
+    const { runtime, currentSessionId } = getTenantContext(req);
 
-    // Marcar sessão como desconectada no banco
-    if (authStateAdapter) {
-      await authStateAdapter.markAsDisconnected();
-    }
-
-    // Se solicitado, remover sessão completamente do banco
-    if (deleteSession && authStateAdapter) {
-      try {
-        await authStateAdapter.deleteSession();
-        console.log(`🗑️ Sessão ${currentSessionId} removida do banco de dados`);
-      } catch (error) {
-        console.error('❌ Erro ao remover sessão do banco:', error);
-      }
-    }
+    await disconnectTenantRuntime(runtime, { deleteSession });
 
     broadcast({
       type: 'status',
+      tenantId: req.tenantId,
       status: 'disconnected',
       message: deleteSession ? 'Sessão removida' : 'Desconectado manualmente',
       sessionId: currentSessionId
@@ -484,6 +692,7 @@ router.post('/disconnect', async (req, res) => {
 router.post('/send-message', async (req, res) => {
   try {
     const { phone, message } = req.body;
+    const { sock, isAuthenticated } = getTenantContext(req);
 
     if (!isAuthenticated || !sock) {
       return res.status(400).json({
@@ -529,53 +738,22 @@ router.post('/send-message', async (req, res) => {
 // Rota para reiniciar cliente
 router.post('/restart', async (req, res) => {
   try {
-    console.log('🔄 Reiniciando cliente WhatsApp...');
+    const { runtime, currentSessionId } = getTenantContext(req);
+    const storedSessionId = runtime.currentSessionId;
 
-    if (sock) {
-      try {
-        await sock.logout();
-      } catch (error) {
-        console.log('⚠️ Erro ao desconectar:', error.message);
-      }
-      sock = null;
-    }
-    isAuthenticated = false;
-    qrCodeData = null;
-    isInitializing = false;
+    console.log(`🔄 Reiniciando cliente WhatsApp do tenant ${req.tenantId}, sessão ${currentSessionId}...`);
 
-    // Delay maior para garantir liberação de arquivos
+    await disconnectTenantRuntime(runtime);
+
+    // Delay maior para garantir liberação da sessão anterior
     await new Promise(resolve => setTimeout(resolve, 1000));
+    await new BaileysAuthStateAdapter(storedSessionId).resetSession();
 
-    // Limpar sessão de forma robusta
-    const sessionPath = path.join(__dirname, '../../auth_info_baileys');
-    if (fs.existsSync(sessionPath)) {
-      try {
-        fs.rmSync(sessionPath, { recursive: true, force: true });
-        console.log('🧹 Sessão limpa (restart)');
-      } catch (error) {
-        console.log('⚠️ Erro ao limpar sessão:', error.message);
-      }
-    }
-    // Garante que a pasta não existe antes de recriar
-    if (fs.existsSync(sessionPath)) {
-      try {
-        fs.rmSync(sessionPath, { recursive: true, force: true });
-        console.log('🧹 Pasta de sessão forçada a remover (segunda tentativa)');
-      } catch (error) {
-        console.log('⚠️ Erro ao remover pasta de sessão (segunda tentativa):', error.message);
-      }
-    }
-    // Cria a pasta vazia para o próximo uso
-    try {
-      fs.mkdirSync(sessionPath, { recursive: true });
-      console.log('📁 Pasta de sessão criada vazia');
-    } catch (error) {
-      console.log('⚠️ Erro ao criar pasta de sessão:', error.message);
-    }
+    runtime.currentSessionId = storedSessionId;
 
     // Inicializar novamente
     setTimeout(() => {
-      initializeWhatsAppClient();
+      initializeWhatsAppClient(req.tenantId, storedSessionId);
     }, 2000);
 
     res.json({
@@ -597,6 +775,7 @@ router.post('/restart', async (req, res) => {
 // Rota para notificar cliente cadastrado - ATUALIZADA PARA CORRESPONDENTES
 router.post('/notificarClienteCadastrado', async (req, res) => {
   try {
+    const { sock, isAuthenticated } = getTenantContext(req);
     const {
       clienteId,
       clienteNome,
@@ -688,6 +867,7 @@ router.post('/notificarClienteCadastrado', async (req, res) => {
 // Rota para notificar status alterado
 router.post('/notificarStatusAlterado', async (req, res) => {
   try {
+    const { sock, isAuthenticated } = getTenantContext(req);
     const { clienteId, clienteNome, statusAntigo, statusNovo, usuarioAlterou, telefoneUsuarioResponsavel } = req.body;
     
     console.log('📱 Notificação: Status alterado', { 
@@ -735,6 +915,7 @@ router.post('/notificarStatusAlterado', async (req, res) => {
 // Nova rota para notificar sobre nota adicionada
 router.post('/notificarNotaAdicionada', async (req, res) => {
     try {
+      const { sock, isAuthenticated } = getTenantContext(req);
         const { 
             clienteId, 
             clienteNome, 
@@ -813,6 +994,7 @@ _Sistema CRM CAIXA_`;
         try {
             const { getSocketIO } = require('../socket');
             getSocketIO().emit('whatsapp-nota-adicionada', {
+            tenantId: req.tenantId,
                 clienteId,
                 clienteNome,
                 notaTexto,
@@ -847,6 +1029,7 @@ _Sistema CRM CAIXA_`;
 // Rota para notificar notas concluídas
 router.post('/notificarNotasConcluidas', async (req, res) => {
   try {
+    const { sock, isAuthenticated } = getTenantContext(req);
     const { clienteId, clienteNome, totalNotas, telefoneUsuarioResponsavel } = req.body;
     
     console.log('📱 Notificação: Notas concluídas', { clienteId, clienteNome, totalNotas });
@@ -877,6 +1060,7 @@ router.post('/notificarNotasConcluidas', async (req, res) => {
 // Nova rota para notificar correspondentes sobre nota concluída
 router.post('/notificarCorrespondentesNotaConcluida', async (req, res) => {
     try {
+      const { sock, isAuthenticated } = getTenantContext(req);
         const { 
             clienteId, 
             clienteNome, 
@@ -918,6 +1102,7 @@ router.post('/notificarCorrespondentesNotaConcluida', async (req, res) => {
         
         const correspondentes = await User.findAll({
             where: {
+            tenant_id: req.tenantId,
                 is_correspondente: true // ✅ USAR is_correspondente EM VEZ DE role
             },
             attributes: ['id', 'first_name', 'last_name', 'telefone']
@@ -1006,6 +1191,7 @@ _Sistema CRM CAIXA_`;
 // ✅ NOVA ROTA PARA ENVIAR PAGAMENTO DIRETAMENTE PARA O CLIENTE
 router.post('/enviar-pagamento', async (req, res) => {
   try {
+    const { sock, isAuthenticated } = getTenantContext(req);
     const { telefone, clienteNome, pagamento } = req.body;
 
     console.log('💳 Enviando pagamento via WhatsApp:', {
@@ -1116,6 +1302,7 @@ router.post('/enviar-pagamento', async (req, res) => {
 // ✅ ROTA PARA REENVIAR PAGAMENTO PARA CLIENTE
 router.post('/reenviar-pagamento/:pagamentoId', async (req, res) => {
   try {
+    const { sock, isAuthenticated } = getTenantContext(req);
     const { pagamentoId } = req.params;
 
     if (!isAuthenticated || !sock) {
@@ -1128,7 +1315,11 @@ router.post('/reenviar-pagamento/:pagamentoId', async (req, res) => {
     // Buscar pagamento no banco
     const { Pagamento, Cliente } = require('../models');
     
-    const pagamento = await Pagamento.findByPk(pagamentoId, {
+    const pagamento = await Pagamento.findOne({
+      where: {
+        id: pagamentoId,
+        tenant_id: req.tenantId
+      },
       include: [
         {
           model: Cliente,
@@ -1156,7 +1347,8 @@ router.post('/reenviar-pagamento/:pagamentoId', async (req, res) => {
     const resultadoEnvio = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8000'}/api/whatsapp/enviar-pagamento`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Tenant-Id': String(req.tenantId)
       },
       body: JSON.stringify({
         telefone: pagamento.cliente.telefone,
@@ -1207,6 +1399,7 @@ router.post('/reenviar-pagamento/:pagamentoId', async (req, res) => {
 router.post('/session/create', async (req, res) => {
   try {
     const { sessionId, forceCreate = false } = req.body;
+    const runtime = getTenantRuntime(req.tenantId);
     
     if (!sessionId || sessionId.trim() === '') {
       return res.status(400).json({
@@ -1215,22 +1408,23 @@ router.post('/session/create', async (req, res) => {
       });
     }
 
-    const sessionIdClean = sessionId.trim();
+    const previousSession = getCurrentPublicSessionId(req.tenantId, runtime);
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, sessionId);
 
     // Verificar se sessão já existe
-    const sessionExists = sessionManager.sessionExists(sessionIdClean);
+    const sessionExists = await WhatsAppSessionService.sessionExists(storedSessionId);
     
     if (sessionExists && !forceCreate) {
       return res.status(409).json({
         success: false,
         error: 'Sessão já existe',
-        sessionId: sessionIdClean,
+        sessionId: publicSessionId,
         suggestion: 'Use forceCreate=true para sobrescrever'
       });
     }
 
     // Criar a sessão
-    const created = await sessionManager.createSession(sessionIdClean, forceCreate);
+    const created = await WhatsAppSessionService.createSession(storedSessionId, forceCreate);
     
     if (!created) {
       return res.status(500).json({
@@ -1241,33 +1435,24 @@ router.post('/session/create', async (req, res) => {
 
     // Se não é a sessão atual, pode inicializar imediatamente
     // Se é a sessão atual, desconectar primeiro
-    if (currentSessionId !== sessionIdClean) {
-      if (sock) {
-        console.log(`🔄 Trocando sessão de ${currentSessionId} para ${sessionIdClean}`);
-        
-        try {
-          await sock.logout();
-        } catch (e) {
-          console.log('⚠️ Erro no logout:', e.message);
-        }
-        sock = null;
+    if (runtime.currentSessionId !== storedSessionId) {
+      if (runtime.sock) {
+        console.log(`🔄 Trocando sessão do tenant ${req.tenantId} de ${previousSession} para ${publicSessionId}`);
       }
-      
-      isAuthenticated = false;
-      qrCodeData = null;
-      isInitializing = false;
+
+      await disconnectTenantRuntime(runtime);
 
       // Inicializar nova sessão
       setTimeout(() => {
-        initializeWhatsAppClient(sessionIdClean);
+        initializeWhatsAppClient(req.tenantId, storedSessionId);
       }, 1000);
     }
 
     res.json({
       success: true,
       message: 'Nova sessão criada com sucesso',
-      sessionId: sessionIdClean,
-      previousSession: currentSessionId
+      sessionId: publicSessionId,
+      previousSession
     });
 
   } catch (error) {
@@ -1285,6 +1470,7 @@ router.delete('/session/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { force = false } = req.query;
+    const runtime = getTenantRuntime(req.tenantId);
 
     if (!sessionId || sessionId.trim() === '') {
       return res.status(400).json({
@@ -1293,58 +1479,53 @@ router.delete('/session/:sessionId', async (req, res) => {
       });
     }
 
-    const sessionIdClean = sessionId.trim();
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, sessionId);
+    const wasActive = storedSessionId === runtime.currentSessionId;
 
     // Verificar se é a sessão ativa
-    if (sessionIdClean === currentSessionId && sock) {
+    if (wasActive && runtime.sock) {
       if (!force) {
         return res.status(409).json({
           success: false,
           error: 'Não é possível deletar sessão ativa',
           suggestion: 'Use force=true para forçar remoção ou desconecte primeiro',
-          sessionId: sessionIdClean
+          sessionId: publicSessionId
         });
       }
 
       // Forçar desconexão da sessão ativa
-      console.log(`🔌 Forçando desconexão da sessão ativa: ${sessionIdClean}`);
-      
-      if (sock) {
-        try {
-          await sock.logout();
-        } catch (e) {
-          console.log('⚠️ Erro no logout forçado:', e.message);
-        }
-        sock = null;
-      }
-      
-      isAuthenticated = false;
-      qrCodeData = null;
-      isInitializing = false;
+      console.log(`🔌 Forçando desconexão da sessão ativa do tenant ${req.tenantId}: ${publicSessionId}`);
+      await disconnectTenantRuntime(runtime);
     }
 
     // Deletar sessão
-    const deleted = await sessionManager.deleteSession(sessionIdClean);
+    const deleted = await WhatsAppSessionService.deleteSession(storedSessionId);
     
     if (!deleted) {
       return res.status(404).json({
         success: false,
         error: 'Sessão não encontrada',
-        sessionId: sessionIdClean
+        sessionId: publicSessionId
       });
+    }
+
+    if (wasActive) {
+      runtime.currentSessionId = buildStoredSessionId(req.tenantId, DEFAULT_SESSION_ID);
+      runtime.authStateAdapter = null;
     }
 
     broadcast({
       type: 'sessionDeleted',
-      sessionId: sessionIdClean,
+      tenantId: req.tenantId,
+      sessionId: publicSessionId,
       message: 'Sessão removida'
     });
 
     res.json({
       success: true,
       message: 'Sessão deletada com sucesso',
-      sessionId: sessionIdClean,
-      wasActive: sessionIdClean === currentSessionId
+      sessionId: publicSessionId,
+      wasActive
     });
 
   } catch (error) {
@@ -1360,18 +1541,21 @@ router.delete('/session/:sessionId', async (req, res) => {
 // Rota para listar todas as sessões
 router.get('/sessions', async (req, res) => {
   try {
-    const sessions = await sessionManager.listSessions();
-    
-    const sessionsWithStatus = sessions.map(session => ({
-      ...session,
-      isActive: session.id === currentSessionId,
-      isConnected: session.id === currentSessionId && isAuthenticated
-    }));
+    const runtime = getTenantRuntime(req.tenantId);
+    const prefix = getTenantSessionPrefix(req.tenantId);
+    const sessions = (await WhatsAppSessionService.listSessions())
+      .filter((session) => session.id.startsWith(prefix))
+      .map((session) => ({
+        ...session,
+        id: toPublicSessionId(req.tenantId, session.id),
+        isActive: session.id === runtime.currentSessionId,
+        isConnected: session.id === runtime.currentSessionId && runtime.isAuthenticated
+      }));
 
     res.json({
       success: true,
-      sessions: sessionsWithStatus,
-      currentSession: currentSessionId,
+      sessions,
+      currentSession: getCurrentPublicSessionId(req.tenantId, runtime),
       totalSessions: sessions.length
     });
 
@@ -1389,6 +1573,7 @@ router.get('/sessions', async (req, res) => {
 router.post('/session/switch', async (req, res) => {
   try {
     const { sessionId } = req.body;
+    const runtime = getTenantRuntime(req.tenantId);
 
     if (!sessionId || sessionId.trim() === '') {
       return res.status(400).json({
@@ -1397,56 +1582,43 @@ router.post('/session/switch', async (req, res) => {
       });
     }
 
-    const sessionIdClean = sessionId.trim();
+    const previousSession = getCurrentPublicSessionId(req.tenantId, runtime);
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, sessionId);
 
     // Verificar se sessão existe
-    const sessionExists = sessionManager.sessionExists(sessionIdClean);
+    const sessionExists = await WhatsAppSessionService.sessionExists(storedSessionId);
     
     if (!sessionExists) {
       return res.status(404).json({
         success: false,
         error: 'Sessão não encontrada',
-        sessionId: sessionIdClean
+        sessionId: publicSessionId
       });
     }
 
     // Se já é a sessão ativa, não fazer nada
-    if (sessionIdClean === currentSessionId) {
+    if (storedSessionId === runtime.currentSessionId) {
       return res.json({
         success: true,
         message: 'Sessão já está ativa',
-        sessionId: sessionIdClean
+        sessionId: publicSessionId
       });
     }
 
-    const previousSession = currentSessionId;
-
     // Desconectar sessão atual
-    if (sock) {
-      console.log(`🔄 Trocando de sessão ${currentSessionId} para ${sessionIdClean}`);
-      
-      try {
-        await sock.logout();
-      } catch (e) {
-        console.log('⚠️ Erro no logout:', e.message);
-      }
-      sock = null;
-    }
-    
-    isAuthenticated = false;
-    qrCodeData = null;
-    isInitializing = false;
+    console.log(`🔄 Trocando sessão do tenant ${req.tenantId} de ${previousSession} para ${publicSessionId}`);
+    await disconnectTenantRuntime(runtime);
 
     // Inicializar nova sessão
     setTimeout(() => {
-      initializeWhatsAppClient(sessionIdClean);
+      initializeWhatsAppClient(req.tenantId, storedSessionId);
     }, 1000);
 
     res.json({
       success: true,
       message: 'Trocando para nova sessão',
-      sessionId: sessionIdClean,
-      previousSession: previousSession
+      sessionId: publicSessionId,
+      previousSession
     });
 
   } catch (error) {
@@ -1463,6 +1635,7 @@ router.post('/session/switch', async (req, res) => {
 router.post('/session/reset/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const runtime = getTenantRuntime(req.tenantId);
 
     if (!sessionId || sessionId.trim() === '') {
       return res.status(400).json({
@@ -1471,39 +1644,35 @@ router.post('/session/reset/:sessionId', async (req, res) => {
       });
     }
 
-    const sessionIdClean = sessionId.trim();
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, sessionId);
+    const wasActive = storedSessionId === runtime.currentSessionId;
 
     // Se é a sessão ativa, desconectar primeiro
-    if (sessionIdClean === currentSessionId && sock) {
-      console.log(`🔌 Desconectando sessão ativa para reset: ${sessionIdClean}`);
-      
-      try {
-        await sock.logout();
-      } catch (e) {
-        console.log('⚠️ Erro no logout:', e.message);
-      }
-      sock = null;
-      
-      isAuthenticated = false;
-      qrCodeData = null;
-      isInitializing = false;
+    if (wasActive && runtime.sock) {
+      console.log(`🔌 Desconectando sessão ativa do tenant ${req.tenantId} para reset: ${publicSessionId}`);
+      await disconnectTenantRuntime(runtime);
     }
 
     // Reset da sessão
-    await sessionManager.resetSession(sessionIdClean);
+    await WhatsAppSessionService.resetSession(storedSessionId);
+
+    if (wasActive) {
+      runtime.currentSessionId = storedSessionId;
+      runtime.authStateAdapter = null;
+    }
 
     // Se era a sessão ativa, reinicializar
-    if (sessionIdClean === currentSessionId) {
+    if (wasActive) {
       setTimeout(() => {
-        initializeWhatsAppClient(sessionIdClean);
+        initializeWhatsAppClient(req.tenantId, storedSessionId);
       }, 1000);
     }
 
     res.json({
       success: true,
       message: 'Sessão resetada com sucesso',
-      sessionId: sessionIdClean,
-      wasActive: sessionIdClean === currentSessionId
+      sessionId: publicSessionId,
+      wasActive
     });
 
   } catch (error) {
@@ -1519,7 +1688,22 @@ router.post('/session/reset/:sessionId', async (req, res) => {
 // Rota para limpar sessões antigas
 router.post('/sessions/cleanup', async (req, res) => {
   try {
-    const deletedCount = await sessionManager.cleanOldSessions();
+    const prefix = getTenantSessionPrefix(req.tenantId);
+    const sessions = (await WhatsAppSessionService.listSessions()).filter((session) => session.id.startsWith(prefix));
+    const thirtyDaysAgo = new Date();
+    let deletedCount = 0;
+
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    for (const session of sessions) {
+      const lastActivity = new Date(session.updatedAt || session.createdAt);
+      if (lastActivity < thirtyDaysAgo) {
+        const del = await WhatsAppSessionService.deleteSession(session.id);
+        if (del) {
+          deletedCount += 1;
+        }
+      }
+    }
 
     res.json({
       success: true,
@@ -1541,6 +1725,7 @@ router.post('/sessions/cleanup', async (req, res) => {
 router.get('/session/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const runtime = getTenantRuntime(req.tenantId);
 
     if (!sessionId || sessionId.trim() === '') {
       return res.status(400).json({
@@ -1549,14 +1734,14 @@ router.get('/session/:sessionId', async (req, res) => {
       });
     }
 
-    const sessionIdClean = sessionId.trim();
-    const sessionInfo = await sessionManager.getSessionInfo(sessionIdClean);
+    const { publicSessionId, storedSessionId } = getRequestSessionIds(req, sessionId);
+    const sessionInfo = await WhatsAppSessionService.getSessionInfo(storedSessionId);
 
     if (!sessionInfo) {
       return res.status(404).json({
         success: false,
         error: 'Sessão não encontrada',
-        sessionId: sessionIdClean
+        sessionId: publicSessionId
       });
     }
 
@@ -1564,8 +1749,9 @@ router.get('/session/:sessionId', async (req, res) => {
       success: true,
       sessionInfo: {
         ...sessionInfo,
-        isActive: sessionIdClean === currentSessionId,
-        isConnected: sessionIdClean === currentSessionId && isAuthenticated
+        id: publicSessionId,
+        isActive: storedSessionId === runtime.currentSessionId,
+        isConnected: storedSessionId === runtime.currentSessionId && runtime.isAuthenticated
       }
     });
 
@@ -1579,11 +1765,8 @@ router.get('/session/:sessionId', async (req, res) => {
   }
 });
 
-// Inicializar cliente automaticamente ao carregar o módulo
-setTimeout(() => {
-  console.log('🚀 Iniciando cliente WhatsApp automaticamente...');
-  initializeWhatsAppClient();
-}, 3000);
+// Inicialização automática removida no modo multi-tenant.
+// Cada organização inicia a própria sessão ao acessar a tela e clicar em conectar.
 
 // Rota para notificar cliente cadastrado - ATUALIZADA PARA CORRESPONDENTES
 router.post('/notificarClienteCadastrado', async (req, res) => {
@@ -2170,5 +2353,34 @@ _Sistema CRM CAIXA_`;
         });
     }
 });
+
+// ===== AUTO-RECONEXÃO AO INICIAR O SERVIDOR =====
+// Após 5 s, busca no banco sessões marcadas como 'active' e reconecta.
+setTimeout(async () => {
+  try {
+    const activeSessions = await WhatsAppSessionService.listActiveSessions();
+    if (activeSessions.length === 0) {
+      console.log('📱 Nenhuma sessão WhatsApp ativa encontrada no banco para reconectar.');
+      return;
+    }
+
+    console.log(`📱 Reconectando ${activeSessions.length} sessão(ões) WhatsApp do banco...`);
+
+    for (const session of activeSessions) {
+      const match = session.id.match(/^tenant_(\d+)__(.+)/);
+      if (!match) continue;
+      const tenantId = parseInt(match[1], 10);
+      const storedSessionId = session.id;
+      console.log(`🔄 Auto-reconectando tenant ${tenantId}, sessão ${session.id}...`);
+      try {
+        await initializeWhatsAppClient(tenantId, storedSessionId);
+      } catch (err) {
+        console.error(`❌ Falha ao reconectar sessão ${session.id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('❌ Erro ao buscar sessões ativas para reconexão:', err.message);
+  }
+}, 5000);
 
 module.exports = router;

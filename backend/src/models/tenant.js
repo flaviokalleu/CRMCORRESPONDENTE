@@ -189,6 +189,17 @@ module.exports = (sequelize) => {
       type: DataTypes.BIGINT,
       defaultValue: 0,
       comment: 'Bytes usados atualmente pelo tenant'
+    },
+    // === Integração Asaas (por tenant) ===
+    asaas_api_key: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Chave de API do Asaas deste tenant'
+    },
+    asaas_webhook_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Token de validação do webhook Asaas deste tenant'
     }
   }, {
     sequelize,

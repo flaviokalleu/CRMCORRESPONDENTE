@@ -14,16 +14,35 @@ console.log('Ambiente Asaas:', ASAAS_ENVIRONMENT);
 console.log('URL Base Asaas:', BASE_URL);
 
 if (!ASAAS_API_KEY) {
-  console.error('ASAAS_API_KEY não configurado no .env');
+  console.warn('ASAAS_API_KEY não configurado no .env — será necessário chave por tenant');
 }
 
-const asaasApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'access_token': ASAAS_API_KEY,
-    'Content-Type': 'application/json',
-  },
-  timeout: 15000,
+/**
+ * Retorna um cliente axios do Asaas usando a apiKey fornecida.
+ * Fallback para a chave global do .env se nenhuma for passada.
+ */
+const getApi = (apiKey) => {
+  const key = apiKey || ASAAS_API_KEY;
+  if (!key) {
+    throw new Error('Nenhuma chave de API do Asaas configurada para este tenant');
+  }
+  return axios.create({
+    baseURL: BASE_URL,
+    headers: {
+      'access_token': key,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+};
+
+// Instância legada com resolução lazy para não quebrar o boot quando só há chave por tenant.
+const asaasApi = new Proxy({}, {
+  get(_, prop) {
+    const api = getApi();
+    const value = api[prop];
+    return typeof value === 'function' ? value.bind(api) : value;
+  }
 });
 
 // Calcula a próxima data de vencimento baseado no dia_vencimento
@@ -213,12 +232,59 @@ const buscarIdentificacaoBoleto = async (paymentId) => {
   }
 };
 
-// Testar conexão com o Asaas
-const testarConexao = async () => {
+// Detectar tipo de chave PIX a partir do valor
+const detectarTipoChavePix = (chave) => {
+  const c = chave.trim();
+  if (/^\d{11}$/.test(c.replace(/\D/g, '')) && c.replace(/\D/g, '').length === 11 && !c.includes('@')) return 'CPF';
+  if (/^\d{14}$/.test(c.replace(/\D/g, ''))) return 'CNPJ';
+  if (c.includes('@')) return 'EMAIL';
+  if (/^\+?\d{10,13}$/.test(c.replace(/[\s\-().+]/g, ''))) return 'PHONE';
+  return 'EVP'; // Chave aleatória
+};
+
+// Realizar transferência PIX via Asaas
+// apiKey opcional — usa chave global se omitido
+const realizarTransferenciaPix = async ({ valor, chavePix, descricao }, apiKey) => {
+  try {
+    const api = getApi(apiKey);
+    const tipo = detectarTipoChavePix(chavePix);
+    console.log(`Iniciando transferência PIX — R$${valor} → ${chavePix} (tipo: ${tipo})`);
+
+    const response = await api.post('/transfers', {
+      value: parseFloat(parseFloat(valor).toFixed(2)),
+      pixAddressKey: chavePix.trim(),
+      pixAddressKeyType: tipo,
+      description: descricao || 'Repasse de aluguel',
+    });
+
+    console.log('Transferência PIX enviada, ID Asaas:', response.data.id);
+    return response.data;
+  } catch (error) {
+    const msg = error.response?.data?.errors?.[0]?.description || error.response?.data?.error || error.message;
+    console.error('Erro na transferência PIX Asaas:', error.response?.data || error.message);
+    throw new Error(`Erro na transferência PIX: ${msg}`);
+  }
+};
+
+// Buscar saldo disponível na conta Asaas
+// apiKey opcional — usa chave global se omitido
+const buscarSaldo = async (apiKey) => {
+  try {
+    const api = getApi(apiKey);
+    const response = await api.get('/finance/getCurrentBalance');
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao buscar saldo Asaas:', error.response?.data || error.message);
+    throw new Error(`Erro ao buscar saldo: ${error.message}`);
+  }
+};
+
+// Testar conexão com o Asaas (apiKey opcional)
+const testarConexao = async (apiKey) => {
   try {
     console.log('Testando conexao com Asaas...');
-
-    const response = await asaasApi.get('/finance/getCurrentBalance');
+    const api = getApi(apiKey);
+    const response = await api.get('/finance/getCurrentBalance');
 
     console.log('Conexao com Asaas OK. Saldo:', response.data);
     return {
@@ -238,6 +304,7 @@ const testarConexao = async () => {
 };
 
 module.exports = {
+  getApi,
   criarCliente,
   buscarCliente,
   criarAssinatura,
@@ -249,6 +316,9 @@ module.exports = {
   listarCobrancasPorCliente,
   buscarPixQrCode,
   buscarIdentificacaoBoleto,
+  realizarTransferenciaPix,
+  detectarTipoChavePix,
+  buscarSaldo,
   testarConexao,
   calcularProximoVencimento,
   ASAAS_API_KEY,

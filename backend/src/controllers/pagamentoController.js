@@ -57,7 +57,7 @@ async function deletarPagamento(req, res) {
 
 async function getWhatsAppStatus(req, res) {
   try {
-    const isConnected = await pagamentoService.verificarStatusWhatsApp();
+    const isConnected = await pagamentoService.verificarStatusWhatsApp(req.tenantId || req.user?.tenant_id);
     res.json({ connected: isConnected, status: isConnected ? 'connected' : 'disconnected' });
   } catch (error) {
     res.status(500).json({ connected: false, error: error.message });
@@ -109,14 +109,14 @@ async function enviarWhatsApp(req, res) {
     const telefone = pagamento.cliente.telefone || pagamento.cliente.celular;
     if (!telefone) return res.status(400).json({ error: 'Cliente não possui telefone cadastrado' });
 
-    const isConnected = await pagamentoService.verificarStatusWhatsApp();
+    const isConnected = await pagamentoService.verificarStatusWhatsApp(req.tenantId || req.user?.tenant_id);
     if (!isConnected) return res.status(503).json({ error: 'WhatsApp não está conectado' });
 
     const telefoneFormatado = pagamentoService.formatPhoneNumber(telefone);
     if (!telefoneFormatado) return res.status(400).json({ error: 'Número de telefone inválido' });
 
     const mensagem = pagamentoService.criarMensagemPagamento(pagamento, pagamento.cliente, pagamento.tipo);
-    const result = await pagamentoService.enviarWhatsAppViaBaileys(telefoneFormatado, mensagem);
+    const result = await pagamentoService.enviarWhatsAppViaBaileys(telefoneFormatado, mensagem, req.tenantId || req.user?.tenant_id);
 
     if (result.success) res.json({ success: true, message: 'WhatsApp enviado com sucesso' });
     else res.status(500).json({ success: false, error: result.error });

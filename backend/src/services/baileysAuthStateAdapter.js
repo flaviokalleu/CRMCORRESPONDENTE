@@ -1,123 +1,113 @@
+const { BufferJSON, makeCacheableSignalKeyStore, initAuthCreds } = require('whaileys');
 const WhatsAppSessionService = require('./whatsappSessionService');
 
 /**
- * Adaptador para Baileys que usa banco de dados ao invés de arquivos
+ * Adaptador para Baileys que salva TODO o estado de autenticação no banco de dados.
+ * Usa makeCacheableSignalKeyStore do Baileys para gerenciar as chaves Signal corretamente.
  */
 class BaileysAuthStateAdapter {
   constructor(sessionId = 'default') {
     this.sessionId = sessionId;
   }
 
+  _toPlain(value) {
+    return JSON.parse(JSON.stringify(value, BufferJSON.replacer));
+  }
+
+  _fromPlain(value) {
+    return JSON.parse(JSON.stringify(value), BufferJSON.reviver);
+  }
+
   /**
-   * Cria o state adapter para Baileys
-   * @returns {object} - Object com state e saveCreds
+   * Cria o state adapter para Baileys (usando banco de dados como storage).
+   * Retorna { state, saveCreds } compatível com makeWASocket({ auth: state })
    */
   async useDBAuthState() {
-    // Carregar state inicial do banco
-    let authState = { creds: {}, keys: {} };
-    let shouldResetSession = false;
-    
+    let creds;
+    let storedKeys = {};
+
     try {
       const sessionData = await WhatsAppSessionService.loadSession(this.sessionId);
-      
-      if (sessionData && typeof sessionData === 'object') {
-        // Verificar se os dados têm a estrutura mínima necessária
-        if (sessionData.creds && typeof sessionData.creds === 'object') {
-          // Verificar se as credenciais têm estrutura válida
-          const creds = sessionData.creds;
-          
-          // Se as credenciais existem mas estão incompletas/corrompidas, resetar
-          if (Object.keys(creds).length > 0) {
-            // Verificar se tem campos essenciais válidos
-            const hasValidData = creds.noiseKey && 
-                                creds.pairingEphemeralKeyPair && 
-                                creds.signedIdentityKey && 
-                                creds.signedPreKey && 
-                                creds.registrationId;
-            
-            if (!hasValidData) {
-              console.log(`⚠️ Dados de sessão corrompidos para ${this.sessionId}, resetando...`);
-              shouldResetSession = true;
-            } else {
-              authState = {
-                creds: sessionData.creds || {},
-                keys: sessionData.keys || {}
-              };
-              console.log(`✅ State válido carregado do banco para sessão: ${this.sessionId}`);
-            }
-          } else {
-            console.log(`⚠️ Credenciais vazias para sessão: ${this.sessionId}`);
-          }
-        } else {
-          console.log(`⚠️ Estrutura inválida para sessão: ${this.sessionId}`);
-          shouldResetSession = true;
-        }
+
+      if (
+        sessionData &&
+        sessionData.creds &&
+        sessionData.creds.noiseKey &&
+        sessionData.creds.signedIdentityKey &&
+        sessionData.creds.registrationId
+      ) {
+        creds = this._fromPlain(sessionData.creds);
+        storedKeys = sessionData.keys || {};
+        console.log(`✅ Estado DB carregado para sessão: ${this.sessionId}`);
       } else {
-        console.log(`⚠️ Nova sessão criada: ${this.sessionId}`);
-        shouldResetSession = true;
+        console.log(`🆕 Iniciando nova sessão: ${this.sessionId}`);
+        creds = initAuthCreds();
+        await WhatsAppSessionService.saveSession(this.sessionId, {
+          creds: this._toPlain(creds),
+          keys: {},
+        });
       }
-      
-      // Se deve resetar, limpar dados antigos e começar do zero
-      if (shouldResetSession) {
-        authState = { creds: {}, keys: {} };
-        // Deletar sessão corrompida do banco
-        try {
-          await WhatsAppSessionService.deleteSession(this.sessionId);
-          console.log(`🧹 Sessão corrompida ${this.sessionId} removida do banco`);
-        } catch (e) {
-          console.log(`⚠️ Erro ao remover sessão corrompida: ${e.message}`);
-        }
-        // Salvar estado inicial limpo
-        await WhatsAppSessionService.saveSession(this.sessionId, authState);
-        console.log(`✨ Nova sessão limpa criada: ${this.sessionId}`);
-      }
-      
     } catch (error) {
-      console.error(`❌ Erro ao carregar state da sessão ${this.sessionId}:`, error);
-      // Em caso de erro, sempre começar com estado limpo
-      authState = { creds: {}, keys: {} };
-      try {
-        await WhatsAppSessionService.deleteSession(this.sessionId);
-        await WhatsAppSessionService.saveSession(this.sessionId, authState);
-        console.log(`🔧 Sessão resetada após erro: ${this.sessionId}`);
-      } catch (e) {
-        console.log(`⚠️ Erro ao resetar sessão: ${e.message}`);
-      }
+      console.error(`❌ Erro ao carregar sessão ${this.sessionId}:`, error.message);
+      creds = initAuthCreds();
     }
 
-    // Função para salvar credenciais
+    // ─── Raw Signal Key Store com persistência no banco ───────────────────────
+    const self = this;
+
+    const rawKeyStore = {
+      get: async (type, ids) => {
+        const result = {};
+        for (const id of ids) {
+          const raw = storedKeys[`${type}-${id}`];
+          if (raw !== undefined && raw !== null) {
+            result[id] = self._fromPlain(raw);
+          }
+        }
+        return result;
+      },
+      set: async (data) => {
+        let changed = false;
+        for (const [type, typeData] of Object.entries(data)) {
+          for (const [id, value] of Object.entries(typeData)) {
+            const key = `${type}-${id}`;
+            if (value !== undefined && value !== null) {
+              storedKeys[key] = self._toPlain(value);
+              changed = true;
+            } else if (storedKeys[key] !== undefined) {
+              delete storedKeys[key];
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          WhatsAppSessionService.saveSession(self.sessionId, {
+            creds: self._toPlain(creds),
+            keys: storedKeys,
+          }).catch((e) => console.error(`❌ Erro ao salvar chaves Signal:`, e.message));
+        }
+      },
+    };
+
+    const keys = makeCacheableSignalKeyStore(rawKeyStore, console);
+
     const saveCreds = async () => {
       try {
-        // Validar dados antes de salvar
-        if (!authState || typeof authState !== 'object') {
-          console.log(`⚠️ Dados inválidos para salvar na sessão ${this.sessionId}`);
-          return;
-        }
-        
-        // Criar cópia limpa dos dados para salvar
-        const dataToSave = {
-          creds: authState.creds || {},
-          keys: authState.keys || {}
-        };
-        
-        await WhatsAppSessionService.saveSession(this.sessionId, dataToSave);
+        await WhatsAppSessionService.saveSession(this.sessionId, {
+          creds: this._toPlain(creds),
+          keys: storedKeys,
+        });
         console.log(`💾 Credenciais salvas para sessão: ${this.sessionId}`);
       } catch (error) {
-        console.error(`❌ Erro ao salvar credenciais da sessão ${this.sessionId}:`, error);
+        console.error(`❌ Erro ao salvar credenciais da sessão ${this.sessionId}:`, error.message);
       }
     };
 
-    // Retornar no formato esperado pelo Baileys
-    return {
-      state: authState,
-      saveCreds
-    };
+    return { state: { creds, keys }, saveCreds };
   }
 
   /**
    * Atualiza status da sessão no banco
-   * @param {string} status - Status da sessão
-   * @param {object} additionalData - Dados adicionais
    */
   async updateSessionStatus(status, additionalData = {}) {
     try {
@@ -128,98 +118,60 @@ class BaileysAuthStateAdapter {
         id: this.sessionId,
         status,
         lastActivity: new Date(),
-        data: { creds: {}, keys: {} }, // Dados padrão
-        ...additionalData
+        ...additionalData,
       };
 
-      // Se já existe uma sessão, carregar os dados existentes
       const existingSession = await WhatsappSession.findByPk(this.sessionId);
-      if (existingSession && existingSession.data) {
-        updateData.data = existingSession.data;
+      if (existingSession) {
+        await existingSession.update(updateData);
+      } else {
+        await WhatsappSession.upsert({ ...updateData, data: { creds: {}, keys: {} } });
       }
-      
-      await WhatsappSession.upsert(updateData);
-      
-      console.log(`📊 Status da sessão ${this.sessionId} atualizado para: ${status}`);
+
+      console.log(`📊 Status da sessão ${this.sessionId} → ${status}`);
     } catch (error) {
-      console.error(`❌ Erro ao atualizar status da sessão ${this.sessionId}:`, error);
+      console.error(`❌ Erro ao atualizar status da sessão ${this.sessionId}:`, error.message);
     }
   }
 
-  /**
-   * Marca sessão como autenticada
-   * @param {string} phoneNumber - Número do telefone autenticado
-   */
   async markAsAuthenticated(phoneNumber = null) {
-    await this.updateSessionStatus('active', {
-      isAuthenticated: true,
-      phoneNumber
-    });
+    await this.updateSessionStatus('active', { isAuthenticated: true, phoneNumber });
   }
 
-  /**
-   * Marca sessão como desconectada
-   */
   async markAsDisconnected() {
-    await this.updateSessionStatus('inactive', {
-      isAuthenticated: false
-    });
+    await this.updateSessionStatus('inactive', { isAuthenticated: false });
   }
 
-  /**
-   * Marca sessão como conectando
-   */
   async markAsConnecting() {
     await this.updateSessionStatus('connecting');
   }
 
-  /**
-   * Marca sessão com erro
-   */
   async markAsError() {
-    await this.updateSessionStatus('error');
+    await this.updateSessionStatus('error', { isAuthenticated: false });
   }
 
-  /**
-   * Remove sessão completamente
-   */
   async deleteSession() {
     try {
       await WhatsAppSessionService.deleteSession(this.sessionId);
       console.log(`🗑️ Sessão ${this.sessionId} removida`);
     } catch (error) {
-      console.error(`❌ Erro ao remover sessão ${this.sessionId}:`, error);
+      console.error(`❌ Erro ao remover sessão ${this.sessionId}:`, error.message);
       throw error;
     }
   }
 
-  /**
-   * Obter informações da sessão
-   * @returns {object} - Informações da sessão
-   */
-  async getSessionInfo() {
+  async resetSession() {
     try {
-      const { WhatsappSession } = require('../models');
-      
-      const session = await WhatsappSession.findByPk(this.sessionId);
-      
-      if (session) {
-        return {
-          id: session.id,
-          status: session.status,
-          phoneNumber: session.phoneNumber,
-          lastActivity: session.lastActivity,
-          isAuthenticated: session.isAuthenticated,
-          createdAt: session.createdAt,
-          updatedAt: session.updatedAt
-        };
-      }
-      
-      return null;
+      await WhatsAppSessionService.deleteSession(this.sessionId);
+      console.log(`🔄 Sessão ${this.sessionId} resetada`);
     } catch (error) {
-      console.error(`❌ Erro ao obter info da sessão ${this.sessionId}:`, error);
-      return null;
+      console.error(`❌ Erro ao resetar sessão ${this.sessionId}:`, error.message);
+      throw error;
     }
+  }
+
+  async getSessionInfo() {
+    return WhatsAppSessionService.getSessionInfo(this.sessionId);
   }
 }
 

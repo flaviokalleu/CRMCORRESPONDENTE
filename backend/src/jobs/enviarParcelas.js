@@ -112,11 +112,13 @@ const enviarParcelasAutomaticas = async () => {
 const enviarWhatsAppParcela = async (cliente, parcela) => {
   try {
     const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+    const tenantId = parcela.tenant_id || cliente.tenant_id;
     
     const response = await fetch(`${BACKEND_URL}/api/whatsapp/enviar-parcela`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
       },
       body: JSON.stringify({
         telefone: cliente.telefone,

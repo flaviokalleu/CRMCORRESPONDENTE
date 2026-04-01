@@ -88,6 +88,20 @@ io.on('connection', (socket) => {
   console.log('🟢 Novo cliente conectado via socket:', socket.id);
   socket.emit('welcome', 'Bem-vindo ao servidor Socket.IO!');
 
+  // Inscrição em eventos WhatsApp por tenant
+  socket.on('subscribe:whatsapp', ({ tenantId } = {}) => {
+    if (tenantId) {
+      socket.join(`whatsapp:${tenantId}`);
+      console.log(`📱 Socket ${socket.id} inscrito em whatsapp:${tenantId}`);
+    }
+  });
+
+  socket.on('unsubscribe:whatsapp', ({ tenantId } = {}) => {
+    if (tenantId) {
+      socket.leave(`whatsapp:${tenantId}`);
+    }
+  });
+
   socket.on('frontend-message', (msg) => {
     console.log('Mensagem recebida do frontend:', msg);
     // Responder para o mesmo cliente

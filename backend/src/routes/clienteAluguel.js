@@ -1,27 +1,82 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { ClienteAluguel, CobrancaAluguel, Aluguel } = require('../models');
 const asaasService = require('../services/asaasService');
 const { calcularScoreInquilino } = require('../services/scoreInquilinoService');
 
 const router = express.Router();
 
+// ── Upload config for inquilino documents ──────────────────────────────────
+const inquilinoUploadDir = path.join(__dirname, '../../uploads/clientes');
+const fiadorUploadDir    = path.join(__dirname, '../../uploads/fiador_documentos');
+
+[inquilinoUploadDir, fiadorUploadDir].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
+const inquilinoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, file.fieldname === 'fiador_documento_id' ? fiadorUploadDir : inquilinoUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`);
+  },
+});
+
+const inquilinoUpload = multer({
+  storage: inquilinoStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).fields([
+  { name: 'documento_id',       maxCount: 1 },
+  { name: 'contrato',           maxCount: 1 },
+  { name: 'fiador_documento_id', maxCount: 1 },
+]);
+
 // 1. Rota para adicionar cliente + criar cliente e assinatura no Asaas
-router.post('/clientealuguel', async (req, res) => {
-  const { nome, cpf, email, telefone, valor_aluguel, dia_vencimento,
-    aluguel_id, data_inicio_contrato, data_fim_contrato, indice_reajuste } = req.body;
+router.post('/clientealuguel', inquilinoUpload, async (req, res) => {
+  const {
+    nome, cpf, email, telefone,
+    valor_aluguel, dia_vencimento,
+    aluguel_id, data_inicio_contrato, data_fim_contrato, indice_reajuste,
+    // novos campos
+    data_nascimento, cidade_nascimento,
+    tem_fiador,
+    fiador_nome, fiador_telefone, fiador_email, fiador_cpf,
+    fiador_data_nascimento, fiador_cidade_nascimento,
+  } = req.body;
+
+  const documento_id_path     = req.files?.documento_id?.[0]?.path || null;
+  const contrato_path         = req.files?.contrato?.[0]?.path || null;
+  const fiador_documento_id_path = req.files?.fiador_documento_id?.[0]?.path || null;
 
   try {
     const clienteAluguel = await ClienteAluguel.create({
-      nome,
-      cpf,
-      email,
-      telefone,
-      valor_aluguel,
-      dia_vencimento,
+      nome:      nome      || null,
+      cpf:       cpf       || null,
+      email:     email     || null,
+      telefone:  telefone  || null,
+      valor_aluguel:  valor_aluguel  ? parseFloat(valor_aluguel)  : 0,
+      dia_vencimento: dia_vencimento ? parseInt(dia_vencimento, 10) : 1,
       aluguel_id: aluguel_id || null,
       data_inicio_contrato: data_inicio_contrato || null,
-      data_fim_contrato: data_fim_contrato || null,
-      indice_reajuste: indice_reajuste || 'IGPM',
+      data_fim_contrato:    data_fim_contrato    || null,
+      indice_reajuste:      indice_reajuste      || 'IGPM',
+      // novos campos
+      data_nascimento:       data_nascimento       || null,
+      cidade_nascimento:     cidade_nascimento     || null,
+      tem_fiador:            tem_fiador === 'true' || tem_fiador === true,
+      fiador_nome:           fiador_nome           || null,
+      fiador_telefone:       fiador_telefone       || null,
+      fiador_email:          fiador_email          || null,
+      fiador_cpf:            fiador_cpf            || null,
+      fiador_data_nascimento: fiador_data_nascimento || null,
+      fiador_cidade_nascimento: fiador_cidade_nascimento || null,
+      documento_id_path,
+      contrato_path,
+      fiador_documento_id_path,
     });
 
     // Tentar criar cliente e assinatura no Asaas (não bloqueia se falhar)
@@ -59,8 +114,11 @@ router.post('/clientealuguel', async (req, res) => {
 
     res.status(201).json(clienteAluguel);
   } catch (error) {
-    console.error("Erro ao adicionar aluguel:", error);
-    res.status(500).json({ error: "Erro ao adicionar aluguel." });
+    console.error("Erro ao adicionar aluguel:", error.message, error.errors);
+    res.status(500).json({
+      error: "Erro ao adicionar aluguel.",
+      details: process.env.NODE_ENV !== 'production' ? (error.errors?.map(e => e.message) || error.message) : undefined,
+    });
   }
 });
 
@@ -159,9 +217,21 @@ router.delete('/clientealuguel/:id/pagamento/:pagamentoId', async (req, res) => 
 });
 
 // 6. Rota para atualizar cliente + atualizar assinatura Asaas se valor mudou
-router.put('/clientealuguel/:id', async (req, res) => {
+router.put('/clientealuguel/:id', inquilinoUpload, async (req, res) => {
   const { id } = req.params;
-  const { nome, cpf, email, telefone, valor_aluguel, dia_vencimento, pago, historico_pagamentos } = req.body;
+  const {
+    nome, cpf, email, telefone,
+    valor_aluguel, dia_vencimento, pago, historico_pagamentos,
+    data_nascimento, cidade_nascimento,
+    tem_fiador,
+    fiador_nome, fiador_telefone, fiador_email, fiador_cpf,
+    fiador_data_nascimento, fiador_cidade_nascimento,
+    // proprietário e repasse
+    proprietario_nome, proprietario_telefone, proprietario_pix,
+    taxa_administracao,
+    // corretor
+    corretor_nome, corretor_pix, corretor_percentual,
+  } = req.body;
 
   try {
     const clienteAtual = await ClienteAluguel.findByPk(id);
@@ -169,14 +239,42 @@ router.put('/clientealuguel/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado.' });
     }
 
-    const [updated] = await ClienteAluguel.update(
-      { nome, cpf, email, telefone, valor_aluguel, dia_vencimento, pago, historico_pagamentos },
-      { where: { id } }
-    );
+    const f = (v, fallback) => (v !== undefined ? (v || null) : fallback);
 
-    if (!updated) {
-      return res.status(404).json({ error: 'Cliente não encontrado.' });
-    }
+    const updateData = {
+      nome,
+      cpf,
+      email,
+      telefone,
+      valor_aluguel:  valor_aluguel  != null ? parseFloat(valor_aluguel)  : clienteAtual.valor_aluguel,
+      dia_vencimento: dia_vencimento != null ? parseInt(dia_vencimento, 10) : clienteAtual.dia_vencimento,
+      pago,
+      historico_pagamentos,
+      data_nascimento:          f(data_nascimento,          clienteAtual.data_nascimento),
+      cidade_nascimento:        f(cidade_nascimento,        clienteAtual.cidade_nascimento),
+      tem_fiador:               tem_fiador !== undefined ? (tem_fiador === 'true' || tem_fiador === true) : clienteAtual.tem_fiador,
+      fiador_nome:              f(fiador_nome,              clienteAtual.fiador_nome),
+      fiador_telefone:          f(fiador_telefone,          clienteAtual.fiador_telefone),
+      fiador_email:             f(fiador_email,             clienteAtual.fiador_email),
+      fiador_cpf:               f(fiador_cpf,               clienteAtual.fiador_cpf),
+      fiador_data_nascimento:   f(fiador_data_nascimento,   clienteAtual.fiador_data_nascimento),
+      fiador_cidade_nascimento: f(fiador_cidade_nascimento, clienteAtual.fiador_cidade_nascimento),
+      // proprietário
+      proprietario_nome:     f(proprietario_nome,     clienteAtual.proprietario_nome),
+      proprietario_telefone: f(proprietario_telefone, clienteAtual.proprietario_telefone),
+      proprietario_pix:      f(proprietario_pix,      clienteAtual.proprietario_pix),
+      taxa_administracao:    taxa_administracao != null ? parseFloat(taxa_administracao) : clienteAtual.taxa_administracao,
+      // corretor
+      corretor_nome:       f(corretor_nome,       clienteAtual.corretor_nome),
+      corretor_pix:        f(corretor_pix,        clienteAtual.corretor_pix),
+      corretor_percentual: corretor_percentual != null ? parseFloat(corretor_percentual) : clienteAtual.corretor_percentual,
+    };
+
+    if (req.files?.documento_id?.[0])        updateData.documento_id_path        = req.files.documento_id[0].path;
+    if (req.files?.contrato?.[0])            updateData.contrato_path             = req.files.contrato[0].path;
+    if (req.files?.fiador_documento_id?.[0]) updateData.fiador_documento_id_path  = req.files.fiador_documento_id[0].path;
+
+    await ClienteAluguel.update(updateData, { where: { id } });
 
     // Se o valor do aluguel mudou e tem assinatura Asaas, atualizar
     if (valor_aluguel && clienteAtual.asaas_subscription_id &&

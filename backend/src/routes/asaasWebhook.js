@@ -1,18 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { ClienteAluguel, CobrancaAluguel } = require('../models');
+const { ClienteAluguel, CobrancaAluguel, Tenant } = require('../models');
 const { client, isAuthenticated } = require('./whatsappRoutes');
 const { gerarReciboPDF } = require('../services/reciboService');
+const { processarRepasse } = require('../services/repasseService');
 
-const WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN;
+const WEBHOOK_TOKEN_GLOBAL = process.env.ASAAS_WEBHOOK_TOKEN;
 
-// POST /api/asaas/webhook — recebe eventos do Asaas
-router.post('/asaas/webhook', async (req, res) => {
+/**
+ * Processa o corpo do webhook para um tenant identificado.
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ * @param {string|null} webhookToken - token esperado (null = sem validação)
+ * @param {string|null} apiKey - chave Asaas do tenant (null = usa global)
+ */
+async function processarWebhook(req, res, webhookToken, apiKey) {
   try {
     // Validar token do webhook (se configurado)
-    if (WEBHOOK_TOKEN) {
+    if (webhookToken) {
       const receivedToken = req.headers['asaas-access-token'];
-      if (receivedToken !== WEBHOOK_TOKEN) {
+      if (receivedToken !== webhookToken) {
         console.error('Asaas webhook: token invalido');
         return res.status(401).json({ error: 'Token invalido' });
       }
@@ -110,6 +117,14 @@ router.post('/asaas/webhook', async (req, res) => {
             clienteAluguel.telefone,
             `Ola ${clienteAluguel.nome}! Seu pagamento de aluguel no valor de R$ ${parseFloat(payment.value).toFixed(2)} foi confirmado. Obrigado!${reciboMsg}`
           );
+
+          // Processar repasse automático ao proprietário via PIX
+          try {
+            await processarRepasse(cobranca, clienteAluguel, enviarWhatsApp, apiKey);
+          } catch (repasseErr) {
+            // Não bloqueia o webhook — o repasse pode ser reprocessado manualmente
+            console.error('Erro ao processar repasse automático:', repasseErr.message);
+          }
         }
 
         console.log('Pagamento confirmado:', payment.id);
@@ -171,6 +186,27 @@ router.post('/asaas/webhook', async (req, res) => {
     // Sempre retorna 200 para evitar retries desnecessários
     res.status(200).json({ received: true, error: error.message });
   }
+}
+
+// POST /api/asaas/webhook/:tenantSlug — webhook por tenant (chave e token individuais)
+router.post('/asaas/webhook/:tenantSlug', async (req, res) => {
+  const { tenantSlug } = req.params;
+
+  const tenant = await Tenant.findOne({ where: { slug: tenantSlug } });
+  if (!tenant) {
+    console.error(`Asaas webhook: tenant "${tenantSlug}" não encontrado`);
+    return res.status(404).json({ error: 'Tenant não encontrado' });
+  }
+
+  const webhookToken = tenant.asaas_webhook_token || null;
+  const apiKey = tenant.asaas_api_key || null;
+
+  return processarWebhook(req, res, webhookToken, apiKey);
+});
+
+// POST /api/asaas/webhook — rota legada (usa chave global do .env)
+router.post('/asaas/webhook', (req, res) => {
+  return processarWebhook(req, res, WEBHOOK_TOKEN_GLOBAL, null);
 });
 
 // GET /api/asaas/teste — testa conexão com Asaas

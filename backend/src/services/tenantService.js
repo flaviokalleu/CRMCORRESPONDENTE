@@ -2,6 +2,7 @@
 
 const { Tenant, User, Plan, Subscription, Cliente, Imovel, Aluguel } = require('../models');
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
 
 const TENANT_INCLUDE = [{
   model: Subscription,
@@ -96,23 +97,84 @@ async function getTenantDetails(id) {
     Aluguel.count({ where: { tenant_id: tenant.id } })
   ]);
 
-  return { ...tenant.toJSON(), stats: { clientes, usuarios, imoveis, alugueis } };
+  const adminUser = await User.findOne({
+    where: { tenant_id: tenant.id, is_administrador: true },
+    attributes: { exclude: ['password'] },
+    order: [['created_at', 'ASC']]
+  });
+
+  return {
+    ...tenant.toJSON(),
+    stats: { clientes, usuarios, imoveis, alugueis },
+    admin_user: adminUser ? adminUser.toJSON() : null
+  };
 }
 
 /**
  * Criar tenant com assinatura opcional.
  */
-async function createTenant({ nome, slug, cnpj, email, telefone, plan_id }) {
-  if (!nome || !slug || !email) {
-    throw { status: 400, message: 'Nome, slug e email são obrigatórios' };
+async function createTenant({
+  nome,
+  slug,
+  cnpj,
+  email,
+  telefone,
+  plan_id,
+  admin_first_name,
+  admin_last_name,
+  admin_email,
+  admin_password,
+  admin_telefone
+}) {
+  const normalizedNome = nome?.trim();
+  const normalizedSlug = slug?.trim().toLowerCase();
+  const normalizedCompanyEmail = email?.trim().toLowerCase();
+  const normalizedAdminEmail = admin_email?.trim().toLowerCase();
+  const normalizedAdminFirstName = admin_first_name?.trim();
+  const normalizedAdminLastName = admin_last_name?.trim();
+  const normalizedCompanyPhone = telefone?.trim() || null;
+  const normalizedAdminPhone = admin_telefone?.trim() || null;
+
+  if (!normalizedNome || !normalizedSlug || !normalizedCompanyEmail || !normalizedAdminEmail || !admin_password) {
+    throw { status: 400, message: 'Nome, slug, email da empresa, email do administrador e senha são obrigatórios' };
   }
 
-  const existingSlug = await Tenant.findOne({ where: { slug } });
+  if (admin_password.length < 6) {
+    throw { status: 400, message: 'Senha do administrador deve ter pelo menos 6 caracteres' };
+  }
+
+  const existingSlug = await Tenant.findOne({ where: { slug: normalizedSlug } });
   if (existingSlug) {
     throw { status: 409, message: 'Slug já está em uso' };
   }
 
-  const tenant = await Tenant.create({ nome, slug, cnpj, email, telefone, ativo: true });
+  const existingAdmin = await User.findOne({ where: { email: normalizedAdminEmail } });
+  if (existingAdmin) {
+    throw { status: 409, message: 'Email do administrador já está em uso' };
+  }
+
+  const tenant = await Tenant.create({
+    nome: normalizedNome,
+    slug: normalizedSlug,
+    cnpj,
+    email: normalizedCompanyEmail,
+    telefone: normalizedCompanyPhone,
+    ativo: true
+  });
+
+  await User.create({
+    first_name: normalizedAdminFirstName || normalizedNome,
+    last_name: normalizedAdminLastName || '',
+    username: normalizedAdminEmail,
+    email: normalizedAdminEmail,
+    telefone: normalizedAdminPhone || normalizedCompanyPhone,
+    password: await bcrypt.hash(admin_password, 10),
+    is_administrador: true,
+    is_corretor: false,
+    is_correspondente: false,
+    is_super_admin: false,
+    tenant_id: tenant.id
+  });
 
   if (plan_id) {
     const plan = await Plan.findByPk(plan_id);
@@ -142,11 +204,38 @@ async function updateTenant(id, data) {
   const tenant = await Tenant.findByPk(id, { include: TENANT_INCLUDE });
   if (!tenant) return null;
 
+  const normalizedCompanyEmail = typeof data.email === 'string' ? data.email.trim().toLowerCase() : data.email;
+  const normalizedAdminEmail = typeof data.admin_email === 'string' ? data.admin_email.trim().toLowerCase() : data.admin_email;
+  const normalizedAdminFirstName = typeof data.admin_first_name === 'string' ? data.admin_first_name.trim() : data.admin_first_name;
+  const normalizedAdminLastName = typeof data.admin_last_name === 'string' ? data.admin_last_name.trim() : data.admin_last_name;
+  const normalizedCompanyPhone = typeof data.telefone === 'string' ? data.telefone.trim() : data.telefone;
+  const normalizedAdminPhone = typeof data.admin_telefone === 'string' ? data.admin_telefone.trim() : data.admin_telefone;
+
+  const adminUser = await User.findOne({
+    where: { tenant_id: tenant.id, is_administrador: true },
+    order: [['created_at', 'ASC']]
+  });
+
   const updateData = {};
   for (const field of ALLOWED_UPDATE_FIELDS) {
     if (data[field] !== undefined) {
       updateData[field] = data[field];
     }
+  }
+
+  if (normalizedCompanyEmail !== undefined) updateData.email = normalizedCompanyEmail;
+  if (normalizedCompanyPhone !== undefined) updateData.telefone = normalizedCompanyPhone;
+
+  if (data.nome !== undefined && !String(data.nome).trim()) {
+    throw { status: 400, message: 'Nome da empresa é obrigatório' };
+  }
+
+  if (normalizedCompanyEmail !== undefined && !normalizedCompanyEmail) {
+    throw { status: 400, message: 'Email da empresa é obrigatório' };
+  }
+
+  if (data.admin_email !== undefined && !normalizedAdminEmail) {
+    throw { status: 400, message: 'Email do administrador não pode ficar vazio' };
   }
 
   // Se desativando módulos customizados, limpar overrides
@@ -156,10 +245,62 @@ async function updateTenant(id, data) {
     }
   }
 
+  if (normalizedAdminEmail && normalizedAdminEmail !== adminUser?.email) {
+    const existingAdminWithEmail = await User.findOne({
+      where: {
+        email: normalizedAdminEmail,
+        id: { [Op.ne]: adminUser?.id || 0 }
+      }
+    });
+
+    if (existingAdminWithEmail) {
+      throw { status: 409, message: 'Email do administrador já está em uso' };
+    }
+  }
+
   await tenant.update(updateData);
 
+  const hasAdminPayload = [
+    'admin_first_name',
+    'admin_last_name',
+    'admin_email',
+    'admin_telefone',
+    'admin_password'
+  ].some((field) => data[field] !== undefined && data[field] !== '');
+
+  if (hasAdminPayload) {
+    if (adminUser) {
+      const adminUpdateData = {};
+
+      if (normalizedAdminFirstName !== undefined) adminUpdateData.first_name = normalizedAdminFirstName;
+      if (normalizedAdminLastName !== undefined) adminUpdateData.last_name = normalizedAdminLastName;
+      if (normalizedAdminEmail !== undefined) {
+        adminUpdateData.email = normalizedAdminEmail;
+        adminUpdateData.username = normalizedAdminEmail;
+      }
+      if (normalizedAdminPhone !== undefined) adminUpdateData.telefone = normalizedAdminPhone;
+      if (data.admin_password) adminUpdateData.password = await bcrypt.hash(data.admin_password, 10);
+
+      await adminUser.update(adminUpdateData);
+    } else if (normalizedAdminEmail && data.admin_password) {
+      await User.create({
+        first_name: normalizedAdminFirstName || tenant.nome,
+        last_name: normalizedAdminLastName || '',
+        username: normalizedAdminEmail,
+        email: normalizedAdminEmail,
+        telefone: normalizedAdminPhone || tenant.telefone || null,
+        password: await bcrypt.hash(data.admin_password, 10),
+        is_administrador: true,
+        is_corretor: false,
+        is_correspondente: false,
+        is_super_admin: false,
+        tenant_id: tenant.id
+      });
+    }
+  }
+
   // Recarregar com associações
-  return Tenant.findByPk(tenant.id, { include: TENANT_INCLUDE });
+  return getTenantDetails(tenant.id);
 }
 
 /**
