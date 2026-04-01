@@ -91,7 +91,7 @@ router.get('/contratos/opcoes', async (req, res) => {
       }),
       ClienteAluguel.findAll({
         attributes: pickExistingAttributes(schema.clienteColumns, ['id', 'nome', 'aluguel_id', 'proprietario_nome', 'proprietario_telefone', 'contrato_path']),
-        where: buildTenantWhere(req, schema.clienteHasTenantId),
+        where: buildTenantWhereIncludingLegacy(req, schema.clienteHasTenantId),
         order: [['nome', 'ASC']]
       }),
     ]);
@@ -167,7 +167,8 @@ router.post('/contratos/:clienteAluguelId/documentos', upload.array('documentos'
       ? cliente.contrato_documentos
       : [];
 
-    const novos = (req.files || []).map((file) => ({
+    const novos = (req.files || []).map((file, index) => ({
+      id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
       nome: file.originalname,
       tipo: file.mimetype,
       path: `contratos/${file.filename}`,
@@ -227,8 +228,14 @@ router.get('/contratos', async (req, res) => {
 
       if (!schema.clienteHasContratoDocumentos) {
         item.contrato_documentos = item.contrato_path
-          ? [{ nome: path.basename(item.contrato_path), path: item.contrato_path, tipo: null, data_upload: null }]
+          ? [{ id: `${item.id}-0`, nome: path.basename(item.contrato_path), path: item.contrato_path, tipo: null, data_upload: null }]
           : [];
+      } else if (Array.isArray(item.contrato_documentos)) {
+        // Garante IDs estáveis para documentos antigos que não possuem id salvo no JSON.
+        item.contrato_documentos = item.contrato_documentos.map((doc, index) => ({
+          ...doc,
+          id: doc?.id ?? `${item.id}-${index}`,
+        }));
       }
 
       if (!schema.clienteHasProprietarioId) {
@@ -335,16 +342,28 @@ router.get('/contratos/documento/:docId/download', async (req, res) => {
     const schema = await getSchemaSupport();
 
     const contratos = await ClienteAluguel.findAll({
-      attributes: pickExistingAttributes(schema.clienteColumns, ['id', 'tenant_id', 'contrato_documentos']),
+      attributes: pickExistingAttributes(schema.clienteColumns, ['id', 'tenant_id', 'contrato_documentos', 'contrato_path']),
       where: buildTenantWhere(req, schema.clienteHasTenantId),
     });
 
     let documento = null;
     for (const contrato of contratos) {
       if (schema.clienteHasContratoDocumentos && Array.isArray(contrato.contrato_documentos)) {
-        const doc = contrato.contrato_documentos.find(d => d.id === parseInt(docId) || d.id === docId);
+        const doc = contrato.contrato_documentos.find((d, index) => {
+          const normalizedId = d?.id ?? `${contrato.id}-${index}`;
+          return String(normalizedId) === String(docId);
+        });
         if (doc) {
           documento = doc;
+          break;
+        }
+      } else if (contrato.contrato_path) {
+        const legacyId = `${contrato.id}-0`;
+        if (String(legacyId) === String(docId)) {
+          documento = {
+            nome: path.basename(contrato.contrato_path),
+            path: contrato.contrato_path,
+          };
           break;
         }
       }

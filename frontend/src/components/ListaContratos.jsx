@@ -50,8 +50,16 @@ export default function ListaContratos() {
         }),
       ]);
 
-      if (!opRes.ok) throw new Error('Erro ao carregar opções');
-      if (!contratosRes.ok) throw new Error('Erro ao carregar contratos');
+      if (!opRes.ok) {
+        const errText = await opRes.text();
+        console.error('Erro ao carregar opções:', opRes.status, errText);
+        throw new Error(`Erro ao carregar opções (${opRes.status})`);
+      }
+      if (!contratosRes.ok) {
+        const errText = await contratosRes.text();
+        console.error('Erro ao carregar contratos:', contratosRes.status, errText);
+        throw new Error(`Erro ao carregar contratos (${contratosRes.status})`);
+      }
 
       const opData = await opRes.json();
       const contratosData = await contratosRes.json();
@@ -59,6 +67,7 @@ export default function ListaContratos() {
       setOpcoes(opData);
       setContratos(contratosData);
     } catch (e) {
+      console.error('Falha ao carregar dados dos contratos:', e.message);
       setErr(e.message || 'Falha ao carregar dados dos contratos');
     } finally {
       setLoading(false);
@@ -191,15 +200,27 @@ export default function ListaContratos() {
   };
 
   const abrirDocumentos = (contrato) => {
+    const documentosNormalizados = Array.isArray(contrato.contrato_documentos)
+      ? contrato.contrato_documentos.map((doc, index) => ({
+          ...doc,
+          _docId: doc?.id ?? `${contrato.id}-${index}`,
+        }))
+      : [];
+
     setDocsModal({
       contrato,
-      documentos: Array.isArray(contrato.contrato_documentos) ? contrato.contrato_documentos : [],
+      documentos: documentosNormalizados,
     });
   };
 
   const baixarDocumento = async (doc) => {
     try {
-      const res = await fetch(`${API_URL}/contratos/documento/${doc.id}/download`, {
+      const docId = doc?._docId ?? doc?.id;
+      if (!docId) {
+        throw new Error('Documento sem identificador para download');
+      }
+
+      const res = await fetch(`${API_URL}/contratos/documento/${docId}/download`, {
         headers: authHeaders,
       });
 
@@ -209,7 +230,7 @@ export default function ListaContratos() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = doc.nome_arquivo || `documento_${doc.id}`;
+      link.download = doc.nome_arquivo || doc.nome || `documento_${docId}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -381,7 +402,7 @@ export default function ListaContratos() {
                         className="border-b border-white/5 hover:bg-white/5 transition"
                       >
                         <td className="py-3 px-4 text-white/80">#{c.id}</td>
-                        <td className="py-3 px-4 text-white/80">{c.cliente_aluguel?.cliente?.nome || c.inquilino_nome || '-'}</td>
+                        <td className="py-3 px-4 text-white/80">{c.nome || c.inquilino_nome || '-'}</td>
                         <td className="py-3 px-4 text-white/80">{c.imovel?.nome_imovel || 'Não vinculado'}</td>
                         <td className="py-3 px-4 text-white/80">{c.proprietario?.name || c.proprietario_nome || '-'}</td>
                         <td className="py-3 px-4">
@@ -550,9 +571,9 @@ export default function ListaContratos() {
                 ) : (
                   <div className="space-y-2">
                     {docsModal.documentos.map((doc, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                      <div key={doc._docId || idx} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
                         <div className="flex-1">
-                          <p className="text-white text-sm truncate">{doc.nome_arquivo || `Documento ${idx + 1}`}</p>
+                          <p className="text-white text-sm truncate">{doc.nome_arquivo || doc.nome || `Documento ${idx + 1}`}</p>
                           <p className="text-white/50 text-xs">
                             {doc.tamanho ? `${(doc.tamanho / 1024).toFixed(2)} KB` : ''}
                           </p>
