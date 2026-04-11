@@ -48,6 +48,8 @@ fs.readdirSync(__dirname)
     return (
       file.indexOf('.') !== 0 &&
       file !== 'index.js' &&
+      file !== 'init-models.js' &&
+      !file.includes(' copy') &&
       file.slice(-3) === '.js'
     );
   })

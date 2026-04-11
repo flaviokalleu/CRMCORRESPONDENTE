@@ -4,8 +4,6 @@ const { User, Cliente, Pagamento } = require('../models');
 const { authenticateToken } = require('./authRoutes');
 const mercadoPagoService = require('../services/mercadoPagoService');
 const pagamentoController = require('../controllers/pagamentoController');
-const pagamentoService = require('../services/pagamentoService');
-
 // ✅ CONFIGURAÇÕES DO ENV
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const WHATSAPP_API_URL = `${BACKEND_URL}/api/whatsapp`;
@@ -326,7 +324,51 @@ router.post('/webhook/test', async (req, res) => {
   }
 });
 
-// ✅ MIDDLEWARE DE AUTENTICAÇÃO (APLICAR APÓS WEBHOOKS PÚBLICOS)
+// ✅ ROTA PÚBLICA PARA ACESSAR PAGAMENTO (SEM AUTENTICAÇÃO)
+router.get('/publico/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pagamento = await Pagamento.findByPk(id, {
+      include: [
+        {
+          model: Cliente,
+          as: 'cliente',
+          attributes: ['id', 'nome', 'email']
+        }
+      ]
+    });
+
+    if (!pagamento) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+
+    res.json({
+      pagamento: {
+        id: pagamento.id,
+        titulo: pagamento.titulo,
+        descricao: pagamento.descricao,
+        valor: pagamento.valor,
+        parcelas: pagamento.parcelas,
+        valor_parcela: pagamento.valor_parcela,
+        tipo: pagamento.tipo,
+        status: pagamento.status,
+        data_vencimento: pagamento.data_vencimento,
+        link_pagamento: pagamento.link_pagamento,
+        created_at: pagamento.created_at,
+        cliente: {
+          nome: pagamento.cliente?.nome
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar pagamento público:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ✅ MIDDLEWARE DE AUTENTICAÇÃO (APLICAR APÓS WEBHOOKS E ROTAS PÚBLICAS)
 router.use(authenticateToken);
 
 // ✅ FUNÇÃO PARA ENVIAR WHATSAPP VIA BAILEYS
@@ -522,6 +564,78 @@ const converterValorParaNumero = (valorFormatado) => {
   }
   
   return parseFloat(valorLimpo) || 0;
+};
+
+// ✅ GERAR LINK ÚNICO PARA PAGAMENTO
+const gerarLinkUnico = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// ✅ NOTIFICAR CLIENTE SOBRE PAGAMENTO APROVADO
+const notificarClientePagamentoAprovado = async (cliente, pagamento, pagamentoMP) => {
+  try {
+    if (!cliente.telefone) {
+      return { success: false, error: 'Cliente sem telefone' };
+    }
+
+    const telefoneFormatado = formatPhoneNumber(cliente.telefone);
+    if (!telefoneFormatado) {
+      return { success: false, error: 'Telefone inválido' };
+    }
+
+    const metodoPagamento = pagamentoMP?.payment_method_id || pagamento.tipo?.toUpperCase() || 'N/A';
+    let mensagem = `✅ *PAGAMENTO APROVADO!*\n\n`;
+    mensagem += `👤 *Cliente:* ${cliente.nome}\n`;
+    mensagem += `📄 *Descrição:* ${pagamento.titulo}\n`;
+    mensagem += `💰 *Valor:* R$ ${pagamento.valor}\n`;
+    mensagem += `💳 *Método:* ${metodoPagamento}\n`;
+    mensagem += `🆔 *ID:* #${pagamento.id}\n`;
+    mensagem += `📅 *Data:* ${new Date().toLocaleString('pt-BR')}\n\n`;
+    mensagem += `Obrigado pelo pagamento!`;
+
+    return await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem);
+  } catch (error) {
+    console.error('Erro ao notificar cliente sobre pagamento aprovado:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ✅ NOTIFICAR ADMINISTRADORES SOBRE PAGAMENTO APROVADO
+const notificarAdministradoresPagamentoAprovado = async (pagamento, pagamentoMP) => {
+  try {
+    const admins = await User.findAll({
+      where: { is_administrador: true }
+    });
+
+    const resultados = [];
+    for (const admin of admins) {
+      if (!admin.telefone) continue;
+      const telefoneFormatado = formatPhoneNumber(admin.telefone);
+      if (!telefoneFormatado) continue;
+
+      const metodoPagamento = pagamentoMP?.payment_method_id || pagamento.tipo?.toUpperCase() || 'N/A';
+      let mensagem = `💰 *PAGAMENTO RECEBIDO!*\n\n`;
+      mensagem += `👤 *Cliente:* ${pagamento.cliente?.nome || 'N/A'}\n`;
+      mensagem += `📄 *Descrição:* ${pagamento.titulo}\n`;
+      mensagem += `💰 *Valor:* R$ ${pagamento.valor}\n`;
+      mensagem += `💳 *Método:* ${metodoPagamento}\n`;
+      mensagem += `🆔 *ID:* #${pagamento.id}\n`;
+      mensagem += `📅 *Data:* ${new Date().toLocaleString('pt-BR')}`;
+
+      const resultado = await enviarWhatsAppViaBaileys(telefoneFormatado, mensagem);
+      resultados.push({ admin: admin.email, ...resultado });
+    }
+
+    return { success: true, resultados };
+  } catch (error) {
+    console.error('Erro ao notificar administradores:', error);
+    return { success: false, error: error.message };
+  }
 };
 
 // ✅ CRIAR BOLETO COM ENVIO AUTOMÁTICO VIA BAILEYS
@@ -734,7 +848,7 @@ router.post('/boleto', async (req, res) => {
       console.error('❌ Erro no Mercado Pago:', mpError);
       
       await pagamento.update({ 
-        status: 'erro',
+        status: 'cancelado',
         observacoes: `${observacoes || ''}\n\nErro Mercado Pago: ${mpError.message}`
       });
 
@@ -945,7 +1059,7 @@ router.post('/pix', async (req, res) => {
       console.error('❌ Erro no Mercado Pago PIX:', mpError);
       
       await pagamento.update({ 
-        status: 'erro',
+        status: 'cancelado',
         observacoes: `${observacoes || ''}\n\nErro Mercado Pago: ${mpError.message}`
       });
 
@@ -1330,53 +1444,6 @@ router.post('/:id/enviar-email', async (req, res) => {
     res.status(500).json({
       error: 'Erro interno do servidor',
       details: error.message
-    });
-  }
-});
-
-// ✅ ROTA PÚBLICA PARA ACESSAR PAGAMENTO (SEM AUTENTICAÇÃO)
-router.get('/publico/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const pagamento = await Pagamento.findByPk(id, {
-      include: [
-        {
-          model: Cliente,
-          as: 'cliente',
-          attributes: ['id', 'nome', 'email'] // Dados limitados por segurança
-        }
-      ]
-    });
-
-    if (!pagamento) {
-      return res.status(404).json({ error: 'Pagamento não encontrado' });
-    }
-
-    // Retornar apenas dados necessários para o cliente
-    res.json({
-      pagamento: {
-        id: pagamento.id,
-        titulo: pagamento.titulo,
-        descricao: pagamento.descricao,
-        valor: pagamento.valor,
-        parcelas: pagamento.parcelas,
-        valor_parcela: pagamento.valor_parcela,
-        tipo: pagamento.tipo,
-        status: pagamento.status,
-        data_vencimento: pagamento.data_vencimento,
-        link_pagamento: pagamento.link_pagamento,
-        created_at: pagamento.created_at,
-        cliente: {
-          nome: pagamento.cliente.nome
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao buscar pagamento público:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor'
     });
   }
 });

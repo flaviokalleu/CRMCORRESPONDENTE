@@ -43,6 +43,10 @@ const propostaRoutes = require('./propostaRoutes');
 const notificacaoRoutes = require('./notificacaoRoutes');
 const timelineRoutes = require('./timelineRoutes');
 
+// Rotas anteriormente órfãs
+const documentRoutes = require('./documentRoutes');
+const startCronJobs = require('./cronJobs');
+
 // SaaS
 const superAdminRoutes = require('./superAdminRoutes');
 const tenantRoutes = require('./tenantRoutes');
@@ -100,23 +104,23 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api', portalInquilinoRoutes); // manter no topo para evitar conflito com rotas dinâmicas
   app.use('/api/protected', protectedRoutes);
   app.use('/api', dashboardAluguelRoutes); // ANTES do dashboardRoutes para evitar conflito
-  app.use('/api/dashboard', dashboardRoutes);
-  app.use('/api/corretor', corretorRoutes);
+  app.use('/api/dashboard', authenticateToken, resolveTenant, dashboardRoutes);
+  app.use('/api/corretor', authenticateToken, resolveTenant, corretorRoutes);
   app.use('/api/correspondente', correspondenteRoutes);
   app.use('/api/listadecorretores', listadecorretores);
   app.use('/api/admin', adminRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/report', reportRoutes);
   app.use('/api/listadeclientes', listadeclientesRoutes);
-  app.use('/api/imoveis', imoveisRouter);
+  app.use('/api/imoveis', authenticateToken, resolveTenant, imoveisRouter);
   app.use('/api/notas', notasRouter);
   app.use('/api', configurationsRoute);
   app.use('/api', locationsRoute);
-  app.use('/api/alugueis', alugueisRouter);
+  app.use('/api/alugueis', authenticateToken, resolveTenant, alugueisRouter);
   app.use('/api/whatsapp', whatsappRoutes);
   app.use('/api', lembreteRoutes);
   app.use('/api/acessos', acessosRoutes);
-  app.use('/api', clienteAluguelRoutes);
+  app.use('/api', authenticateToken, resolveTenant, clienteAluguelRoutes);
   app.use('/api', asaasWebhookRoutes);
   app.use('/api', contratoAluguelRoutes);
   app.use('/api', contratoRoutes);
@@ -127,7 +131,7 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   }, repasseRoutes);
   app.use('/api', vistoriaRoutes);
   app.use('/api', chamadoRoutes);
-  app.use('/api/laudos', laudosRoutes);
+  app.use('/api/laudos', authenticateToken, resolveTenant, laudosRoutes);
   app.use('/api/simulacoes', simulacaoRoutes);
   app.use('/api/visitas', visitaNewRoutes);
   app.use('/api/propostas', propostaRoutes);
@@ -136,13 +140,19 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api/pagamentos', pagamentosRoutes);
 
   // Rotas financeiras
-  app.use('/api/receitas', require('./receitas'));
-  app.use('/api/despesas', require('./despesas'));
-  app.use('/api/comissoes', require('./comissoes'));
-  app.use('/api/fluxocaixa', require('./fluxocaixa'));
+  app.use('/api/receitas', authenticateToken, resolveTenant, require('./receitas'));
+  app.use('/api/despesas', authenticateToken, resolveTenant, require('./despesas'));
+  app.use('/api/comissoes', authenticateToken, resolveTenant, require('./comissoes'));
+  app.use('/api/fluxocaixa', authenticateToken, resolveTenant, require('./fluxocaixa'));
+
+  // Upload de documentos
+  app.use('/api/documentos', documentRoutes);
 
   // Rota principal de clientes (deve vir por ÚLTIMO para evitar conflitos)
   app.use('/api/', clienteRoutes);
+
+  // Iniciar cron jobs
+  startCronJobs();
 }
 
 module.exports = { mountRoutes };

@@ -11,6 +11,11 @@ module.exports = (sequelize) => {
     data: DataTypes.DATEONLY,
     contratoId: DataTypes.INTEGER,
     corretorId: DataTypes.INTEGER,
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
+    },
   }, {
     sequelize,
     modelName: 'Despesa',

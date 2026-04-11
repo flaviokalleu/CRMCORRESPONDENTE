@@ -8,15 +8,15 @@ const { Tenant, Subscription, Plan } = require('../models');
  */
 const resolveTenant = async (req, res, next) => {
   try {
-    // Super admin pode acessar sem tenant específico ou com header X-Tenant-Id
-    if (req.user && req.user.is_super_admin) {
+    // Super admin ou administrador pode acessar sem tenant específico ou com header X-Tenant-Id
+    if (req.user && (req.user.is_super_admin || req.user.is_administrador)) {
       const headerTenantId = req.headers['x-tenant-id'];
       if (headerTenantId) {
         req.tenantId = parseInt(headerTenantId, 10);
       } else {
         req.tenantId = req.user.tenant_id;
       }
-      req.isSuperAdmin = true;
+      req.isSuperAdmin = req.user.is_super_admin || false;
       return next();
     }
 
@@ -60,8 +60,8 @@ const resolveTenant = async (req, res, next) => {
  */
 const checkSubscription = async (req, res, next) => {
   try {
-    // Super admin sempre tem acesso
-    if (req.isSuperAdmin) return next();
+    // Super admin ou administrador sempre tem acesso
+    if (req.isSuperAdmin || (req.user && req.user.is_administrador)) return next();
 
     const subscription = await Subscription.findOne({
       where: {

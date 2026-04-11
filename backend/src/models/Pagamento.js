@@ -233,6 +233,11 @@ module.exports = (sequelize) => {
       allowNull: true,
       unique: true,
       comment: 'Link único para esta parcela específica'
+    },
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
     }
   }, {
     sequelize,

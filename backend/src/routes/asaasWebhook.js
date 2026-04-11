@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { ClienteAluguel, CobrancaAluguel, Tenant } = require('../models');
-const { client, isAuthenticated } = require('./whatsappRoutes');
 const { gerarReciboPDF } = require('../services/reciboService');
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const WHATSAPP_API_URL = `${BACKEND_URL}/api/whatsapp`;
 const { processarRepasse } = require('../services/repasseService');
 
 const WEBHOOK_TOKEN_GLOBAL = process.env.ASAAS_WEBHOOK_TOKEN;
@@ -220,16 +222,26 @@ router.get('/asaas/teste', async (req, res) => {
   }
 });
 
-// Helper para enviar WhatsApp
-async function enviarWhatsApp(telefone, mensagem) {
+// Helper para enviar WhatsApp via API Baileys
+async function enviarWhatsApp(telefone, mensagem, tenantId) {
   try {
-    if (client && isAuthenticated) {
-      const numero = telefone.replace(/\D/g, '');
-      const destinatario = numero.startsWith('55') ? numero : `55${numero}`;
-      await client.sendMessage(`${destinatario}@c.us`, mensagem);
+    const numero = telefone.replace(/\D/g, '');
+    const destinatario = numero.startsWith('55') ? numero : `55${numero}`;
+
+    const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {})
+      },
+      body: JSON.stringify({ phone: destinatario, message: mensagem })
+    });
+
+    const result = await response.json();
+    if (result.success) {
       console.log('WhatsApp enviado para:', destinatario);
     } else {
-      console.log('WhatsApp nao disponivel, mensagem nao enviada:', mensagem);
+      console.log('WhatsApp nao disponivel, mensagem nao enviada:', result.message);
     }
   } catch (error) {
     console.error('Erro ao enviar WhatsApp:', error.message);

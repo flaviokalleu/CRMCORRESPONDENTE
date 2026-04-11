@@ -85,3 +85,19 @@ Users have boolean flags (`is_administrador`, `is_correspondente`, `is_corretor`
 - WhatsApp Baileys reconnection has a 5-attempt limit with exponential backoff. Error 405 means the connection is blocked and should not retry.
 - File upload paths differ by user role: `imagem_administrador/`, `imagem_correspondente/`, `corretor/`, `imagem_user/`.
 - All text content is in Brazilian Portuguese.
+
+## Skills Reference
+
+Behavioral rules and coding guidelines are in `claude-skills/`. Consult them when working on related tasks:
+
+| Folder | When to use |
+|---|---|
+| `core/` | Token optimization (economia máxima), diagramação de telas, clean architecture, code quality, performance |
+| `security/` | Auth, input validation, secrets, OWASP compliance |
+| `backend/` | API design, database/Sequelize, error handling, services |
+| `frontend/` | React patterns, UI/Tailwind, state management, frontend perf |
+| `automation/` | Workflow automation, scripts, CI triggers |
+| `testing/` | Unit, integration, E2E tests, mocking strategies |
+| `devops/` | Docker, CI/CD, monitoring, infrastructure |
+| `ai/` | AI integration, prompt engineering, data processing |
+| `advanced/` | Debugging, refactoring, profiling, migrations, code review |

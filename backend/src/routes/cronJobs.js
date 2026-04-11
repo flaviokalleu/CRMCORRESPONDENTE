@@ -1,8 +1,34 @@
 const cron = require('node-cron');
 const moment = require('moment-timezone');
 const { Lembrete, ClienteAluguel, CobrancaAluguel, ReguaCobranca } = require('../models');
-const { client, isAuthenticated } = require('./whatsappRoutes');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const WHATSAPP_API_URL = `${BACKEND_URL}/api/whatsapp`;
+
+// Helper para enviar WhatsApp via API Baileys
+async function enviarWhatsAppMsg(telefone, mensagem) {
+  try {
+    const numero = telefone.replace(/\D/g, '');
+    const destinatario = numero.startsWith('55') ? numero : `55${numero}`;
+    const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: destinatario, message: mensagem })
+    });
+    const result = await response.json();
+    if (result.success) {
+      console.log(`WhatsApp enviado para ${destinatario}`);
+      return true;
+    } else {
+      console.log('WhatsApp nao disponivel:', result.message);
+      return false;
+    }
+  } catch (error) {
+    console.error('Erro ao enviar WhatsApp:', error.message);
+    return false;
+  }
+}
 const { backupDatabase } = require('../utils/backup');
 const asaasService = require('../services/asaasService');
 const { calcularScoreTodosInquilinos } = require('../services/scoreInquilinoService');
@@ -43,14 +69,10 @@ const verificarLembretesParaNotificacao = async () => {
       const diffMinutes = lembreteData.diff(now, 'minutes');
 
       if (diffMinutes === 15) {
-        if (client && isAuthenticated) {
-          const destinatario = lembrete.destinatario || defaultPhoneNumber;
+        const destinatario = lembrete.destinatario || defaultPhoneNumber;
+        if (destinatario) {
           const message = `Lembrete: ${lembrete.titulo} - ${lembrete.descricao} está agendado para daqui a 15 minutos.`;
-
-          await client.sendMessage(`55${destinatario}@c.us`, message);
-          console.log(`Notificação enviada para ${destinatario}`);
-        } else {
-          console.error('Cliente WhatsApp não está pronto.');
+          await enviarWhatsAppMsg(destinatario, message);
         }
       }
     }
@@ -70,9 +92,8 @@ const verificarVencimentosParaNotificacao = async () => {
       const diffDays = diaVencimento.diff(now, 'days');
 
       if (diffDays === 3) {
-        if (client && isAuthenticated) {
-          const destinatario = cliente.telefone || defaultPhoneNumber;
-
+        const destinatario = cliente.telefone || defaultPhoneNumber;
+        if (destinatario) {
           // Buscar link de pagamento Asaas se disponível
           let linkPagamento = '';
           if (cliente.asaas_subscription_id) {
@@ -93,11 +114,7 @@ const verificarVencimentosParaNotificacao = async () => {
           }
 
           const message = `Olá tudo bem? ${cliente.nome} seu aluguel vence em 3 dias. Por favor não esqueça de enviar seu pagamento.${linkPagamento}`;
-
-          await client.sendMessage(`55${destinatario}@c.us`, message);
-          console.log(`Notificação de vencimento enviada para ${destinatario}`);
-        } else {
-          console.error('Cliente WhatsApp não está pronto.');
+          await enviarWhatsAppMsg(destinatario, message);
         }
       }
     }
@@ -222,11 +239,10 @@ const enviarRelatorioMensalProprietario = async () => {
 
     const mensagem = `Relatorio de Alugueis - ${nomeMes}\n\nRecebido: R$ ${totalRecebido.toFixed(2)} (${pagos.length} inquilinos)\nPendente: R$ ${totalPendente.toFixed(2)} (${pendentes.length} inquilinos)\nTaxa de adimplencia: ${taxaAdimplencia}%${inadimplentesMsg ? '\n\nInadimplentes:' + inadimplentesMsg : ''}\n\nPrevisao proximo mes: R$ ${previsao.toFixed(2)}`;
 
-    if (client && isAuthenticated && defaultPhoneNumber) {
-      await client.sendMessage(`55${defaultPhoneNumber}@c.us`, mensagem);
-      console.log('Relatorio mensal enviado para:', defaultPhoneNumber);
+    if (defaultPhoneNumber) {
+      await enviarWhatsAppMsg(defaultPhoneNumber, mensagem);
     } else {
-      console.log('Relatorio mensal (WhatsApp indisponivel):', mensagem);
+      console.log('Relatorio mensal (sem telefone configurado):', mensagem);
     }
   } catch (error) {
     console.error('Erro ao gerar relatorio mensal:', error);
@@ -254,7 +270,7 @@ const startCronJobs = async () => {
     if (!isHorarioComercial()) return;
     console.log('Executando regua de cobranca automatica...');
     try {
-      const enviados = await processarReguaCobranca(ClienteAluguel, CobrancaAluguel, ReguaCobranca, client, isAuthenticated);
+      const enviados = await processarReguaCobranca(ClienteAluguel, CobrancaAluguel, ReguaCobranca, enviarWhatsAppMsg);
       console.log(`Regua de cobranca: ${enviados} mensagens enviadas`);
     } catch (error) {
       console.error('Erro na regua de cobranca:', error);
@@ -294,11 +310,10 @@ const startCronJobs = async () => {
     try {
       const alertas = await verificarContratosReajuste(ClienteAluguel);
       for (const alerta of alertas) {
-        if (client && isAuthenticated) {
-          const destinatario = alerta.cliente.telefone || defaultPhoneNumber;
+        const destinatario = alerta.cliente.telefone || defaultPhoneNumber;
+        if (destinatario) {
           const msg = `Ola ${alerta.cliente.nome}! Informamos que seu contrato de aluguel tera reajuste em 30 dias. Valor atual: R$ ${alerta.reajuste.valor_atual.toFixed(2)}. Valor estimado apos reajuste (${alerta.reajuste.indice_nome}): R$ ${alerta.reajuste.valor_reajustado.toFixed(2)}.`;
-          await client.sendMessage(`55${destinatario.replace(/\D/g, '')}@c.us`, msg);
-          console.log('Alerta de reajuste enviado para:', destinatario);
+          await enviarWhatsAppMsg(destinatario, msg);
         }
       }
     } catch (error) {

@@ -83,6 +83,11 @@ module.exports = (sequelize, DataTypes) => {
           this.setDataValue('foto_adicional', JSON.stringify([]));
         }
       }
+    },
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
     }
   }, {
     tableName: 'alugueis',

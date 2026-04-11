@@ -5,7 +5,7 @@ const fs = require('fs');
 const { User, Laudo, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { authenticateToken } = require('./authRoutes');
-const { uploadFields, logUploadedFiles, handleMulterError, uploadDir } = require('../middleware/upload');
+const { uploadFields, logUploadedFiles, handleMulterError, uploadDirectories } = require('../middleware/upload');
 
 // ✅ LISTAR TODOS OS LAUDOS
 router.get('/', authenticateToken, async (req, res) => {
@@ -442,7 +442,7 @@ router.put('/:id', authenticateToken, uploadFields, async (req, res) => {
           // Remover arquivos do disco
           for (const arquivo of arquivosAtuais[categoria]) {
             try {
-              const caminhoArquivo = path.join(uploadDir, arquivo.filename);
+              const caminhoArquivo = path.join(uploadDirectories.clientes, arquivo.filename);
               if (fs.existsSync(caminhoArquivo)) {
                 fs.unlinkSync(caminhoArquivo);
               }
@@ -560,7 +560,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         if (Array.isArray(categoria)) {
           categoria.forEach(arquivo => {
             try {
-              const caminhoArquivo = path.join(uploadDir, arquivo.filename);
+              const caminhoArquivo = path.join(uploadDirectories.clientes, arquivo.filename);
               if (fs.existsSync(caminhoArquivo)) {
                 fs.unlinkSync(caminhoArquivo);
               }
@@ -635,7 +635,7 @@ router.get('/:id/arquivo/:categoria/:filename', authenticateToken, async (req, r
       });
     }
 
-    const caminhoArquivo = path.join(uploadDir, filename);
+    const caminhoArquivo = path.join(uploadDirectories.clientes, filename);
     if (!fs.existsSync(caminhoArquivo)) {
       return res.status(404).json({
         success: false,

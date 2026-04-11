@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const multer = require('multer');
-const { User, Cliente, Nota, TelaAprovacao, sequelize } = require('../models');
+const { User, Cliente, Nota, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { authenticateToken } = require('./authRoutes');
 
@@ -439,8 +439,9 @@ router.post('/clientes',
       if (req.files?.notas && req.files.notas.length > 0) {
         const notasPromises = req.files.notas.map(file =>
           Nota.create({
-            clienteId: cliente.id,
-            content: `Nota: ${file.originalname}`
+            cliente_id: cliente.id,
+            texto: `Nota: ${file.originalname}`,
+            criado_por_id: user.id
           }, { transaction })
         );
         await Promise.all(notasPromises);
@@ -674,8 +675,9 @@ router.put('/clientes/:id',
       if (req.files?.notas && req.files.notas.length > 0) {
         const notasPromises = req.files.notas.map(file =>
           Nota.create({
-            clienteId: cliente.id,
-            content: `Nota atualizada: ${file.originalname}`
+            cliente_id: cliente.id,
+            texto: `Nota atualizada: ${file.originalname}`,
+            criado_por_id: req.user.id
           }, { transaction })
         );
         await Promise.all(notasPromises);
@@ -1336,7 +1338,7 @@ router.get('/clientes/:id/documentos/:tipo/verificar', authenticateToken, async 
 const upload = multer({ dest: 'uploads/tela_aprovacao/' });
 
 // Rota para upload de tela de aprovação
-router.post('/clientes/:id/tela_aprovacao', upload.array('tela_aprovacao'), async (req, res) => {
+router.post('/clientes/:id/tela_aprovacao', authenticateToken, upload.array('tela_aprovacao'), async (req, res) => {
   try {
     const { id } = req.params;
     const files = req.files;
@@ -1345,18 +1347,25 @@ router.post('/clientes/:id/tela_aprovacao', upload.array('tela_aprovacao'), asyn
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // Processar e salvar informações dos arquivos no banco de dados
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+
+    // Salvar caminhos dos arquivos no campo tela_aprovacao do cliente
     const fileData = files.map(file => ({
-      clienteId: id,
       filePath: file.path,
       fileName: file.originalname,
     }));
 
-    await TelaAprovacao.bulkCreate(fileData);
+    const existingFiles = cliente.tela_aprovacao ? JSON.parse(cliente.tela_aprovacao) : [];
+    const updatedFiles = [...existingFiles, ...fileData];
+
+    await cliente.update({ tela_aprovacao: JSON.stringify(updatedFiles) });
 
     res.status(200).json({ message: 'Arquivos enviados com sucesso', files: fileData });
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao enviar tela de aprovação para cliente', id, ':', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

@@ -23,7 +23,7 @@ const uploadFields = upload.fields([
   { name: 'imagem_capa', maxCount: 1 }
 ]);
 
-// Rotas
+// Rotas (autenticação aplicada no mount em index.js)
 router.get('/', imovelController.listarImoveis);
 router.get('/imoveis', imovelController.listarImoveis);
 router.get('/busca', imovelController.buscarImoveis);

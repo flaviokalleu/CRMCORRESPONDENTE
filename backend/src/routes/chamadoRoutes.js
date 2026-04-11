@@ -1,9 +1,30 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { ChamadoManutencao, ClienteAluguel, Aluguel } = require('../models');
-const { client, isAuthenticated } = require('./whatsappRoutes');
 
 const router = express.Router();
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const WHATSAPP_API_URL = `${BACKEND_URL}/api/whatsapp`;
+
+// Helper para enviar WhatsApp via API Baileys
+async function enviarWhatsApp(telefone, mensagem) {
+  try {
+    const numero = telefone.replace(/\D/g, '');
+    const destinatario = numero.startsWith('55') ? numero : `55${numero}`;
+    const response = await fetch(`${WHATSAPP_API_URL}/send-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: destinatario, message: mensagem })
+    });
+    const result = await response.json();
+    if (!result.success) {
+      console.log('WhatsApp nao disponivel:', result.message);
+    }
+  } catch (error) {
+    console.error('Erro ao enviar WhatsApp:', error.message);
+  }
+}
 const JWT_SECRET = process.env.JWT_SECRET_KEY || 'portal-inquilino-secret';
 
 // Middleware do portal do inquilino
@@ -36,9 +57,9 @@ router.post('/portal/chamados', authenticateInquilino, async (req, res) => {
 
     // Notificar admin via WhatsApp
     const defaultPhone = process.env.DEFAULT_PHONE_NUMBER;
-    if (client && isAuthenticated && defaultPhone) {
+    if (defaultPhone) {
       const prioridadeEmoji = { baixa: '', media: '', alta: '!', urgente: 'URGENTE!' }[chamado.prioridade] || '';
-      await client.sendMessage(`55${defaultPhone}@c.us`,
+      await enviarWhatsApp(defaultPhone,
         `Novo chamado de manutencao ${prioridadeEmoji}\n\nInquilino: ${cliente?.nome || 'N/A'}\nTitulo: ${titulo}\nCategoria: ${categoria || 'outros'}\nPrioridade: ${chamado.prioridade}\n\n${descricao}`
       );
     }
@@ -109,14 +130,11 @@ router.put('/chamados/:id', async (req, res) => {
     });
 
     // Notificar inquilino via WhatsApp sobre atualização
-    if (chamado.clienteAluguel && client && isAuthenticated) {
-      const telefone = chamado.clienteAluguel.telefone.replace(/\D/g, '');
-      const dest = telefone.startsWith('55') ? telefone : `55${telefone}`;
-
+    if (chamado.clienteAluguel?.telefone) {
       let msg = `Atualizacao do seu chamado "${chamado.titulo}": Status agora e "${status || chamado.status}".`;
       if (resposta_admin) msg += `\n\nResposta: ${resposta_admin}`;
 
-      await client.sendMessage(`${dest}@c.us`, msg);
+      await enviarWhatsApp(chamado.clienteAluguel.telefone, msg);
     }
 
     res.status(200).json(chamado);

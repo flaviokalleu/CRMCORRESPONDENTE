@@ -10,8 +10,14 @@ module.exports = {
       try {
         await queryInterface.addIndex(table, columns, options);
       } catch (e) {
-        // Índice já existe — ignorar
-        if (!e.message.includes('already exists')) throw e;
+        // Índice já existe ou tabela não existe — ignorar
+        if (
+          e.message.includes('already exists') ||
+          e.message.includes('já existe') ||
+          e.message.includes('não existe') ||
+          e.message.includes('does not exist')
+        ) return;
+        throw e;
       }
     };
 
@@ -40,7 +46,7 @@ module.exports = {
     await addIndexSafe('alugueis', ['tenant_id'], { name: 'idx_alugueis_tenant_id' });
 
     // ClienteAluguel
-    await addIndexSafe('cliente_alugueis', ['tenant_id'], { name: 'idx_cliente_alugueis_tenant_id' });
+    await addIndexSafe('cliente_aluguels', ['tenant_id'], { name: 'idx_cliente_aluguels_tenant_id' });
 
     // Notas
     await addIndexSafe('notas', ['cliente_id'], { name: 'idx_notas_cliente_id' });
@@ -73,7 +79,7 @@ module.exports = {
     await removeIndexSafe('pagamentos', 'idx_pagamentos_status');
     await removeIndexSafe('pagamentos', 'idx_pagamentos_created_at');
     await removeIndexSafe('alugueis', 'idx_alugueis_tenant_id');
-    await removeIndexSafe('cliente_alugueis', 'idx_cliente_alugueis_tenant_id');
+    await removeIndexSafe('cliente_aluguels', 'idx_cliente_aluguels_tenant_id');
     await removeIndexSafe('notas', 'idx_notas_cliente_id');
     await removeIndexSafe('acessos', 'idx_acessos_user_id');
     await removeIndexSafe('acessos', 'idx_acessos_created_at');

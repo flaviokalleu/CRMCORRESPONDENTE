@@ -29,7 +29,7 @@ const uploadFields = upload.fields([
   { name: 'fotos_adicionais', maxCount: 10 }
 ]);
 
-// Rotas
+// Rotas (autenticação aplicada no mount em index.js)
 router.get('/', aluguelController.listarAlugueis);
 router.post('/', uploadFields, aluguelController.criarAluguel);
 router.put('/:id', uploadFields, aluguelController.atualizarAluguel);

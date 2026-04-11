@@ -175,6 +175,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: [],
     },
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
+    },
+  }, {
+    tableName: 'cliente_aluguels',
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   });
 
   ClienteAluguel.associate = function(models) {

@@ -5,8 +5,9 @@ const multer = require('multer');
 const { ClienteAluguel, CobrancaAluguel, Aluguel, sequelize } = require('../models');
 const asaasService = require('../services/asaasService');
 const { calcularScoreInquilino } = require('../services/scoreInquilinoService');
-
 const router = express.Router();
+
+// Autenticação aplicada no mount em index.js
 
 let clienteAluguelColumnsCache = null;
 

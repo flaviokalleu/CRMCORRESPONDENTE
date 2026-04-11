@@ -10,6 +10,11 @@ module.exports = (sequelize) => {
     descricao: DataTypes.STRING,
     data: DataTypes.DATEONLY,
     contratoId: DataTypes.INTEGER,
+    tenant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'tenants', key: 'id' }
+    },
   }, {
     sequelize,
     modelName: 'Receita',

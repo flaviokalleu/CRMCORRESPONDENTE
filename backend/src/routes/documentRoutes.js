@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const bb = require('express-busboy');
-const { authenticateToken } = require('../middleware/authMiddleware'); // Corrija o caminho se necessário
+const authenticateToken = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
