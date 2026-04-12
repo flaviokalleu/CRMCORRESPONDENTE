@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { io } from "socket.io-client";
+import { getSocketUrl } from "../utils/socketConfig";
 import {
   MessageCircle,
   Wifi,
@@ -534,7 +535,7 @@ const WhatsAppQRCode = () => {
 
   // Conexão Socket.IO — substitui todo o polling
   useEffect(() => {
-    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:8000';
+    const socketUrl = getSocketUrl();
     const socket = io(socketUrl, { withCredentials: true, transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 

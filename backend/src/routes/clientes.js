@@ -374,6 +374,10 @@ router.post('/clientes',
       }
       const { user, role } = userResult;
 
+      if (!req.tenantId) {
+        throw new Error('Tenant não identificado para criação do cliente');
+      }
+
       // Log das datas recebidas no body
       console.log('📅 Recebido data_nascimento:', req.body.data_nascimento);
       console.log('📅 Recebido data_criacao:', req.body.data_criacao);
@@ -397,6 +401,7 @@ router.post('/clientes',
         userIdParaVincular = req.body.user_id;
       }
       clienteData.userId = userIdParaVincular;
+      clienteData.tenant_id = req.tenantId;
 
       // Data de criação personalizada
       if (req.body.data_criacao) {
@@ -877,7 +882,11 @@ router.get('/clientes', authenticateToken, async (req, res) => {
     }
     const { user, role } = userResult;
 
-    const whereClause = {};
+    if (!req.tenantId) {
+      return res.status(403).json({ error: 'Tenant não identificado para listagem de clientes' });
+    }
+
+    const whereClause = { tenant_id: req.tenantId };
     // Filtro por corretor (admin/correspondente pode filtrar qualquer userId, corretor só vê seus clientes)
     if (corretor && corretor !== 'Todos') {
       whereClause.userId = corretor;

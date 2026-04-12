@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // Importação centralizada de rotas customizadas
 import customRoutes from './routes';
-import { socket } from './index';
 import { SocketProvider } from './context/SocketContext';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';

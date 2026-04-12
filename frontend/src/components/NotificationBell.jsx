@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, X, Check, CheckCheck, Clock, AlertTriangle, DollarSign, Calendar, FileText, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getSocketUrl } from "../utils/socketConfig";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
@@ -68,7 +69,7 @@ const NotificationBell = () => {
   useEffect(() => {
     try {
       const { io } = require("socket.io-client");
-      const socketUrl = process.env.REACT_APP_SOCKET_URL || "http://localhost:8000";
+      const socketUrl = getSocketUrl();
       const socket = io(socketUrl, { transports: ["websocket"] });
 
       // Escutar notificações do usuário

@@ -252,7 +252,10 @@ const ClientForm = ({ onSuccess }) => {
       setConjugeDataAdmissao("");
     } catch (error) {
       let msg = "Erro ao adicionar cliente.";
-      if (error.response?.data?.message) msg = error.response.data.message;
+      if (Array.isArray(error.response?.data?.details) && error.response.data.details.length > 0) {
+        msg = error.response.data.details.map((detail) => detail.message).join(' | ');
+      } else if (error.response?.data?.message) msg = error.response.data.message;
+      else if (error.response?.data?.error) msg = error.response.data.error;
       else if (error.message) msg = error.message;
       setMessage(msg); toast.error(msg);
     } finally { setLoading(false); }

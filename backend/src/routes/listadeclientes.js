@@ -42,7 +42,11 @@ router.get('/', authenticateToken, async (req, res) => {
       is_corretor: currentUser.is_corretor
     });
 
-    let whereConditions = {};
+    if (!req.tenantId) {
+      return res.status(403).json({ error: 'Tenant não identificado.' });
+    }
+
+    let whereConditions = { tenant_id: req.tenantId };
 
     // ✅ DETERMINAR PERMISSÕES BASEADO NOS FLAGS DO MODELO USER
     if (currentUser.is_corretor && !currentUser.is_administrador && !currentUser.is_correspondente) {
@@ -148,6 +152,7 @@ router.get('/usuarios', authenticateToken, async (req, res) => {
     }
 
     const usuarios = await User.findAll({
+      where: req.tenantId ? { tenant_id: req.tenantId } : undefined,
       attributes: ['id', 'first_name', 'last_name', 'email', 'username', 'is_corretor', 'is_correspondente', 'is_administrador'],
       order: [['first_name', 'ASC']]
     });

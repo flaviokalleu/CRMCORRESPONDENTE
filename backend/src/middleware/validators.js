@@ -75,7 +75,8 @@ const validateCliente = [
   body('cpf')
     .optional({ values: 'falsy' })
     .custom((value) => {
-      if (value && !isValidCPF(value)) throw new Error('CPF inválido');
+      const cleaned = (value || '').replace(/\D/g, '');
+      if (cleaned && cleaned.length !== 11) throw new Error('CPF deve ter 11 dígitos');
       return true;
     }),
 
