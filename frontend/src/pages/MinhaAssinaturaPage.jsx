@@ -8,7 +8,7 @@ import {
 import axios from "axios";
 import MainLayout from "../layouts/MainLayout";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -32,7 +32,7 @@ const stagger = {
 // --- Status helpers ---
 const STATUS_MAP = {
   active: { label: "Ativo", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  trialing: { label: "PerÃ­odo de Teste", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  trialing: { label: "Período de Teste", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   past_due: { label: "Pagamento Pendente", color: "bg-red-500/20 text-red-400 border-red-500/30" },
   canceled: { label: "Cancelado", color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
 };
@@ -42,9 +42,9 @@ const getStatus = (status) => STATUS_MAP[status] || STATUS_MAP.active;
 // --- Resource config ---
 const RESOURCE_CONFIG = {
   clientes: { label: "Clientes", icon: Users, color: "from-blue-500 to-blue-600" },
-  usuarios: { label: "UsuÃ¡rios", icon: Key, color: "from-violet-500 to-violet-600" },
-  imoveis: { label: "ImÃ³veis", icon: Home, color: "from-emerald-500 to-emerald-600" },
-  alugueis: { label: "AluguÃ©is", icon: FileText, color: "from-orange-500 to-orange-600" },
+  usuarios: { label: "Usuários", icon: Key, color: "from-violet-500 to-violet-600" },
+  imoveis: { label: "Imóveis", icon: Home, color: "from-emerald-500 to-emerald-600" },
+  alugueis: { label: "Aluguéis", icon: FileText, color: "from-orange-500 to-orange-600" },
 };
 
 // --- Sub-components ---
@@ -153,7 +153,7 @@ const PlanCard = ({ plan, isCurrent, onSelect }) => (
       <p className="text-2xl font-extrabold text-white mb-1">
         R$ {Number(plan.price).toFixed(2).replace(".", ",")}
         <span className="text-sm font-normal text-gray-400">
-          /{plan.billing_cycle === "yearly" ? "ano" : "mÃªs"}
+          /{plan.billing_cycle === "yearly" ? "ano" : "mês"}
         </span>
       </p>
     )}
@@ -219,7 +219,7 @@ const MinhaAssinaturaPage = () => {
       setError(null);
     } catch (err) {
       console.error("Erro ao carregar dados da assinatura:", err);
-      setError("NÃ£o foi possÃ­vel carregar os dados da assinatura.");
+      setError("Não foi possível carregar os dados da assinatura.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -334,7 +334,7 @@ const MinhaAssinaturaPage = () => {
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Plano</p>
                   <p className="text-xl font-bold text-white flex items-center gap-2">
                     <Star className="w-5 h-5 text-caixa-orange" />
-                    {plan.name || "â€”"}
+                    {plan.name || "—"}
                   </p>
                 </div>
 
@@ -363,7 +363,7 @@ const MinhaAssinaturaPage = () => {
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Dias Restantes</p>
                   <p className="text-lg font-semibold text-white flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
-                    {daysRemaining !== null ? `${daysRemaining} dias` : "â€”"}
+                    {daysRemaining !== null ? `${daysRemaining} dias` : "—"}
                   </p>
                 </div>
               </div>
@@ -388,11 +388,11 @@ const MinhaAssinaturaPage = () => {
             </Card>
           </motion.div>
 
-          {/* Section 3: Features DisponÃ­veis */}
+          {/* Section 3: Features Disponíveis */}
           {features.length > 0 && (
             <motion.div variants={fadeUp}>
               <Card className="p-6">
-                <SectionTitle icon={Check} title="Features DisponÃ­veis" />
+                <SectionTitle icon={Check} title="Features Disponíveis" />
 
                 <motion.div
                   variants={stagger}

@@ -9,9 +9,9 @@ import {
   List, Mail, Globe, Banknote, Wallet, ArrowRight, Save, Shield, Zap
 } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// --- Design tokens ------------------------------------------------------------
 const CARD = 'rgba(255,255,255,0.06)';
 const BORDER = 'rgba(255,255,255,0.10)';
 const INPUT_BG = 'rgba(255,255,255,0.05)';
@@ -29,7 +29,7 @@ const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
 const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
 const selectClass = `${inputClass} cursor-pointer [&>option]:bg-white [&>option]:text-gray-800`;
 
-// ─── Section wrapper ─────────────────────────────────────────────────────────
+// --- Section wrapper ---------------------------------------------------------
 const FormSection = ({ icon, title, subtitle, children }) => (
   <motion.div variants={fadeUp}
     className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
@@ -158,7 +158,7 @@ const CriarPagamento = ({ onBack }) => {
           data_vencimento: new Date().toISOString().split('T')[0], observacoes: '', parcelas: 1,
           enviar_whatsapp: false, enviar_email: false });
       } else { setError(data.error || 'Erro ao criar pagamento'); }
-    } catch (e) { setError('Erro de conexão. Tente novamente.'); }
+    } catch (e) { setError('Erro de conex�o. Tente novamente.'); }
     finally { setLoading(false); }
   };
 
@@ -171,7 +171,7 @@ const CriarPagamento = ({ onBack }) => {
       <div className="min-h-screen bg-caixa-gradient">
         <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
 
-          {/* ── Header ── */}
+          {/* -- Header -- */}
           <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
             className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -185,7 +185,7 @@ const CriarPagamento = ({ onBack }) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white tracking-tight">Criar Pagamento Universal</h1>
-                <p className="text-[11px] text-white/40">PIX, Cartão, Boleto - todos os métodos em um link</p>
+                <p className="text-[11px] text-white/40">PIX, Cart�o, Boleto - todos os m�todos em um link</p>
               </div>
             </div>
             <Link to="/pagamentos/lista"
@@ -197,14 +197,14 @@ const CriarPagamento = ({ onBack }) => {
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-            {/* ── Formulário (3 cols) ── */}
+            {/* -- Formul�rio (3 cols) -- */}
             <div className="lg:col-span-3">
               <form onSubmit={handleSubmit}>
                 <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-                  {/* ═══ TIPO ═══ */}
+                  {/* --- TIPO --- */}
                   <FormSection icon={<Globe className="w-4 h-4 text-white" />} title="Tipo de Pagamento"
-                    subtitle="Link universal que aceita todos os métodos">
+                    subtitle="Link universal que aceita todos os m�todos">
                     <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}>
                       <div className="flex items-center gap-3 mb-2">
                         <Globe className="w-5 h-5" style={{ color: '#F97316' }} />
@@ -214,7 +214,7 @@ const CriarPagamento = ({ onBack }) => {
                       <div className="grid grid-cols-4 gap-2">
                         {[
                           { icon: Smartphone, label: 'PIX' },
-                          { icon: CreditCard, label: 'Cartão' },
+                          { icon: CreditCard, label: 'Cart�o' },
                           { icon: Banknote, label: 'Boleto' },
                           { icon: Wallet, label: 'Saldo MP' },
                         ].map(({ icon: I, label }) => (
@@ -226,9 +226,9 @@ const CriarPagamento = ({ onBack }) => {
                     </div>
                   </FormSection>
 
-                  {/* ═══ CLIENTE & TÍTULO ═══ */}
+                  {/* --- CLIENTE & T�TULO --- */}
                   <FormSection icon={<User className="w-4 h-4 text-white" />} title="Dados do Pagamento"
-                    subtitle="Cliente, título e descrição">
+                    subtitle="Cliente, t�tulo e descri��o">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="sm:col-span-2">
                         <label className={labelClass}><User className="w-3 h-3" />Cliente *</label>
@@ -242,29 +242,29 @@ const CriarPagamento = ({ onBack }) => {
                         </select>
                       </div>
                       <div>
-                        <label className={labelClass}><FileText className="w-3 h-3" />Título *</label>
+                        <label className={labelClass}><FileText className="w-3 h-3" />T�tulo *</label>
                         <input type="text" value={formData.titulo}
                           onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                          className={inputClass} style={inputStyle} placeholder="Ex: Consultoria Imobiliária" required />
+                          className={inputClass} style={inputStyle} placeholder="Ex: Consultoria Imobili�ria" required />
                       </div>
                       <div>
                         <label className={labelClass}><DollarSign className="w-3 h-3" />Valor *</label>
                         <input type="text" value={formatarValor(formData.valor)}
                           onChange={(e) => setFormData(prev => ({ ...prev, valor: e.target.value.replace(/\D/g, '') }))}
                           className={inputClass} style={inputStyle} placeholder="0,00" required />
-                        <p className="text-[9px] text-white/25 mt-1">Digite apenas números</p>
+                        <p className="text-[9px] text-white/25 mt-1">Digite apenas n�meros</p>
                       </div>
                     </div>
                     <div>
-                      <label className={labelClass}><FileText className="w-3 h-3" />Descrição</label>
+                      <label className={labelClass}><FileText className="w-3 h-3" />Descri��o</label>
                       <textarea value={formData.descricao}
                         onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
                         className={`${inputClass} resize-y min-h-[60px]`} style={inputStyle}
-                        placeholder="Descrição do serviço ou produto" rows="2" />
+                        placeholder="Descri��o do servi�o ou produto" rows="2" />
                     </div>
                   </FormSection>
 
-                  {/* ═══ PARCELAS & VENCIMENTO ═══ */}
+                  {/* --- PARCELAS & VENCIMENTO --- */}
                   <FormSection icon={<CreditCard className="w-4 h-4 text-white" />} title="Parcelamento & Vencimento"
                     subtitle="Defina parcelas e data de vencimento">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -273,9 +273,9 @@ const CriarPagamento = ({ onBack }) => {
                         <select value={formData.parcelas}
                           onChange={(e) => setFormData(prev => ({ ...prev, parcelas: parseInt(e.target.value) }))}
                           className={selectClass} style={inputStyle}>
-                          <option value={1}>À vista</option>
+                          <option value={1}>� vista</option>
                           {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                            <option key={n} value={n}>{n}x - Parcelas automáticas</option>
+                            <option key={n} value={n}>{n}x - Parcelas autom�ticas</option>
                           ))}
                         </select>
                       </div>
@@ -284,7 +284,7 @@ const CriarPagamento = ({ onBack }) => {
                         <input type="date" value={formData.data_vencimento}
                           onChange={(e) => setFormData(prev => ({ ...prev, data_vencimento: e.target.value }))}
                           className={inputClass} style={inputStyle} />
-                        <p className="text-[9px] text-white/25 mt-1">Opcional para PIX e cartão</p>
+                        <p className="text-[9px] text-white/25 mt-1">Opcional para PIX e cart�o</p>
                       </div>
                     </div>
 
@@ -300,7 +300,7 @@ const CriarPagamento = ({ onBack }) => {
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         className="rounded-xl p-4 space-y-2" style={{ backgroundColor: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}>
                         <p className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                          <DollarSign className="w-3.5 h-3.5" style={{ color: '#F97316' }} />Simulação
+                          <DollarSign className="w-3.5 h-3.5" style={{ color: '#F97316' }} />Simula��o
                         </p>
                         <div className="space-y-1 text-[11px]">
                           <div className="flex justify-between"><span className="text-white/50">Original:</span><span className="text-white">R$ {calculoJuros.valor_original.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
@@ -316,18 +316,18 @@ const CriarPagamento = ({ onBack }) => {
                     )}
                   </FormSection>
 
-                  {/* ═══ OBSERVAÇÕES & ENVIO ═══ */}
-                  <FormSection icon={<Mail className="w-4 h-4 text-white" />} title="Observações & Envio"
-                    subtitle="Notas adicionais e canais de notificação">
+                  {/* --- OBSERVA��ES & ENVIO --- */}
+                  <FormSection icon={<Mail className="w-4 h-4 text-white" />} title="Observa��es & Envio"
+                    subtitle="Notas adicionais e canais de notifica��o">
                     <div>
-                      <label className={labelClass}><FileText className="w-3 h-3" />Observações</label>
+                      <label className={labelClass}><FileText className="w-3 h-3" />Observa��es</label>
                       <textarea value={formData.observacoes}
                         onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
                         className={`${inputClass} resize-y min-h-[60px]`} style={inputStyle}
-                        placeholder="Observações adicionais" rows="2" />
+                        placeholder="Observa��es adicionais" rows="2" />
                     </div>
                     <div className="space-y-2.5">
-                      <p className={labelClass}><Shield className="w-3 h-3" />Opções de envio</p>
+                      <p className={labelClass}><Shield className="w-3 h-3" />Op��es de envio</p>
                       {[
                         { id: 'enviar_whatsapp', label: 'Enviar por WhatsApp', icon: Smartphone, color: '#22c55e', field: 'enviar_whatsapp' },
                         { id: 'enviar_email', label: 'Enviar por Email', icon: Mail, color: '#3b82f6', field: 'enviar_email' },
@@ -343,11 +343,11 @@ const CriarPagamento = ({ onBack }) => {
                           <span className="text-xs text-white/60 group-hover:text-white/80 transition-colors">{opt.label}</span>
                         </label>
                       ))}
-                      <p className="text-[9px] text-white/25">O link será enviado pelos canais selecionados</p>
+                      <p className="text-[9px] text-white/25">O link ser� enviado pelos canais selecionados</p>
                     </div>
                   </FormSection>
 
-                  {/* ═══ BOTÃO ═══ */}
+                  {/* --- BOT�O --- */}
                   <motion.div variants={fadeUp}>
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                       type="submit" disabled={loading || loadingClientes}
@@ -366,7 +366,7 @@ const CriarPagamento = ({ onBack }) => {
               </form>
             </div>
 
-            {/* ── Resultado (2 cols) ── */}
+            {/* -- Resultado (2 cols) -- */}
             <div className="lg:col-span-2">
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 className="rounded-2xl p-4 sm:p-5 backdrop-blur-md sticky top-6"
@@ -378,12 +378,12 @@ const CriarPagamento = ({ onBack }) => {
                   <p className="text-sm font-bold text-white">Resultado</p>
                 </div>
 
-                {/* Simulação juros grande */}
+                {/* Simula��o juros grande */}
                 {calculoJuros && formData.parcelas > 1 && !loading && !pagamentoCriado && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4 space-y-3">
                     <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)' }}>
                       <p className="text-xs font-bold text-white mb-3 flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5" style={{ color: '#F97316' }} />Simulação de Parcelamento
+                        <DollarSign className="w-3.5 h-3.5" style={{ color: '#F97316' }} />Simula��o de Parcelamento
                       </p>
                       <div className="grid grid-cols-2 gap-3 text-[11px]">
                         <div><p className="text-white/40">Original</p><p className="text-white font-bold text-base">R$ {calculoJuros.valor_original.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
@@ -432,7 +432,7 @@ const CriarPagamento = ({ onBack }) => {
                       <p className="text-[11px] font-bold text-white flex items-center gap-1.5"><Globe className="w-3 h-3" style={{ color: '#F97316' }} />Detalhes</p>
                       <div className="space-y-1.5 text-[11px]">
                         <div className="flex justify-between"><span className="text-white/40">ID:</span><span className="text-white font-mono">#{pagamentoCriado.pagamento_principal?.id || pagamentoCriado.pagamento?.id}</span></div>
-                        <div className="flex justify-between"><span className="text-white/40">Métodos:</span><span className="text-white">PIX, Cartão, Boleto</span></div>
+                        <div className="flex justify-between"><span className="text-white/40">M�todos:</span><span className="text-white">PIX, Cart�o, Boleto</span></div>
                         <div className="flex justify-between"><span className="text-white/40">Valor:</span><span className="text-white">R$ {pagamentoCriado.pagamento_principal?.valor || pagamentoCriado.pagamento?.valor}</span></div>
                       </div>
                     </div>
@@ -457,7 +457,7 @@ const CriarPagamento = ({ onBack }) => {
 
                     {formData.parcelas > 1 && pagamentoCriado.proximas_parcelas && (
                       <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
-                        <p className="text-[11px] font-bold text-white flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-400" />Parcelas Automáticas</p>
+                        <p className="text-[11px] font-bold text-white flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-400" />Parcelas Autom�ticas</p>
                         <div className="space-y-1 text-[10px]">
                           {pagamentoCriado.proximas_parcelas.slice(0, 3).map((p, i) => (
                             <div key={generateStableKey(p, i)} className="flex justify-between text-white/50">
@@ -482,8 +482,8 @@ const CriarPagamento = ({ onBack }) => {
                         style={{ backgroundColor: 'rgba(249,115,22,0.1)' }}>
                         <Globe className="w-5 h-5" style={{ color: '#F97316' }} />
                       </div>
-                      <p className="text-xs text-white/40">Preencha o formulário</p>
-                      <p className="text-[10px] text-white/25 mt-1">O resultado aparecerá aqui</p>
+                      <p className="text-xs text-white/40">Preencha o formul�rio</p>
+                      <p className="text-[10px] text-white/25 mt-1">O resultado aparecer� aqui</p>
                     </div>
                   </div>
                 )}

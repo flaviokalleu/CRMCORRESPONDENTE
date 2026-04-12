@@ -305,7 +305,7 @@ const ListaPagamentos = () => {  const [pagamentos, setPagamentos] = useState([]
       setLoading(true);
 
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${API_URL}/api/pagamentos/${pagamentoId}/reenviar-notificacoes`, {
+      const response = await fetch(`${API_URL}/pagamentos/${pagamentoId}/reenviar-notificacoes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

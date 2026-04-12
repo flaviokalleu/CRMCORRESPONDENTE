@@ -12,7 +12,7 @@ import Footer from '../components/landpage/Footer';
 import { motion } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '5561994617584';
+const WHATSAPP_NUMBER = '556182511308';
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}`;
 
 const EXEMPLO_IMOVEIS = [

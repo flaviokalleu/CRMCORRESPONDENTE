@@ -164,7 +164,7 @@ const FAQAccordion = () => {
             Não encontrou sua resposta?
           </p>
           <a
-            href="https://wa.me/5561994617584?text=Olá! Tenho uma dúvida sobre os serviços da CRM IMOB"
+            href="https://wa.me/556182511308?text=Olá! Tenho uma dúvida sobre os serviços da CRM IMOB"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border-2 border-[#0B1426] px-7 py-3 text-sm font-semibold text-[#0B1426] transition-all duration-300 hover:bg-[#0B1426] hover:text-white hover:shadow-lg"

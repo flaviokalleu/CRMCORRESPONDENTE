@@ -454,7 +454,7 @@ const ImovelDetail = () => {
     currency: "BRL",
   }).format(valor_venda)}. Veja mais em: ${window.location.href}`;
   
-  const whatsappLink = `https://api.whatsapp.com/send/?phone=5561994617584&text=${encodeURIComponent(whatsappMessage)}`;
+  const whatsappLink = `https://api.whatsapp.com/send/?phone=556182511308&text=${encodeURIComponent(whatsappMessage)}`;
 
   const shareData = {
     title: nome_imovel,

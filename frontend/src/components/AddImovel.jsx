@@ -8,9 +8,9 @@ import {
   ImageIcon, Paperclip, ArrowRight, Globe, Users, Shield
 } from "lucide-react";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// --- Design tokens ------------------------------------------------------------
 const CARD = 'rgba(255,255,255,0.06)';
 const BORDER = 'rgba(255,255,255,0.10)';
 const INPUT_BG = 'rgba(255,255,255,0.05)';
@@ -28,7 +28,7 @@ const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
 const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
 const selectClass = `${inputClass} cursor-pointer [&>option]:bg-white [&>option]:text-gray-800`;
 
-// ─── Section wrapper ─────────────────────────────────────────────────────────
+// --- Section wrapper ---------------------------------------------------------
 const FormSection = ({ icon, title, subtitle, children }) => (
   <motion.div variants={fadeUp}
     className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
@@ -47,7 +47,7 @@ const FormSection = ({ icon, title, subtitle, children }) => (
   </motion.div>
 );
 
-// ─── Input field ─────────────────────────────────────────────────────────────
+// --- Input field -------------------------------------------------------------
 const InputField = ({ label, name, type = 'text', icon: Icon, required, placeholder, value, onChange, error, children, ...props }) => (
   <div className="space-y-1.5">
     <label className={labelClass}>
@@ -68,16 +68,16 @@ const InputField = ({ label, name, type = 'text', icon: Icon, required, placehol
   </div>
 );
 
-// ─── Tag selector (dark theme) ───────────────────────────────────────────────
+// --- Tag selector (dark theme) -----------------------------------------------
 const TagSelector = ({ tags, setTags }) => {
   const [customTag, setCustomTag] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const predefinedTags = [
-    "100% Financiado", "Alto Padrão", "Apartamento", "Casa", "Duplex",
-    "Em construção", "Exclusivos", "Melhores Ofertas", "Próximo ao Centro",
-    "Próximo à Escola", "Próximo ao Comércio", "Aceita Financiamento",
-    "Reformado", "Com Lazer", "Garagem", "Jardim", "Área Privativa"
+    "100% Financiado", "Alto Padr�o", "Apartamento", "Casa", "Duplex",
+    "Em constru��o", "Exclusivos", "Melhores Ofertas", "Pr�ximo ao Centro",
+    "Pr�ximo � Escola", "Pr�ximo ao Com�rcio", "Aceita Financiamento",
+    "Reformado", "Com Lazer", "Garagem", "Jardim", "�rea Privativa"
   ];
 
   const addCustomTag = () => {
@@ -159,7 +159,7 @@ const TagSelector = ({ tags, setTags }) => {
   );
 };
 
-// ─── File drop zone (dark theme) ─────────────────────────────────────────────
+// --- File drop zone (dark theme) ---------------------------------------------
 const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon, value }) => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
@@ -190,7 +190,7 @@ const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon
             Clique ou arraste arquivos
           </p>
           <p className="text-[9px] text-white/20 mt-1">
-            {accept === 'image/*' ? 'PNG, JPG até 10MB' : accept === '.pdf' ? 'PDF até 10MB' : 'Qualquer arquivo'}
+            {accept === 'image/*' ? 'PNG, JPG at� 10MB' : accept === '.pdf' ? 'PDF at� 10MB' : 'Qualquer arquivo'}
           </p>
         </div>
         {value && (
@@ -204,13 +204,13 @@ const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon
   );
 };
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// --- Main component ----------------------------------------------------------
 const AddImovel = () => {
   const [formData, setFormData] = useState({
     nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo",
     quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "",
-    localizacao: "Valparaiso de Goiás - Goiás", exclusivo: "não",
-    temInquilino: "não", situacaoImovel: "", observacoes: ""
+    localizacao: "Valparaiso de Goi�s - Goi�s", exclusivo: "n�o",
+    temInquilino: "n�o", situacaoImovel: "", observacoes: ""
   });
   const [tags, setTags] = useState([]);
   const [files, setFiles] = useState({ documentacao: null, imagens: [], imagemCapa: null });
@@ -236,24 +236,24 @@ const AddImovel = () => {
 
   const validateForm = () => {
     const e = {};
-    if (!formData.nomeImovel.trim()) e.nomeImovel = "Nome é obrigatório";
-    if (!formData.endereco.trim()) e.endereco = "Endereço é obrigatório";
-    if (!formData.quartos) e.quartos = "Quartos é obrigatório";
-    if (!formData.banheiro) e.banheiro = "Banheiros é obrigatório";
-    if (!formData.valorVenda) e.valorVenda = "Valor de venda é obrigatório";
-    if (!formData.situacaoImovel.trim()) e.situacaoImovel = "Situação é obrigatória";
+    if (!formData.nomeImovel.trim()) e.nomeImovel = "Nome � obrigat�rio";
+    if (!formData.endereco.trim()) e.endereco = "Endere�o � obrigat�rio";
+    if (!formData.quartos) e.quartos = "Quartos � obrigat�rio";
+    if (!formData.banheiro) e.banheiro = "Banheiros � obrigat�rio";
+    if (!formData.valorVenda) e.valorVenda = "Valor de venda � obrigat�rio";
+    if (!formData.situacaoImovel.trim()) e.situacaoImovel = "Situa��o � obrigat�ria";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const resetForm = () => {
-    setFormData({ nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo", quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "", localizacao: "Valparaiso de Goiás - Goiás", exclusivo: "não", temInquilino: "não", situacaoImovel: "", observacoes: "" });
+    setFormData({ nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo", quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "", localizacao: "Valparaiso de Goi�s - Goi�s", exclusivo: "n�o", temInquilino: "n�o", situacaoImovel: "", observacoes: "" });
     setTags([]); setFiles({ documentacao: null, imagens: [], imagemCapa: null }); setMessage({ type: '', text: '' }); setErrors({});
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateForm()) { setMessage({ type: 'error', text: 'Corrija os erros no formulário.' }); return; }
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Corrija os erros no formul�rio.' }); return; }
     setLoading(true); setMessage({ type: '', text: '' });
     const submitData = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -271,10 +271,10 @@ const AddImovel = () => {
     if (files.imagemCapa) submitData.append("imagem_capa", files.imagemCapa);
     try {
       await axios.post(`${API_URL}/imoveis`, submitData, { headers: { "Content-Type": "multipart/form-data" } });
-      setMessage({ type: 'success', text: 'Imóvel cadastrado com sucesso!' });
+      setMessage({ type: 'success', text: 'Im�vel cadastrado com sucesso!' });
       setTimeout(() => resetForm(), 2000);
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao cadastrar imóvel.' });
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao cadastrar im�vel.' });
     } finally {
       setLoading(false);
       notificationRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -285,27 +285,27 @@ const AddImovel = () => {
     <div className="min-h-screen w-full bg-caixa-gradient">
       <div className="w-full max-w-6xl mx-auto px-4 py-6 sm:px-6">
 
-        {/* ── Header ── */}
+        {/* -- Header -- */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
             <Home className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Imóvel</h1>
-            <p className="text-[11px] text-white/40">Preencha as informações para cadastrar um novo imóvel</p>
+            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Im�vel</h1>
+            <p className="text-[11px] text-white/40">Preencha as informa��es para cadastrar um novo im�vel</p>
           </div>
         </motion.div>
 
         <form onSubmit={handleSubmit}>
           <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-            {/* ═══ INFORMAÇÕES BÁSICAS ═══ */}
-            <FormSection icon={<Building className="w-4 h-4 text-white" />} title="Informações Básicas"
-              subtitle="Nome, tipo e descrição do imóvel">
+            {/* --- INFORMA��ES B�SICAS --- */}
+            <FormSection icon={<Building className="w-4 h-4 text-white" />} title="Informa��es B�sicas"
+              subtitle="Nome, tipo e descri��o do im�vel">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <InputField label="Nome do Imóvel" name="nomeImovel" icon={Home} required
+                  <InputField label="Nome do Im�vel" name="nomeImovel" icon={Home} required
                     placeholder="Ex: Residencial Jardim Europa" value={formData.nomeImovel}
                     onChange={(e) => handleInputChange('nomeImovel', e.target.value)} error={errors.nomeImovel} />
                 </div>
@@ -316,44 +316,44 @@ const AddImovel = () => {
                       className={selectClass} style={inputStyle} required>
                       <option value="novo">Novo</option>
                       <option value="usado">Usado</option>
-                      <option value="agio">Ágio</option>
+                      <option value="agio">�gio</option>
                     </select>
                   </InputField>
                 </div>
               </div>
               <div>
-                <InputField label="Descrição" name="descricaoImovel" icon={FileText}
+                <InputField label="Descri��o" name="descricaoImovel" icon={FileText}
                   value={formData.descricaoImovel} onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}>
                   <textarea value={formData.descricaoImovel}
                     onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}
                     className={`${inputClass} resize-y min-h-[80px]`} style={inputStyle} rows="3"
-                    placeholder="Descreva detalhes, diferenciais e características..." />
+                    placeholder="Descreva detalhes, diferenciais e caracter�sticas..." />
                 </InputField>
               </div>
             </FormSection>
 
-            {/* ═══ LOCALIZAÇÃO ═══ */}
-            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Localização"
-              subtitle="Endereço e cidade do imóvel">
+            {/* --- LOCALIZA��O --- */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Localiza��o"
+              subtitle="Endere�o e cidade do im�vel">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <InputField label="Endereço" name="endereco" icon={MapPin} required
-                  placeholder="Rua, número, bairro" value={formData.endereco}
+                <InputField label="Endere�o" name="endereco" icon={MapPin} required
+                  placeholder="Rua, n�mero, bairro" value={formData.endereco}
                   onChange={(e) => handleInputChange('endereco', e.target.value)} error={errors.endereco} />
                 <InputField label="Cidade/Estado" name="localizacao" icon={Globe}
                   value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}>
                   <select value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="Valparaiso de Goiás - Goiás">Valparaíso de Goiás - GO</option>
+                    <option value="Valparaiso de Goi�s - Goi�s">Valpara�so de Goi�s - GO</option>
                     <option value="Cidade Ocidental - Goias">Cidade Ocidental - GO</option>
-                    <option value="Luziania - Goias">Luziânia - GO</option>
-                    <option value="Jardim Inga - Goias">Jardim Ingá - GO</option>
+                    <option value="Luziania - Goias">Luzi�nia - GO</option>
+                    <option value="Jardim Inga - Goias">Jardim Ing� - GO</option>
                   </select>
                 </InputField>
               </div>
             </FormSection>
 
-            {/* ═══ CARACTERÍSTICAS ═══ */}
-            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Características"
+            {/* --- CARACTER�STICAS --- */}
+            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Caracter�sticas"
               subtitle="Quartos, banheiros e valores">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <InputField label="Quartos" name="quartos" type="number" icon={Bed} required
@@ -362,7 +362,7 @@ const AddImovel = () => {
                 <InputField label="Banheiros" name="banheiro" type="number" icon={Bath} required
                   placeholder="2" value={formData.banheiro}
                   onChange={(e) => handleInputChange('banheiro', e.target.value)} error={errors.banheiro} />
-                <InputField label="Valor Avaliação" name="valorAvaliacao" icon={DollarSign}
+                <InputField label="Valor Avalia��o" name="valorAvaliacao" icon={DollarSign}
                   placeholder="R$ 350.000" value={formatCurrency(formData.valorAvaliacao)}
                   onChange={(e) => handleCurrencyChange('valorAvaliacao', e.target.value)} />
                 <InputField label="Valor Venda" name="valorVenda" icon={DollarSign} required
@@ -371,24 +371,24 @@ const AddImovel = () => {
               </div>
             </FormSection>
 
-            {/* ═══ TAGS ═══ */}
-            <FormSection icon={<Tag className="w-4 h-4 text-white" />} title="Tags do Imóvel"
-              subtitle="Selecione características e diferenciais">
+            {/* --- TAGS --- */}
+            <FormSection icon={<Tag className="w-4 h-4 text-white" />} title="Tags do Im�vel"
+              subtitle="Selecione caracter�sticas e diferenciais">
               <TagSelector tags={tags} setTags={setTags} />
             </FormSection>
 
-            {/* ═══ DETALHES ADICIONAIS ═══ */}
+            {/* --- DETALHES ADICIONAIS --- */}
             <FormSection icon={<FileText className="w-4 h-4 text-white" />} title="Detalhes Adicionais"
-              subtitle="Situação, exclusividade e observações">
+              subtitle="Situa��o, exclusividade e observa��es">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <InputField label="Situação do Imóvel" name="situacaoImovel" icon={Home} required
+                <InputField label="Situa��o do Im�vel" name="situacaoImovel" icon={Home} required
                   placeholder="Pronto para morar" value={formData.situacaoImovel}
                   onChange={(e) => handleInputChange('situacaoImovel', e.target.value)} error={errors.situacaoImovel} />
                 <InputField label="Exclusivo" name="exclusivo" icon={Shield}
                   value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}>
                   <select value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="não">Não</option>
+                    <option value="n�o">N�o</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
@@ -396,30 +396,30 @@ const AddImovel = () => {
                   value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}>
                   <select value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="não">Não</option>
+                    <option value="n�o">N�o</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
               </div>
               <div>
-                <InputField label="Observações" name="observacoes" icon={FileText}
+                <InputField label="Observa��es" name="observacoes" icon={FileText}
                   value={formData.observacoes} onChange={(e) => handleInputChange('observacoes', e.target.value)}>
                   <textarea value={formData.observacoes}
                     onChange={(e) => handleInputChange('observacoes', e.target.value)}
                     className={`${inputClass} resize-y min-h-[70px]`} style={inputStyle} rows="3"
-                    placeholder="Informações adicionais sobre o imóvel..." />
+                    placeholder="Informa��es adicionais sobre o im�vel..." />
                 </InputField>
               </div>
             </FormSection>
 
-            {/* ═══ DOCUMENTOS E IMAGENS ═══ */}
+            {/* --- DOCUMENTOS E IMAGENS --- */}
             <FormSection icon={<Upload className="w-4 h-4 text-white" />} title="Documentos e Imagens"
-              subtitle="Anexe documentação e fotos do imóvel">
+              subtitle="Anexe documenta��o e fotos do im�vel">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FileUploadField label="Documentação (PDF)" accept=".pdf" icon={Paperclip}
+                <FileUploadField label="Documenta��o (PDF)" accept=".pdf" icon={Paperclip}
                   onChange={(e) => setFiles(prev => ({ ...prev, documentacao: e.target.files[0] }))}
                   value={files.documentacao} />
-                <FileUploadField label="Imagens do Imóvel" accept="image/*" multiple icon={ImageIcon}
+                <FileUploadField label="Imagens do Im�vel" accept="image/*" multiple icon={ImageIcon}
                   onChange={(e) => setFiles(prev => ({ ...prev, imagens: Array.from(e.target.files) }))}
                   value={files.imagens} />
                 <FileUploadField label="Imagem de Capa" accept="image/*" icon={Camera}
@@ -428,7 +428,7 @@ const AddImovel = () => {
               </div>
             </FormSection>
 
-            {/* ═══ BOTÕES ═══ */}
+            {/* --- BOT�ES --- */}
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 type="button" onClick={resetForm}
@@ -445,12 +445,12 @@ const AddImovel = () => {
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Cadastrando...</>
                 ) : (
-                  <><Save className="w-4 h-4" />Cadastrar Imóvel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
+                  <><Save className="w-4 h-4" />Cadastrar Im�vel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
                 )}
               </motion.button>
             </motion.div>
 
-            {/* ═══ STATUS ═══ */}
+            {/* --- STATUS --- */}
             <div ref={notificationRef}>
               <AnimatePresence>
                 {message.text && (

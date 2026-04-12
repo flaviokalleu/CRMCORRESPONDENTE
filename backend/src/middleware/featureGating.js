@@ -143,6 +143,31 @@ const checkLimit = (resourceType) => {
 const getPlanUsage = async (req, res) => {
   try {
     if (!req.plan) {
+      // Admin/super-admin sem plano configurado — retorna uso ilimitado
+      if (req.isSuperAdmin || (req.user && req.user.is_administrador)) {
+        const [clientes, usuarios, imoveis, alugueis] = await Promise.all([
+          Cliente.count({ where: req.tenantId ? { tenant_id: req.tenantId } : {} }),
+          User.count({ where: req.tenantId ? { tenant_id: req.tenantId } : {} }),
+          Imovel.count({ where: req.tenantId ? { tenant_id: req.tenantId } : {} }),
+          Aluguel.count({ where: req.tenantId ? { tenant_id: req.tenantId } : {} })
+        ]);
+        return res.json({
+          plano: { nome: 'Administrador', slug: 'admin' },
+          uso: {
+            clientes: { atual: clientes, limite: 'Ilimitado' },
+            usuarios: { atual: usuarios, limite: 'Ilimitado' },
+            imoveis: { atual: imoveis, limite: 'Ilimitado' },
+            alugueis: { atual: alugueis, limite: 'Ilimitado' }
+          },
+          features: {
+            whatsapp: true, pagamentos: true, ai_analysis: true,
+            relatorios_avancados: true, multi_usuarios: true,
+            api_access: true, suporte_prioritario: true, dominio_customizado: true
+          },
+          modulos_customizados: true,
+          subscription: null
+        });
+      }
       return res.status(402).json({ error: 'Plano não encontrado' });
     }
 

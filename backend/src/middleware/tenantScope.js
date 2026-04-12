@@ -24,10 +24,11 @@ const tenantStorage = new AsyncLocalStorage();
  * Define o tenant_id no contexto assíncrono atual.
  * Chamado pelo middleware Express após resolver o tenant.
  */
-const setCurrentTenant = (tenantId) => {
+const setCurrentTenant = (tenantId, isSuperAdmin = false) => {
   const store = tenantStorage.getStore();
   if (store) {
     store.tenantId = tenantId;
+    store.isSuperAdmin = isSuperAdmin;
   }
 };
 

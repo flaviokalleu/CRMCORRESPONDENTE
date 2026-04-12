@@ -18,6 +18,7 @@ module.exports = (sequelize) => {
     sequelize,
     modelName: 'FluxoCaixa',
     tableName: 'fluxo_caixa',
+    underscored: false,
   });
   return FluxoCaixa;
 };

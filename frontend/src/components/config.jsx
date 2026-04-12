@@ -4,7 +4,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 
 export const API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api/";
+  process.env.REACT_APP_API_URL || "http://localhost:8000/api/";
 
 // Hook para buscar dados mensais de clientes
 export const useFetchMonthlyClients = () => {
@@ -119,7 +119,7 @@ export const useFetchWeeklyClients = () => {
   return lineChartData;
 };
 
-// OpÃ§Ãµes do grÃ¡fico de linha
+// Opções do gráfico de linha
 export const LINE_CHART_OPTIONS = {
   plugins: {
     legend: {
@@ -158,7 +158,7 @@ export const LINE_CHART_OPTIONS = {
   elements: {
     line: {
       borderWidth: 3,
-      borderColor: "linear-gradient(to right, #1E3A8A, #10B981)", // DegradÃª da linha
+      borderColor: "linear-gradient(to right, #1E3A8A, #10B981)", // Degradê da linha
       tension: 0.4,
     },
     point: {
@@ -170,7 +170,7 @@ export const LINE_CHART_OPTIONS = {
   },
 };
 
-// OpÃ§Ãµes do grÃ¡fico de barras
+// Opções do gráfico de barras
 export const BAR_CHART_OPTIONS = {
   plugins: {
     legend: {

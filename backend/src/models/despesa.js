@@ -20,6 +20,7 @@ module.exports = (sequelize) => {
     sequelize,
     modelName: 'Despesa',
     tableName: 'despesas',
+    underscored: false,
   });
   return Despesa;
 };

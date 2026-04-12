@@ -1,6 +1,7 @@
 'use strict';
 
 const { Tenant, Subscription, Plan } = require('../models');
+const { setCurrentTenant } = require('./tenantScope');
 
 /**
  * Middleware que resolve o tenant a partir do req.user (após authenticateToken).
@@ -17,6 +18,7 @@ const resolveTenant = async (req, res, next) => {
         req.tenantId = req.user.tenant_id;
       }
       req.isSuperAdmin = req.user.is_super_admin || false;
+      setCurrentTenant(req.tenantId, req.isSuperAdmin);
       return next();
     }
 
@@ -46,6 +48,7 @@ const resolveTenant = async (req, res, next) => {
     req.tenantId = tenant.id;
     req.tenant = tenant;
     req.isSuperAdmin = false;
+    setCurrentTenant(req.tenantId, req.isSuperAdmin);
 
     next();
   } catch (error) {

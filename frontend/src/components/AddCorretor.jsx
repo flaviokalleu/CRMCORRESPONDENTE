@@ -7,9 +7,9 @@ import {
   Save, Trash2, IdCard, Shield, ArrowRight, UserPlus, Wallet
 } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// --- Design tokens ------------------------------------------------------------
 const CARD = 'rgba(255,255,255,0.06)';
 const BORDER = 'rgba(255,255,255,0.10)';
 const INPUT_BG = 'rgba(255,255,255,0.05)';
@@ -26,7 +26,7 @@ const inputClass = `w-full px-4 py-3 rounded-xl text-sm text-white placeholder-w
 const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
 const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
 
-// ─── Section wrapper ─────────────────────────────────────────────────────────
+// --- Section wrapper ---------------------------------------------------------
 const FormSection = ({ icon, title, subtitle, children }) => (
   <motion.div variants={fadeUp}
     className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
@@ -45,7 +45,7 @@ const FormSection = ({ icon, title, subtitle, children }) => (
   </motion.div>
 );
 
-// ─── Input field ─────────────────────────────────────────────────────────────
+// --- Input field -------------------------------------------------------------
 const InputField = ({ label, name, type = 'text', icon: Icon, required, placeholder, value, onChange, error, showPassword, togglePassword, ...props }) => {
   const inputType = type === 'password' && showPassword ? 'text' : type;
   return (
@@ -76,7 +76,7 @@ const InputField = ({ label, name, type = 'text', icon: Icon, required, placehol
   );
 };
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// --- Main component ----------------------------------------------------------
 const AddCorretor = () => {
   const [formData, setFormData] = useState({
     username: '', email: '', first_name: '', last_name: '',
@@ -104,7 +104,7 @@ const AddCorretor = () => {
       setMessage({ type: 'error', text: 'Por favor, selecione apenas arquivos de imagem' }); return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Imagem muito grande. Máximo: 5MB' }); return;
+      setMessage({ type: 'error', text: 'Imagem muito grande. M�ximo: 5MB' }); return;
     }
     setPhoto(file);
     const reader = new FileReader();
@@ -117,20 +117,20 @@ const AddCorretor = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.username || formData.username.length < 3) newErrors.username = 'Username deve ter pelo menos 3 caracteres';
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email inválido';
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email inv�lido';
     if (!formData.first_name || formData.first_name.length < 2) newErrors.first_name = 'Nome deve ter pelo menos 2 caracteres';
     if (!formData.last_name || formData.last_name.length < 2) newErrors.last_name = 'Sobrenome deve ter pelo menos 2 caracteres';
-    if (!formData.telefone || formData.telefone.length < 10) newErrors.telefone = 'Telefone deve ter pelo menos 10 dígitos';
+    if (!formData.telefone || formData.telefone.length < 10) newErrors.telefone = 'Telefone deve ter pelo menos 10 d�gitos';
     if (!formData.password || formData.password.length < 6) newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não conferem';
-    if (!photo) newErrors.photo = 'Foto é obrigatória';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas n�o conferem';
+    if (!photo) newErrors.photo = 'Foto � obrigat�ria';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) { setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulário' }); return; }
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Por favor, corrija os erros no formul�rio' }); return; }
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
@@ -168,7 +168,7 @@ const AddCorretor = () => {
     <div className="min-h-screen w-full bg-caixa-gradient">
       <div className="w-full max-w-5xl mx-auto px-4 py-6 sm:px-6">
 
-        {/* ── Header ── */}
+        {/* -- Header -- */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
@@ -183,9 +183,9 @@ const AddCorretor = () => {
         <form onSubmit={handleSubmit}>
           <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-            {/* ═══ FOTO ═══ */}
+            {/* --- FOTO --- */}
             <FormSection icon={<Camera className="w-4 h-4 text-white" />} title="Foto do Corretor"
-              subtitle="Imagem de perfil para identificação">
+              subtitle="Imagem de perfil para identifica��o">
               <div className="flex flex-col sm:flex-row items-center gap-5">
                 <div className="relative">
                   {photoPreview ? (
@@ -214,7 +214,7 @@ const AddCorretor = () => {
                     <Upload className="h-3.5 w-3.5" /> Escolher Foto
                     <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
                   </motion.label>
-                  <p className="text-[10px] text-white/30">PNG, JPG, GIF até 5MB</p>
+                  <p className="text-[10px] text-white/30">PNG, JPG, GIF at� 5MB</p>
                   {errors.photo && (
                     <p className="text-red-400 text-[10px] flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />{errors.photo}
@@ -224,9 +224,9 @@ const AddCorretor = () => {
               </div>
             </FormSection>
 
-            {/* ═══ DADOS PESSOAIS ═══ */}
+            {/* --- DADOS PESSOAIS --- */}
             <FormSection icon={<User className="w-4 h-4 text-white" />} title="Dados Pessoais"
-              subtitle="Informações de identificação do corretor">
+              subtitle="Informa��es de identifica��o do corretor">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <InputField label="Username" name="username" icon={User} required
                   placeholder="Digite o username" value={formData.username}
@@ -244,17 +244,17 @@ const AddCorretor = () => {
                   placeholder="(00) 00000-0000" value={formData.telefone}
                   onChange={handleInputChange} error={errors.telefone} />
                 <InputField label="CRECI" name="creci" icon={IdCard}
-                  placeholder="Número do CRECI" value={formData.creci}
+                  placeholder="N�mero do CRECI" value={formData.creci}
                   onChange={handleInputChange} error={errors.creci} />
               </div>
             </FormSection>
 
-            {/* ═══ ENDEREÇO & PIX ═══ */}
-            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Endereço & Pagamento"
-              subtitle="Localização e dados bancários">
+            {/* --- ENDERE�O & PIX --- */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Endere�o & Pagamento"
+              subtitle="Localiza��o e dados banc�rios">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <InputField label="Endereço" name="address" icon={MapPin}
-                  placeholder="Endereço completo" value={formData.address}
+                <InputField label="Endere�o" name="address" icon={MapPin}
+                  placeholder="Endere�o completo" value={formData.address}
                   onChange={handleInputChange} error={errors.address} />
                 <InputField label="PIX / Conta" name="pix_account" icon={Wallet}
                   placeholder="Chave PIX ou dados da conta" value={formData.pix_account}
@@ -262,12 +262,12 @@ const AddCorretor = () => {
               </div>
             </FormSection>
 
-            {/* ═══ SEGURANÇA ═══ */}
-            <FormSection icon={<Shield className="w-4 h-4 text-white" />} title="Segurança"
+            {/* --- SEGURAN�A --- */}
+            <FormSection icon={<Shield className="w-4 h-4 text-white" />} title="Seguran�a"
               subtitle="Defina a senha de acesso do corretor">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <InputField label="Senha" name="password" type="password" icon={Lock} required
-                  placeholder="Mínimo 6 caracteres" value={formData.password}
+                  placeholder="M�nimo 6 caracteres" value={formData.password}
                   onChange={handleInputChange} error={errors.password}
                   showPassword={showPassword} togglePassword={() => setShowPassword(!showPassword)} />
                 <InputField label="Confirmar Senha" name="confirmPassword" type="password" icon={Lock} required
@@ -277,7 +277,7 @@ const AddCorretor = () => {
               </div>
             </FormSection>
 
-            {/* ═══ BOTÕES ═══ */}
+            {/* --- BOT�ES --- */}
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 type="button" onClick={resetForm}
@@ -299,7 +299,7 @@ const AddCorretor = () => {
               </motion.button>
             </motion.div>
 
-            {/* ═══ STATUS ═══ */}
+            {/* --- STATUS --- */}
             <AnimatePresence>
               {message.text && (
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}

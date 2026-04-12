@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 
 export const API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api/";
+  process.env.REACT_APP_API_URL || "http://localhost:8000/api/";
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// --- Design tokens ------------------------------------------------------------
 const CARD = 'rgba(255,255,255,0.06)';
 const BORDER = 'rgba(255,255,255,0.10)';
 const INPUT_BG = 'rgba(255,255,255,0.05)';
@@ -27,7 +27,7 @@ const inputClass = `w-full px-4 py-3 rounded-xl text-sm text-white placeholder-w
 const inputStyle = { backgroundColor: INPUT_BG, border: `1px solid ${BORDER}` };
 const labelClass = "flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase text-white/50 mb-1.5";
 
-// ─── Section wrapper ─────────────────────────────────────────────────────────
+// --- Section wrapper ---------------------------------------------------------
 const FormSection = ({ icon, title, subtitle, children }) => (
   <motion.div variants={fadeUp}
     className="rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4"
@@ -46,7 +46,7 @@ const FormSection = ({ icon, title, subtitle, children }) => (
   </motion.div>
 );
 
-// ─── File drop zone ──────────────────────────────────────────────────────────
+// --- File drop zone ----------------------------------------------------------
 const FileDropZone = ({ label, icon: Icon, files, onChange, multiple = false, hint }) => {
   const [dragOver, setDragOver] = useState(false);
   const ref = useRef(null);
@@ -78,7 +78,7 @@ const FileDropZone = ({ label, icon: Icon, files, onChange, multiple = false, hi
           <p className="text-[10px] text-white/30 group-hover:text-white/50 transition-colors">
             Clique ou arraste imagens
           </p>
-          <p className="text-[9px] text-white/20 mt-1">PNG, JPG até 10MB</p>
+          <p className="text-[9px] text-white/20 mt-1">PNG, JPG at� 10MB</p>
         </div>
         {fileCount > 0 && (
           <div className="mt-2 text-[10px] font-medium text-center" style={{ color: '#F97316' }}>
@@ -91,7 +91,7 @@ const FileDropZone = ({ label, icon: Icon, files, onChange, multiple = false, hi
   );
 };
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// --- Main component ----------------------------------------------------------
 const AddAluguelForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
     nome_imovel: "", descricao: "", valor_aluguel: "",
@@ -129,9 +129,9 @@ const AddAluguelForm = ({ onSuccess }) => {
     e.preventDefault();
     setLoading(true); setError(""); setSuccess(false);
 
-    if (!formData.nome_imovel.trim()) { setError("Nome do imóvel é obrigatório"); setLoading(false); return; }
-    if (!formData.descricao.trim()) { setError("Descrição é obrigatória"); setLoading(false); return; }
-    if (!formData.valor_aluguel) { setError("Valor do aluguel é obrigatório"); setLoading(false); return; }
+    if (!formData.nome_imovel.trim()) { setError("Nome do im�vel � obrigat�rio"); setLoading(false); return; }
+    if (!formData.descricao.trim()) { setError("Descri��o � obrigat�ria"); setLoading(false); return; }
+    if (!formData.valor_aluguel) { setError("Valor do aluguel � obrigat�rio"); setLoading(false); return; }
 
     const formDataToSend = new FormData();
     formDataToSend.append("nome_imovel", formData.nome_imovel);
@@ -154,7 +154,7 @@ const AddAluguelForm = ({ onSuccess }) => {
     } catch (error) {
       if (error.response?.data?.error) setError(error.response.data.error);
       else if (error.response?.data?.detalhes) setError(`Erro: ${error.response.data.detalhes.map(d => d.mensagem).join(', ')}`);
-      else setError("Erro ao cadastrar imóvel. Tente novamente.");
+      else setError("Erro ao cadastrar im�vel. Tente novamente.");
     } finally { setLoading(false); }
   };
 
@@ -162,27 +162,27 @@ const AddAluguelForm = ({ onSuccess }) => {
     <div className="min-h-screen w-full bg-caixa-gradient">
       <div className="w-full max-w-5xl mx-auto px-4 py-6 sm:px-6">
 
-        {/* ── Header ── */}
+        {/* -- Header -- */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: ACCENT_GRADIENT }}>
             <Building className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Imóvel para Aluguel</h1>
-            <p className="text-[11px] text-white/40">Preencha os dados do imóvel para locação</p>
+            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Im�vel para Aluguel</h1>
+            <p className="text-[11px] text-white/40">Preencha os dados do im�vel para loca��o</p>
           </div>
         </motion.div>
 
         <form onSubmit={handleSubmit} encType="multipart/form-data">
           <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-            {/* ═══ INFORMAÇÕES DO IMÓVEL ═══ */}
-            <FormSection icon={<Home className="w-4 h-4 text-white" />} title="Informações do Imóvel"
-              subtitle="Nome, valor e localização">
+            {/* --- INFORMA��ES DO IM�VEL --- */}
+            <FormSection icon={<Home className="w-4 h-4 text-white" />} title="Informa��es do Im�vel"
+              subtitle="Nome, valor e localiza��o">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className={labelClass}><MapPin className="w-3 h-3" />Nome/Endereço *</label>
+                  <label className={labelClass}><MapPin className="w-3 h-3" />Nome/Endere�o *</label>
                   <input type="text" name="nome_imovel" value={formData.nome_imovel} onChange={handleChange}
                     className={inputClass} style={inputStyle}
                     placeholder="APARTAMENTO RUA DAS FLORES, 123" required />
@@ -191,13 +191,13 @@ const AddAluguelForm = ({ onSuccess }) => {
                   <label className={labelClass}><DollarSign className="w-3 h-3" />Valor do Aluguel *</label>
                   <input type="text" name="valor_aluguel" value={formData.valor_aluguel} onChange={handleChange}
                     className={inputClass} style={inputStyle} placeholder="1.500,00" required />
-                  <p className="text-[9px] text-white/25 mt-1">Digite apenas números</p>
+                  <p className="text-[9px] text-white/25 mt-1">Digite apenas n�meros</p>
                 </div>
               </div>
             </FormSection>
 
-            {/* ═══ CARACTERÍSTICAS ═══ */}
-            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Características"
+            {/* --- CARACTER�STICAS --- */}
+            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Caracter�sticas"
               subtitle="Quartos, banheiros e vencimento">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
@@ -214,36 +214,36 @@ const AddAluguelForm = ({ onSuccess }) => {
                   <label className={labelClass}><Calendar className="w-3 h-3" />Dia Vencimento *</label>
                   <input type="number" name="dia_vencimento" value={formData.dia_vencimento} onChange={handleChange}
                     min={1} max={31} className={inputClass} style={inputStyle} placeholder="10" required />
-                  <p className="text-[9px] text-white/25 mt-1">Dia do mês (1 a 31)</p>
+                  <p className="text-[9px] text-white/25 mt-1">Dia do m�s (1 a 31)</p>
                 </div>
               </div>
             </FormSection>
 
-            {/* ═══ DESCRIÇÃO ═══ */}
-            <FormSection icon={<FileText className="w-4 h-4 text-white" />} title="Descrição"
-              subtitle="Detalhes e diferenciais do imóvel">
+            {/* --- DESCRI��O --- */}
+            <FormSection icon={<FileText className="w-4 h-4 text-white" />} title="Descri��o"
+              subtitle="Detalhes e diferenciais do im�vel">
               <div>
-                <label className={labelClass}><FileText className="w-3 h-3" />Descrição do Imóvel *</label>
+                <label className={labelClass}><FileText className="w-3 h-3" />Descri��o do Im�vel *</label>
                 <textarea name="descricao" value={formData.descricao} onChange={handleChange}
                   className={`${inputClass} resize-y min-h-[100px]`} style={inputStyle} rows="4"
-                  placeholder="DESCREVA O IMÓVEL: LOCALIZAÇÃO, CARACTERÍSTICAS, DIFERENCIAIS..." required />
+                  placeholder="DESCREVA O IM�VEL: LOCALIZA��O, CARACTER�STICAS, DIFERENCIAIS..." required />
               </div>
             </FormSection>
 
-            {/* ═══ FOTOS ═══ */}
-            <FormSection icon={<Camera className="w-4 h-4 text-white" />} title="Fotos do Imóvel"
-              subtitle="Imagens para o anúncio">
+            {/* --- FOTOS --- */}
+            <FormSection icon={<Camera className="w-4 h-4 text-white" />} title="Fotos do Im�vel"
+              subtitle="Imagens para o an�ncio">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FileDropZone label="Foto de Capa" icon={ImageIcon} files={fotoCapa}
                   onChange={(e) => setFotoCapa(e.target.files[0])}
-                  hint="Foto principal do anúncio" />
+                  hint="Foto principal do an�ncio" />
                 <FileDropZone label="Fotos Adicionais" icon={Camera} files={fotoAdicional}
                   onChange={(e) => setFotoAdicional(e.target.files)} multiple
-                  hint="Selecione múltiplas fotos" />
+                  hint="Selecione m�ltiplas fotos" />
               </div>
             </FormSection>
 
-            {/* ═══ BOTÃO ═══ */}
+            {/* --- BOT�O --- */}
             <motion.div variants={fadeUp}>
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 type="submit" disabled={loading}
@@ -253,12 +253,12 @@ const AddAluguelForm = ({ onSuccess }) => {
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Cadastrando...</>
                 ) : (
-                  <><Save className="w-4 h-4" />Cadastrar Imóvel para Aluguel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
+                  <><Save className="w-4 h-4" />Cadastrar Im�vel para Aluguel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
                 )}
               </motion.button>
             </motion.div>
 
-            {/* ═══ STATUS ═══ */}
+            {/* --- STATUS --- */}
             <AnimatePresence>
               {(error || success) && (
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -272,7 +272,7 @@ const AddAluguelForm = ({ onSuccess }) => {
                     : <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#ef4444' }} />}
                   <span className="text-sm font-medium" style={{
                     color: success ? '#10b981' : '#ef4444'
-                  }}>{success ? 'Imóvel cadastrado com sucesso!' : error}</span>
+                  }}>{success ? 'Im�vel cadastrado com sucesso!' : error}</span>
                 </motion.div>
               )}
             </AnimatePresence>

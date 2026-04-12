@@ -25,7 +25,7 @@ const DashboardCorrespondente = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
   const fetchAll = useCallback(async () => {
     try {
@@ -87,9 +87,9 @@ const DashboardCorrespondente = () => {
       const rendaMin = rendas.length > 0 ? Math.min(...rendas) : 0;
       const rendaTotal = rendas.reduce((a, b) => a + b, 0);
 
-      // Chart data ‚Äî prefer API data, fallback to client-side calc
+      // Chart data ó prefer API data, fallback to client-side calc
       const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-      const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","S√°b"];
+      const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","S·b"];
 
       let monthlyArr = monthlyApiData?.monthlyData || Array(12).fill(0);
       if (!monthlyApiData) {
@@ -115,7 +115,7 @@ const DashboardCorrespondente = () => {
         const u = item.user || {};
         return {
           id: u.id,
-          name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Usu√°rio',
+          name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Usu·rio',
           value: item.clientes || 0,
         };
       });
@@ -194,8 +194,8 @@ const DashboardCorrespondente = () => {
       {/* Content */}
       <motion.div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-        {/* ‚ïê‚ïê‚ïê VIS√ÉO GERAL ‚Äî 6 KPIs ‚ïê‚ïê‚ïê */}
-        <SectionHeader icon={<BarChart3 className="w-3.5 h-3.5" />} title="Vis√£o Geral"
+        {/* --- VIS√O GERAL ó 6 KPIs --- */}
+        <SectionHeader icon={<BarChart3 className="w-3.5 h-3.5" />} title="Vis„o Geral"
           subtitle={new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -203,7 +203,7 @@ const DashboardCorrespondente = () => {
             icon={<Users className="w-4 h-4" />} accent="#3b82f6" trend={d.crescMes} />
           <KPICard index={1} title="Correspondentes" value={fmtNum(d.totalCorretores)} sub="cadastrados"
             icon={<ClipboardList className="w-4 h-4" />} accent="#F97316" />
-          <KPICard index={2} title="Aguardando" value={fmtNum(d.aguardando.length)} sub="aprova√ß√£o"
+          <KPICard index={2} title="Aguardando" value={fmtNum(d.aguardando.length)} sub="aprovaÁ„o"
             icon={<Clock className="w-4 h-4" />} accent="#eab308" />
           <KPICard index={3} title="Aprovados" value={fmtNum(d.aprovados)} sub={`${pctAprov}%`}
             icon={<CheckCircle className="w-4 h-4" />} accent="#10b981" />
@@ -213,8 +213,8 @@ const DashboardCorrespondente = () => {
             icon={<Signal className="w-4 h-4" />} accent="#06b6d4" />
         </motion.div>
 
-        {/* ‚ïê‚ïê‚ïê M√âTRICAS DETALHADAS ‚Äî 8 KPIs ‚ïê‚ïê‚ïê */}
-        <SectionHeader icon={<Activity className="w-3.5 h-3.5" />} title="M√©tricas Detalhadas"
+        {/* --- M…TRICAS DETALHADAS ó 8 KPIs --- */}
+        <SectionHeader icon={<Activity className="w-3.5 h-3.5" />} title="MÈtricas Detalhadas"
           subtitle="Crescimento, performance e atividade" />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
@@ -222,33 +222,33 @@ const DashboardCorrespondente = () => {
             icon={<UserPlus className="w-4 h-4" />} accent="#3b82f6" />
           <KPICard index={1} title="Semana" value={fmtNum(d.semanaCnt)}
             icon={<Calendar className="w-4 h-4" />} accent="#8b5cf6" trend={d.crescSem} />
-          <KPICard index={2} title="Este M√™s" value={fmtNum(d.esteMes)} sub={`ant: ${d.mesPas}`}
+          <KPICard index={2} title="Este MÍs" value={fmtNum(d.esteMes)} sub={`ant: ${d.mesPas}`}
             icon={<Activity className="w-4 h-4" />} accent="#06b6d4" trend={d.crescMes} />
-          <KPICard index={3} title="No Ano" value={fmtNum(d.totalYear)} sub={`m√©dia: ${d.averageMonth}/m√™s`}
+          <KPICard index={3} title="No Ano" value={fmtNum(d.totalYear)} sub={`mÈdia: ${d.averageMonth}/mÍs`}
             icon={<Globe className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={4} title="Aprova√ß√£o" value={fmtPct(d.txAprov)}
+          <KPICard index={4} title="AprovaÁ„o" value={fmtPct(d.txAprov)}
             icon={<Target className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={5} title="Rejei√ß√£o" value={fmtPct(d.txRejeit)}
+          <KPICard index={5} title="RejeiÁ„o" value={fmtPct(d.txRejeit)}
             icon={<TrendingDown className="w-4 h-4" />} accent="#ef4444" />
-          <KPICard index={6} title="Efici√™ncia" value={`${d.efic}`}
+          <KPICard index={6} title="EficiÍncia" value={`${d.efic}`}
             icon={<Zap className="w-4 h-4" />} accent="#F97316" />
-          <KPICard index={7} title="Usu√°rios" value={fmtNum(d.performance?.totalUsuarios || d.sysStats?.totalUsuarios || 0)}
+          <KPICard index={7} title="Usu·rios" value={fmtNum(d.performance?.totalUsuarios || d.sysStats?.totalUsuarios || 0)}
             sub="no sistema" icon={<UserCheck className="w-4 h-4" />} accent="#ec4899" />
         </motion.div>
 
-        {/* ‚ïê‚ïê‚ïê RENDA ‚Äî 4 KPIs ‚ïê‚ïê‚ïê */}
-        <SectionHeader icon={<DollarSign className="w-3.5 h-3.5" />} title="An√°lise Financeira"
+        {/* --- RENDA ó 4 KPIs --- */}
+        <SectionHeader icon={<DollarSign className="w-3.5 h-3.5" />} title="An·lise Financeira"
           subtitle="Perfil de renda dos clientes" />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <KPICard index={0} title="Renda M√©dia" value={fmtR$(d.rendaMedia)} icon={<DollarSign className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={1} title="Renda M√°xima" value={fmtR$(d.rendaMax)} icon={<TrendingUp className="w-4 h-4" />} accent="#3b82f6" />
-          <KPICard index={2} title="Renda M√≠nima" value={fmtR$(d.rendaMin)} icon={<TrendingDown className="w-4 h-4" />} accent="#eab308" />
+          <KPICard index={0} title="Renda MÈdia" value={fmtR$(d.rendaMedia)} icon={<DollarSign className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={1} title="Renda M·xima" value={fmtR$(d.rendaMax)} icon={<TrendingUp className="w-4 h-4" />} accent="#3b82f6" />
+          <KPICard index={2} title="Renda MÌnima" value={fmtR$(d.rendaMin)} icon={<TrendingDown className="w-4 h-4" />} accent="#eab308" />
           <KPICard index={3} title="Renda Total" value={fmtR$(d.rendaTotal)} sub={`${d.comRenda} informaram`}
             icon={<Wallet className="w-4 h-4" />} accent="#8b5cf6" />
         </motion.div>
 
-        {/* ‚ïê‚ïê‚ïê PERFORMANCE + SISTEMA ‚Äî 2 cols ‚ïê‚ïê‚ïê */}
+        {/* --- PERFORMANCE + SISTEMA ó 2 cols --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <motion.div variants={fadeUp} className="rounded-xl p-3 backdrop-blur-md"
             style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
@@ -259,12 +259,12 @@ const DashboardCorrespondente = () => {
               <p className="text-xs font-bold text-white">Performance</p>
             </div>
             <motion.div variants={stagger} className="grid grid-cols-3 gap-2">
-              <EffRing index={0} title="Aprova√ß√£o" value={fmtPct(pctAprov)} pct={pctAprov} accent="#10b981" />
-              <EffRing index={1} title="Rejei√ß√£o" value={fmtPct(pctRejeit)} pct={pctRejeit} accent="#ef4444" />
+              <EffRing index={0} title="AprovaÁ„o" value={fmtPct(pctAprov)} pct={pctAprov} accent="#10b981" />
+              <EffRing index={1} title="RejeiÁ„o" value={fmtPct(pctRejeit)} pct={pctRejeit} accent="#ef4444" />
               <EffRing index={2} title="Aguardando" value={fmtPct(pctAguar)} pct={pctAguar} accent="#eab308" />
               <EffRing index={3} title="Cresc. Semanal" value={`${d.crescSem}%`} pct={Math.min(100, Math.abs(d.crescSem))} accent="#3b82f6" />
               <EffRing index={4} title="Cresc. Mensal" value={`${d.crescMes}%`} pct={Math.min(100, Math.abs(d.crescMes))} accent="#8b5cf6" />
-              <EffRing index={5} title="Efici√™ncia" value={`${d.efic}`} pct={d.efic * 10} accent="#F97316" />
+              <EffRing index={5} title="EficiÍncia" value={`${d.efic}`} pct={d.efic * 10} accent="#F97316" />
             </motion.div>
           </motion.div>
 
@@ -276,7 +276,7 @@ const DashboardCorrespondente = () => {
                 style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}>
                 <BarChart3 className="w-3 h-3 text-white" />
               </div>
-              <p className="text-xs font-bold text-white">Distribui√ß√£o por Status</p>
+              <p className="text-xs font-bold text-white">DistribuiÁ„o por Status</p>
             </div>
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {d.statusData.map((s, i) => {
@@ -300,14 +300,14 @@ const DashboardCorrespondente = () => {
           </motion.div>
         </div>
 
-        {/* ‚ïê‚ïê‚ïê GR√ÅFICOS ‚Äî 4 ‚ïê‚ïê‚ïê */}
-        <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Gr√°ficos"
-          subtitle="Tend√™ncias, comparativos e distribui√ß√£o" />
+        {/* --- GR¡FICOS ó 4 --- */}
+        <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Gr·ficos"
+          subtitle="TendÍncias, comparativos e distribuiÁ„o" />
 
         <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
           {/* Monthly area */}
-          <ChartCard index={0} title="Evolu√ß√£o Mensal" sub={`Total no ano: ${fmtNum(d.totalYear)} ¬∑ M√©dia: ${d.averageMonth}/m√™s`}
+          <ChartCard index={0} title="EvoluÁ„o Mensal" sub={`Total no ano: ${fmtNum(d.totalYear)} ∑ MÈdia: ${d.averageMonth}/mÍs`}
             icon={<TrendingUp className="w-3 h-3" />}>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -330,7 +330,7 @@ const DashboardCorrespondente = () => {
           </ChartCard>
 
           {/* Weekly comparison */}
-          <ChartCard index={1} title="Comparativo Semanal" sub={`Total semana: ${fmtNum(d.totalWeek)} ¬∑ Cresc: ${d.weeklyGrowth}%`}
+          <ChartCard index={1} title="Comparativo Semanal" sub={`Total semana: ${fmtNum(d.totalWeek)} ∑ Cresc: ${d.weeklyGrowth}%`}
             icon={<BarChart3 className="w-3 h-3" />}>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -348,7 +348,7 @@ const DashboardCorrespondente = () => {
           </ChartCard>
 
           {/* Pie chart */}
-          <ChartCard index={2} title="Status dos Clientes" sub="Distribui√ß√£o por status de aprova√ß√£o"
+          <ChartCard index={2} title="Status dos Clientes" sub="DistribuiÁ„o por status de aprovaÁ„o"
             icon={<PieChartIcon className="w-3 h-3" />}>
             <div className="h-52 flex items-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -402,12 +402,12 @@ const DashboardCorrespondente = () => {
           </ChartCard>
         </motion.div>
 
-        {/* ‚ïê‚ïê‚ïê RANKING + ALERTAS + RESUMO ‚Äî 3 cols ‚ïê‚ïê‚ïê */}
+        {/* --- RANKING + ALERTAS + RESUMO ó 3 cols --- */}
         <SectionHeader icon={<Trophy className="w-3.5 h-3.5" />} title="Ranking & Resumo"
           subtitle="Top performers e indicadores" />
 
         <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <RankingCard index={0} title="Ranking do M√™s" icon={<Trophy className="w-3.5 h-3.5" />}
+          <RankingCard index={0} title="Ranking do MÍs" icon={<Trophy className="w-3.5 h-3.5" />}
             items={d.rankingItems} formatValue={v => `${v} clientes`} accent="#F97316" />
 
           {/* Alertas */}
@@ -418,14 +418,14 @@ const DashboardCorrespondente = () => {
                 style={{ background: 'linear-gradient(135deg, #ef4444, #f87171)' }}>
                 <AlertTriangle className="w-3.5 h-3.5 text-white" />
               </div>
-              <p className="text-xs font-bold text-white">Aten√ß√£o</p>
+              <p className="text-xs font-bold text-white">AtenÁ„o</p>
             </div>
             <div className="space-y-2">
               {d.aguardando.length > 0 && (
                 <div className="flex items-center justify-between px-2.5 py-2 rounded-lg" style={{ backgroundColor: 'rgba(234,179,8,0.08)' }}>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" style={{ color: '#eab308' }} />
-                    <p className="text-[10px] font-medium text-white/70">Aguardando aprova√ß√£o</p>
+                    <p className="text-[10px] font-medium text-white/70">Aguardando aprovaÁ„o</p>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#eab308' }}>{d.aguardando.length}</span>
@@ -458,16 +458,16 @@ const DashboardCorrespondente = () => {
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}>
                 <Activity className="w-3.5 h-3.5 text-white" />
               </div>
-              <p className="text-xs font-bold text-white">Resumo do Per√≠odo</p>
+              <p className="text-xs font-bold text-white">Resumo do PerÌodo</p>
             </div>
             <div className="space-y-1.5">
               {[
                 { label: 'Cadastros hoje', value: d.hojeCnt, accent: '#3b82f6' },
                 { label: 'Cadastros na semana', value: d.semanaCnt, accent: '#8b5cf6' },
-                { label: 'Cadastros no m√™s', value: d.esteMes, accent: '#F97316' },
-                { label: 'M√™s anterior', value: d.mesPas, accent: '#06b6d4' },
+                { label: 'Cadastros no mÍs', value: d.esteMes, accent: '#F97316' },
+                { label: 'MÍs anterior', value: d.mesPas, accent: '#06b6d4' },
                 { label: 'Total no ano', value: d.totalYear, accent: '#10b981' },
-                { label: 'M√©dia mensal', value: d.averageMonth, accent: '#eab308' },
+                { label: 'MÈdia mensal', value: d.averageMonth, accent: '#eab308' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-md"
                   style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
@@ -479,8 +479,8 @@ const DashboardCorrespondente = () => {
           </motion.div>
         </motion.div>
 
-        {/* ‚ïê‚ïê‚ïê TABELA AGUARDANDO ‚ïê‚ïê‚ïê */}
-        <SectionHeader icon={<Database className="w-3.5 h-3.5" />} title="Clientes Aguardando Aprova√ß√£o"
+        {/* --- TABELA AGUARDANDO --- */}
+        <SectionHeader icon={<Database className="w-3.5 h-3.5" />} title="Clientes Aguardando AprovaÁ„o"
           subtitle={`${d.aguardando.length} pendentes`} />
 
         <motion.div variants={fadeUp} className="rounded-2xl overflow-hidden backdrop-blur-md"
@@ -532,7 +532,7 @@ const DashboardCorrespondente = () => {
                   <tr>
                     <td colSpan={5} className="text-center py-8 text-xs text-white/40">
                       <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(16,185,129,0.3)' }} />
-                      Nenhum cliente aguardando aprova√ß√£o
+                      Nenhum cliente aguardando aprovaÁ„o
                     </td>
                   </tr>
                 )}
@@ -542,7 +542,7 @@ const DashboardCorrespondente = () => {
         </motion.div>
 
         <motion.div variants={fadeUp} className="text-center py-3">
-          <span className="text-[11px] font-medium text-white/40">Atualiza√ß√£o autom√°tica a cada 30 segundos</span>
+          <span className="text-[11px] font-medium text-white/40">AtualizaÁ„o autom·tica a cada 30 segundos</span>
         </motion.div>
 
       </motion.div>

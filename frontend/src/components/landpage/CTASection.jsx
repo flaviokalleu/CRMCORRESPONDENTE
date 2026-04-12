@@ -77,7 +77,7 @@ const CTASection = () => {
               </div>
 
               <a
-                href="https://wa.me/5561994617584?text=Olá! Gostaria de saber mais sobre o Minha Casa Minha Vida"
+                href="https://wa.me/556182511308?text=Olá! Gostaria de saber mais sobre o Minha Casa Minha Vida"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-2 rounded-full bg-[#F97316] px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#EA580C] hover:shadow-lg hover:shadow-[#F97316]/20"

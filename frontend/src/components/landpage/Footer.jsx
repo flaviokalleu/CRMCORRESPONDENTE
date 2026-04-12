@@ -24,7 +24,7 @@ const Footer = () => {
     { icon: FaInstagram, href: 'https://instagram.com/CRMIMOB', label: 'Instagram' },
     { icon: FaFacebookF, href: 'https://facebook.com/CRMIMOB', label: 'Facebook' },
     { icon: FaLinkedinIn, href: 'https://linkedin.com/company/CRMIMOB', label: 'LinkedIn' },
-    { icon: FaWhatsapp, href: 'https://wa.me/5561994617584', label: 'WhatsApp' },
+    { icon: FaWhatsapp, href: 'https://wa.me/556182511308', label: 'WhatsApp' },
   ];
 
   return (

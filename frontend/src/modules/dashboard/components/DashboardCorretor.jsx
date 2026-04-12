@@ -9,7 +9,7 @@ import { useAuth } from 'context/AuthContext';
 import LineChart from 'modules/dashboard/charts/LineChart';
 import PieChart from 'modules/dashboard/charts/PieChart';
 
-// --- CÃ“DIGO REAL DO COMPONENTE ---
+// --- CÓDIGO REAL DO COMPONENTE ---
 
 const DashboardCorretor = () => {
   const { user } = useAuth();
@@ -20,12 +20,12 @@ const DashboardCorretor = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
   // Nome do sistema do .env
   const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CAIXA CRM";
 
-  // FunÃ§Ã£o para buscar dados APENAS do corretor logado
+  // Função para buscar dados APENAS do corretor logado
   const fetchDashboardData = async () => {
     try {
       setRefreshing(true);
@@ -44,7 +44,7 @@ const DashboardCorretor = () => {
       const clientesData = await clientesResponse.json();
       const meusClientes = clientesData.clientes || [];
 
-      console.log('ðŸ” Clientes do corretor:', meusClientes);
+      console.log('?? Clientes do corretor:', meusClientes);
 
       // Processar dados dos MEUS clientes
       const totalMeusClientes = meusClientes.length;
@@ -53,7 +53,7 @@ const DashboardCorretor = () => {
       const clientesAguardando = meusClientes.filter(c => c.status === 'aguardando_aprovacao' || c.status === 'pendente');
       const clientesPendentes = meusClientes.filter(c => c.status === 'pendente').length;
 
-      // Calcular mÃ©tricas temporais APENAS dos meus clientes
+      // Calcular métricas temporais APENAS dos meus clientes
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
       const inicioSemana = new Date(hoje);
@@ -83,7 +83,7 @@ const DashboardCorretor = () => {
         ? Math.round(((clientesSemana - clientesSemanaPassada) / clientesSemanaPassada) * 100)
         : clientesSemana > 0 ? 100 : 0;
 
-      // Calcular crescimento mensal (comparar com mÃªs anterior)
+      // Calcular crescimento mensal (comparar com mês anterior)
       const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
       const fimMesPassado = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
       const clientesMesPassado = meusClientes.filter(c => {
@@ -108,14 +108,14 @@ const DashboardCorretor = () => {
         ? Math.round(((clientesAprovados + clientesPendentes) / totalMeusClientes) * 10) / 10
         : 0;
 
-      // AnÃ¡lise de renda dos MEUS clientes
+      // Análise de renda dos MEUS clientes
       const clientesComRenda = meusClientes.filter(c => c.valor_renda && c.valor_renda > 0);
       const rendas = clientesComRenda.map(c => parseFloat(c.valor_renda));
       const rendaMedia = rendas.length > 0 ? (rendas.reduce((a, b) => a + b, 0) / rendas.length).toFixed(2) : '0.00';
       const rendaMaxima = rendas.length > 0 ? Math.max(...rendas).toFixed(2) : '0.00';
       const rendaMinima = rendas.length > 0 ? Math.min(...rendas).toFixed(2) : '0.00';
 
-      // Dados mensais para grÃ¡fico (APENAS meus clientes)
+      // Dados mensais para gráfico (APENAS meus clientes)
       const mesesLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
       const dadosMensais = Array(12).fill(0);
       
@@ -124,8 +124,8 @@ const DashboardCorretor = () => {
         dadosMensais[mes]++;
       });
 
-      // Dados semanais para grÃ¡fico (APENAS meus clientes)
-      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "SÃ¡b"];
+      // Dados semanais para gráfico (APENAS meus clientes)
+      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const dadosSemanais = Array(7).fill(0);
       
       meusClientes.forEach(cliente => {
@@ -160,11 +160,11 @@ const DashboardCorretor = () => {
           clientesComRenda: clientesComRenda.length
         },
         meusClientesAprovados: meusClientes.filter(c => c.status === 'aprovado'),
-        // âœ… NOVO: Todos os meus clientes para visualizaÃ§Ã£o
+        // ? NOVO: Todos os meus clientes para visualização
         todosOsMeusClientes: meusClientes
       });
 
-      // Estruturar dados dos grÃ¡ficos DO CORRETOR
+      // Estruturar dados dos gráficos DO CORRETOR
       setChartData({
         monthly: {
           labels: mesesLabels,
@@ -208,7 +208,7 @@ const DashboardCorretor = () => {
       });
 
       setError(null);
-      console.log('âœ… Dados do corretor carregados:', {
+      console.log('? Dados do corretor carregados:', {
         totalClientes: totalMeusClientes,
         aprovados: clientesAprovados,
         aguardando: clientesAguardando.length,
@@ -216,7 +216,7 @@ const DashboardCorretor = () => {
       });
 
     } catch (error) {
-      console.error('âŒ Erro ao buscar dados do corretor:', error);
+      console.error('? Erro ao buscar dados do corretor:', error);
       setError(`Erro ao carregar seus dados: ${error.message}`);
     } finally {
       setLoading(false);
@@ -231,7 +231,7 @@ const DashboardCorretor = () => {
     }
   }, [user?.id]);
 
-  // FunÃ§Ã£o para refresh manual
+  // Função para refresh manual
   const handleRefresh = () => {
     fetchDashboardData();
   };
@@ -246,7 +246,7 @@ const DashboardCorretor = () => {
             <div className="absolute inset-2 h-16 w-16 mx-auto border-2 border-caixa-secondary/20 border-t-caixa-light rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '3s'}}></div>
           </div>
           <p className="text-3xl font-bold text-white mb-2">Carregando Dashboard {nomeSistema}...</p>
-          <p className="text-caixa-extra-light mb-6">Processando suas mÃ©tricas pessoais</p>
+          <p className="text-caixa-extra-light mb-6">Processando suas métricas pessoais</p>
           <div className="w-80 mx-auto bg-caixa-primary/50 rounded-full h-3 overflow-hidden">
             <div className="bg-gradient-to-r from-caixa-orange via-caixa-orange-light to-caixa-orange h-3 rounded-full animate-pulse shadow-lg shadow-caixa-orange/25" style={{width: "75%"}}></div>
           </div>
@@ -273,7 +273,7 @@ const DashboardCorretor = () => {
               onClick={() => window.location.reload()}
               className="px-8 py-3 bg-caixa-primary/50 hover:bg-caixa-primary/70 text-white rounded-xl transition-all duration-300 font-semibold w-full"
             >
-              Recarregar PÃ¡gina
+              Recarregar Página
             </button>
           </div>
         </div>
@@ -303,7 +303,7 @@ const DashboardCorretor = () => {
     todosOsMeusClientes = [] // <-- fallback para array vazio
   } = dashboardData;
 
-  // Calcular mÃ©tricas derivadas
+  // Calcular métricas derivadas
   const metaMensal = 50; // Meta fixa ou pode vir da API
   const taxaAprovacao = performance.taxaAprovacao || 0;
   const performanceScore = Math.round((taxaAprovacao + performance.eficienciaMedia * 10) / 2);
@@ -316,7 +316,7 @@ const DashboardCorretor = () => {
       change: `${crescimentoSemanal >= 0 ? '+' : ''}${crescimentoSemanal}%`,
       isPositive: crescimentoSemanal >= 0,
       color: "bg-gradient-to-r from-caixa-primary to-caixa-secondary",
-      metric: `Este mÃªs: ${clientesEsteMes}`,
+      metric: `Este mês: ${clientesEsteMes}`,
       borderColor: "border-caixa-primary/30",
       textColor: "text-caixa-light"
     },
@@ -346,10 +346,10 @@ const DashboardCorretor = () => {
       title: "Minha Performance",
       value: `${performanceScore}%`,
       icon: Award,
-      change: `${taxaAprovacao}% aprovaÃ§Ã£o`,
+      change: `${taxaAprovacao}% aprovação`,
       isPositive: taxaAprovacao >= 70,
       color: "bg-gradient-to-r from-caixa-light to-caixa-extra-light",
-      metric: `EficiÃªncia: ${performance.eficienciaMedia}`,
+      metric: `Eficiência: ${performance.eficienciaMedia}`,
       borderColor: "border-caixa-light/30",
       textColor: "text-caixa-extra-light"
     }
@@ -374,7 +374,7 @@ const DashboardCorretor = () => {
                 <h1 className="text-3xl font-bold text-white">
                   Meu Dashboard - {user?.first_name || 'Corretor'}
                 </h1>
-                <p className="text-caixa-extra-light">Acompanhe suas mÃ©tricas e performance pessoal</p>
+                <p className="text-caixa-extra-light">Acompanhe suas métricas e performance pessoal</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -559,7 +559,7 @@ const DashboardCorretor = () => {
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
-          {/* Minha Taxa de AprovaÃ§Ã£o */}
+          {/* Minha Taxa de Aprovação */}
           <div className="backdrop-blur-xl bg-white/10 rounded-2xl p-8 border border-caixa-primary/30 text-center">
             <div className="relative w-32 h-32 mx-auto mb-4">
               <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
@@ -598,7 +598,7 @@ const DashboardCorretor = () => {
               </div>
             </div>
             <div className="mt-4">
-              <h3 className="text-white font-semibold text-lg mb-2">Minha Taxa de AprovaÃ§Ã£o</h3>
+              <h3 className="text-white font-semibold text-lg mb-2">Minha Taxa de Aprovação</h3>
               <p className="text-caixa-extra-light text-sm">{clientesAprovados} de {totalClientes} meus clientes</p>
             </div>
           </div>
@@ -643,7 +643,7 @@ const DashboardCorretor = () => {
             </div>
             <div className="mt-4">
               <h3 className="text-white font-semibold text-lg mb-2">Meu Performance Score</h3>
-              <p className="text-caixa-extra-light text-sm">Minha EficiÃªncia: {performance.eficienciaMedia}</p>
+              <p className="text-caixa-extra-light text-sm">Minha Eficiência: {performance.eficienciaMedia}</p>
             </div>
           </div>
 
@@ -692,7 +692,7 @@ const DashboardCorretor = () => {
           </div>
         </motion.div>
 
-        {/* âœ… NOVA SEÃ‡ÃƒO: Meus Clientes Cadastrados (apenas visualizaÃ§Ã£o) */}
+        {/* ? NOVA SEÇÃO: Meus Clientes Cadastrados (apenas visualização) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -706,7 +706,7 @@ const DashboardCorretor = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white">Meus Clientes Cadastrados</h2>
-                  <p className="text-caixa-extra-light mt-1">{clientesAguardandoAprovacao?.length || 0} aguardando aprovaÃ§Ã£o</p>
+                  <p className="text-caixa-extra-light mt-1">{clientesAguardandoAprovacao?.length || 0} aguardando aprovação</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -791,8 +791,8 @@ const DashboardCorretor = () => {
                   <tr>
                     <td colSpan="4" className="py-16 text-center">
                       <ClipboardList className="w-16 h-16 text-caixa-primary/50 mx-auto mb-4" />
-                      <p className="text-caixa-extra-light text-lg">Nenhum cliente aguardando aprovaÃ§Ã£o!</p>
-                      <p className="text-caixa-extra-light text-sm mt-2">Todos os seus clientes jÃ¡ foram processados.</p>
+                      <p className="text-caixa-extra-light text-lg">Nenhum cliente aguardando aprovação!</p>
+                      <p className="text-caixa-extra-light text-sm mt-2">Todos os seus clientes já foram processados.</p>
                     </td>
                   </tr>
                 )}

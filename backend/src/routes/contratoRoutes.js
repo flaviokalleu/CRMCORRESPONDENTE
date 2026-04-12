@@ -220,7 +220,7 @@ router.get('/contratos', async (req, res) => {
         aluguel_id: { [Op.ne]: null },
       },
       include,
-      order: [['updatedAt', 'DESC']],
+      order: [['updated_at', 'DESC']],
     });
 
     const contratosNormalizados = contratos.map((contrato) => {

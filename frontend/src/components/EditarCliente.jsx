@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const getAuthHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('authToken')}` });
+
 const EditarCliente = ({ clienteId }) => {
   const [cliente, setCliente] = useState({
     nome: "",
@@ -31,7 +34,7 @@ const EditarCliente = ({ clienteId }) => {
   // Função para carregar as informações do cliente
   const carregarCliente = async () => {
     try {
-      const response = await axios.get(`/clientes/${clienteId}`);
+      const response = await axios.get(`${API_URL}/clientes/${clienteId}`, { headers: getAuthHeaders() });
       setCliente(response.data);
     } catch (error) {
       console.error("Erro ao carregar cliente:", error);
@@ -58,8 +61,9 @@ const EditarCliente = ({ clienteId }) => {
     }
 
     try {
-      await axios.put(`/clientes/${clienteId}`, formData, {
+      await axios.put(`${API_URL}/clientes/${clienteId}`, formData, {
         headers: {
+          ...getAuthHeaders(),
           "Content-Type": "multipart/form-data",
         },
       });

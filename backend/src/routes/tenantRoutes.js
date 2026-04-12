@@ -238,4 +238,42 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ===== TROCAR PLANO DO PRÓPRIO TENANT (autenticado) =====
+router.post('/change-plan', async (req, res) => {
+  try {
+    // Verificar autenticação via Bearer token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Token não fornecido' });
+    }
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, SECRET_KEY);
+    } catch {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    const { planId } = req.body;
+    if (!planId) return res.status(400).json({ error: 'planId é obrigatório' });
+
+    const user = await User.findByPk(decoded.id);
+    if (!user || !user.tenant_id) return res.status(404).json({ error: 'Usuário ou tenant não encontrado' });
+    if (!user.is_administrador) return res.status(403).json({ error: 'Apenas administradores podem trocar o plano' });
+
+    const plan = await Plan.findByPk(planId);
+    if (!plan || !plan.ativo) return res.status(404).json({ error: 'Plano não encontrado ou inativo' });
+
+    const subscription = await Subscription.findOne({ where: { tenant_id: user.tenant_id } });
+    if (!subscription) return res.status(404).json({ error: 'Assinatura não encontrada' });
+
+    await subscription.update({ plan_id: planId, status: 'active' });
+
+    res.json({ message: 'Plano alterado com sucesso', plan: { id: plan.id, nome: plan.nome } });
+  } catch (error) {
+    console.error('Erro ao trocar plano:', error);
+    res.status(500).json({ error: 'Erro ao trocar plano' });
+  }
+});
+
 module.exports = router;

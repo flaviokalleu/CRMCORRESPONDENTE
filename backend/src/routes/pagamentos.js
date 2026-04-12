@@ -1549,6 +1549,18 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ✅ ROTA PARA VERIFICAR STATUS DO WHATSAPP
+router.get('/whatsapp/status', pagamentoController.getWhatsAppStatus);
+
+// ✅ ROTA PARA OBTER CONFIGURAÇÕES DO SISTEMA
+router.get('/config', pagamentoController.getConfig);
+
+// ✅ ROTA PARA OBTER CONFIGURAÇÕES PÚBLICAS DO MERCADO PAGO
+router.get('/mercadopago/config', pagamentoController.getMercadoPagoConfig);
+
+// ✅ ROTA PARA TESTAR CONEXÃO COM MERCADO PAGO
+router.get('/mercadopago/test', pagamentoController.testMercadoPago);
+
 // ✅ BUSCAR PAGAMENTO POR ID COM COMPROVANTE
 router.get('/:id', async (req, res) => {
   try {
@@ -1767,18 +1779,6 @@ router.put('/:id', async (req, res) => {
     });
   }
 });
-
-// ✅ ROTA PARA VERIFICAR STATUS DO WHATSAPP
-router.get('/whatsapp/status', pagamentoController.getWhatsAppStatus);
-
-// ✅ ROTA PARA OBTER CONFIGURAÇÕES DO SISTEMA
-router.get('/config', pagamentoController.getConfig);
-
-// ✅ ROTA PARA OBTER CONFIGURAÇÕES PÚBLICAS DO MERCADO PAGO
-router.get('/mercadopago/config', pagamentoController.getMercadoPagoConfig);
-
-// ✅ ROTA PARA TESTAR CONEXÃO COM MERCADO PAGO
-router.get('/mercadopago/test', pagamentoController.testMercadoPago);
 
 // ✅ ROTA PARA VERIFICAR STATUS DE PAGAMENTOS PENDENTES
 router.post('/verificar-status', async (req, res) => {

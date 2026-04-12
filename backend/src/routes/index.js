@@ -111,7 +111,7 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api/admin', adminRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/report', reportRoutes);
-  app.use('/api/listadeclientes', listadeclientesRoutes);
+  app.use('/api/listadeclientes', authenticateToken, resolveTenant, listadeclientesRoutes);
   app.use('/api/imoveis', authenticateToken, resolveTenant, imoveisRouter);
   app.use('/api/notas', notasRouter);
   app.use('/api', configurationsRoute);
@@ -120,8 +120,9 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api/whatsapp', whatsappRoutes);
   app.use('/api', lembreteRoutes);
   app.use('/api/acessos', acessosRoutes);
-  app.use('/api', authenticateToken, resolveTenant, clienteAluguelRoutes);
   app.use('/api', asaasWebhookRoutes);
+  app.use('/api/pagamentos', pagamentosRoutes);
+  app.use('/api', authenticateToken, resolveTenant, clienteAluguelRoutes);
   app.use('/api', contratoAluguelRoutes);
   app.use('/api', contratoRoutes);
   app.use('/api', proprietariosRoutes);
@@ -137,7 +138,6 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api/propostas', propostaRoutes);
   app.use('/api/notificacoes', notificacaoRoutes);
   app.use('/api/timeline', timelineRoutes);
-  app.use('/api/pagamentos', pagamentosRoutes);
 
   // Rotas financeiras
   app.use('/api/receitas', authenticateToken, resolveTenant, require('./receitas'));
@@ -149,7 +149,7 @@ function mountRoutes(app, { authenticateToken, resolveTenant, checkSubscription,
   app.use('/api/documentos', documentRoutes);
 
   // Rota principal de clientes (deve vir por ÚLTIMO para evitar conflitos)
-  app.use('/api/', clienteRoutes);
+  app.use('/api/', authenticateToken, resolveTenant, clienteRoutes);
 
   // Iniciar cron jobs
   startCronJobs();

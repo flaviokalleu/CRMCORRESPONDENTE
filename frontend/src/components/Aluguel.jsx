@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import ContratoTab from "./ContratoTab";
 
-const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:5000/api/").replace(/\/+$/, "");
+const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:8000/api/").replace(/\/+$/, "");
 
 const CARD = "rgba(255,255,255,0.06)";
 const BORDER = "rgba(255,255,255,0.10)";
@@ -49,7 +49,7 @@ const AlugueisPage = () => {
           cache: "no-store",
         });
         if (!response.ok) {
-          throw new Error("Erro ao buscar alugu茅is");
+          throw new Error("Erro ao buscar alugu閕s");
         }
         const data = await response.json();
         setAlugueis(data);
@@ -102,7 +102,7 @@ const AlugueisPage = () => {
         body: JSON.stringify({ alugado: !currentStatus }),
       });
       if (!response.ok) {
-        throw new Error("Erro ao atualizar o status do im贸vel");
+        throw new Error("Erro ao atualizar o status do im髒el");
       }
       setAlugueis((prevAlugueis) =>
         prevAlugueis.map((aluguel) =>
@@ -112,7 +112,7 @@ const AlugueisPage = () => {
         )
       );
     } catch (error) {
-      console.error("Erro ao atualizar o status do im贸vel:", error);
+      console.error("Erro ao atualizar o status do im髒el:", error);
       setError("Erro ao atualizar status. Tente novamente.");
     } finally {
       setActionLoading(prev => ({ ...prev, [`status_${aluguelId}`]: false }));
@@ -122,7 +122,7 @@ const AlugueisPage = () => {
   const handleDelete = async (aluguelId) => {
     const aluguel = alugueis.find(a => a.id === aluguelId);
     const confirmed = window.confirm(
-      `Tem certeza que deseja deletar o im贸vel "${aluguel?.nome_imovel}"?\n\nEsta a莽茫o n茫o pode ser desfeita.`
+      `Tem certeza que deseja deletar o im髒el "${aluguel?.nome_imovel}"?\n\nEsta a玢o n鉶 pode ser desfeita.`
     );
 
     if (confirmed) {
@@ -132,21 +132,21 @@ const AlugueisPage = () => {
           method: "DELETE",
         });
         if (!response.ok) {
-          throw new Error("Erro ao deletar o im贸vel");
+          throw new Error("Erro ao deletar o im髒el");
         }
         setAlugueis((prevAlugueis) =>
           prevAlugueis.filter((aluguel) => aluguel.id !== aluguelId)
         );
       } catch (error) {
-        console.error("Erro ao deletar o im贸vel:", error);
-        setError("Erro ao deletar im贸vel. Tente novamente.");
+        console.error("Erro ao deletar o im髒el:", error);
+        setError("Erro ao deletar im髒el. Tente novamente.");
       } finally {
         setActionLoading(prev => ({ ...prev, [`delete_${aluguelId}`]: false }));
       }
     }
   };
 
-  // Filtrar alugu茅is
+  // Filtrar alugu閕s
   const filteredAlugueis = alugueis.filter((aluguel) => {
     const matchesSearch =
       (aluguel.nome_imovel || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,7 +173,7 @@ const AlugueisPage = () => {
           >
             <Home className="w-8 h-8 text-white" />
           </div>
-          <p className="text-white/80 text-lg font-medium">Carregando im贸veis para aluguel...</p>
+          <p className="text-white/80 text-lg font-medium">Carregando im髒eis para aluguel...</p>
           <Loader2 className="w-6 h-6 text-orange-400 animate-spin mx-auto mt-3" />
         </div>
       </div>
@@ -210,10 +210,10 @@ const AlugueisPage = () => {
             </div>
             <div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-                ALUGU脡IS CAIXA
+                ALUGU蒊S CAIXA
               </h1>
               <p className="text-white/60 text-base">
-                <span className="text-green-400 font-semibold">{alugueisDisponiveis}</span> dispon铆veis
+                <span className="text-green-400 font-semibold">{alugueisDisponiveis}</span> dispon韛eis
                 {" "}&bull;{" "}
                 <span className="text-red-400 font-semibold">{alugueisOcupados}</span> ocupados
                 {" "}&bull;{" "}
@@ -233,7 +233,7 @@ const AlugueisPage = () => {
             >
               <span className="inline-flex items-center gap-2">
                 <Home className="w-4 h-4" />
-                Im贸veis
+                Im髒eis
               </span>
             </button>
             <button
@@ -266,7 +266,7 @@ const AlugueisPage = () => {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="Buscar im贸veis para aluguel..."
+                    placeholder="Buscar im髒eis para aluguel..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all"
@@ -290,7 +290,7 @@ const AlugueisPage = () => {
                     }}
                   >
                     <option value="">Todos os status</option>
-                    <option value="disponivel">Dispon铆vel</option>
+                    <option value="disponivel">Dispon韛el</option>
                     <option value="alugado">Alugado</option>
                   </select>
                 </div>
@@ -355,12 +355,12 @@ const AlugueisPage = () => {
                 <Home className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">
-                {searchTerm || filterStatus ? "Nenhum im贸vel encontrado" : "Nenhum im贸vel para aluguel"}
+                {searchTerm || filterStatus ? "Nenhum im髒el encontrado" : "Nenhum im髒el para aluguel"}
               </h3>
               <p className="text-white/50">
                 {searchTerm || filterStatus
                   ? "Tente ajustar os filtros de busca"
-                  : "Cadastre o primeiro im贸vel para aluguel"
+                  : "Cadastre o primeiro im髒el para aluguel"
                 }
               </p>
             </div>
@@ -389,7 +389,7 @@ const AlugueisPage = () => {
                     ) : (
                       <span className="bg-green-500/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
                         <CheckCircle className="w-3 h-3" />
-                        DISPON脥VEL
+                        DISPON蚔EL
                       </span>
                     )}
                   </div>
@@ -424,12 +424,12 @@ const AlugueisPage = () => {
                   <div className="flex-1 flex flex-col p-5">
                     {/* Title */}
                     <h2 className="text-lg font-bold text-white mb-2 line-clamp-2">
-                      {aluguel.nome_imovel || 'Nome n茫o informado'}
+                      {aluguel.nome_imovel || 'Nome n鉶 informado'}
                     </h2>
 
                     {/* Description */}
                     <p className="text-white/50 text-sm mb-4 line-clamp-3">
-                      {aluguel.descricao || 'Descri莽茫o n茫o dispon铆vel'}
+                      {aluguel.descricao || 'Descri玢o n鉶 dispon韛el'}
                     </p>
 
                     {/* Features */}
@@ -487,7 +487,7 @@ const AlugueisPage = () => {
                             currency: "BRL",
                           })}
                         </span>
-                        <span className="text-white/40 text-sm">/m锚s</span>
+                        <span className="text-white/40 text-sm">/m阺</span>
                       </div>
                     </div>
 
@@ -525,7 +525,7 @@ const AlugueisPage = () => {
                             background: "rgba(239,68,68,0.10)",
                             border: "1px solid rgba(239,68,68,0.20)",
                           }}
-                          title="Deletar im贸vel"
+                          title="Deletar im髒el"
                         >
                           {actionLoading[`delete_${aluguel.id}`] ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -556,7 +556,7 @@ const AlugueisPage = () => {
                               : "rgba(239,68,68,0.20)"
                           }`,
                         }}
-                        title={aluguel.alugado ? "Marcar como dispon铆vel" : "Marcar como alugado"}
+                        title={aluguel.alugado ? "Marcar como dispon韛el" : "Marcar como alugado"}
                       >
                         {actionLoading[`status_${aluguel.id}`] ? (
                           <>
@@ -571,7 +571,7 @@ const AlugueisPage = () => {
                               <XCircle className="w-4 h-4" />
                             )}
                             <span className="text-sm">
-                              {aluguel.alugado ? "Marcar Dispon铆vel" : "Marcar Alugado"}
+                              {aluguel.alugado ? "Marcar Dispon韛el" : "Marcar Alugado"}
                             </span>
                           </>
                         )}
