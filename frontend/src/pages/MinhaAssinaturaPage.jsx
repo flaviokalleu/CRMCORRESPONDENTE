@@ -10,6 +10,74 @@ import MainLayout from "../layouts/MainLayout";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
 
+const FEATURE_LABELS = {
+  whatsapp: "WhatsApp",
+  pagamentos: "Pagamentos",
+  ai_analysis: "Analise com IA",
+  relatorios_avancados: "Relatorios avancados",
+  multi_usuarios: "Multiusuarios",
+  api_access: "Acesso a API",
+  suporte_prioritario: "Suporte prioritario",
+  dominio_customizado: "Dominio customizado",
+};
+
+const NO_PLAN_USAGE = {
+  plan: { id: null, name: "Sem plano", slug: null },
+  resources: {},
+  limits: {},
+  features: [],
+  status: "no_plan",
+  daysRemaining: null,
+  billingCycle: null,
+  isNoPlan: true,
+};
+
+const normalizePlanUsage = (data) => {
+  if (!data) {
+    return NO_PLAN_USAGE;
+  }
+
+  const usage = data.uso || {};
+  const featureEntries = Object.entries(data.features || {});
+
+  return {
+    plan: {
+      id: data.plano?.id || null,
+      name: data.plano?.nome || "Sem plano",
+      slug: data.plano?.slug || null,
+    },
+    resources: Object.fromEntries(
+      Object.entries(usage).map(([key, value]) => [key, value?.atual ?? 0])
+    ),
+    limits: Object.fromEntries(
+      Object.entries(usage).map(([key, value]) => [key, value?.limite ?? "Ilimitado"])
+    ),
+    features: featureEntries.map(([key, available]) => ({
+      name: FEATURE_LABELS[key] || key,
+      available: !!available,
+    })),
+    status: data.subscription?.status || (data.plano?.slug === "admin" ? "active" : "no_plan"),
+    daysRemaining: data.subscription?.dias_restantes ?? null,
+    billingCycle: data.subscription?.ciclo || null,
+    isNoPlan: false,
+  };
+};
+
+const normalizePlan = (plan) => ({
+  id: plan.id,
+  name: plan.name || plan.nome,
+  slug: plan.slug,
+  description: plan.description || plan.descricao,
+  price: plan.price ?? plan.preco_mensal ?? 0,
+  billing_cycle: plan.billing_cycle || "mensal",
+  limits: {
+    clientes: plan.limits?.clientes ?? plan.max_clientes,
+    usuarios: plan.limits?.usuarios ?? plan.max_usuarios,
+    imoveis: plan.limits?.imoveis ?? plan.max_imoveis,
+    alugueis: plan.limits?.alugueis ?? plan.max_alugueis,
+  },
+});
+
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("authToken")}`,
   "Content-Type": "application/json",
@@ -32,9 +100,10 @@ const stagger = {
 // --- Status helpers ---
 const STATUS_MAP = {
   active: { label: "Ativo", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  trialing: { label: "Período de Teste", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  trialing: { label: "Perï¿½odo de Teste", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
   past_due: { label: "Pagamento Pendente", color: "bg-red-500/20 text-red-400 border-red-500/30" },
   canceled: { label: "Cancelado", color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  no_plan: { label: "Sem plano", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
 };
 
 const getStatus = (status) => STATUS_MAP[status] || STATUS_MAP.active;
@@ -42,9 +111,9 @@ const getStatus = (status) => STATUS_MAP[status] || STATUS_MAP.active;
 // --- Resource config ---
 const RESOURCE_CONFIG = {
   clientes: { label: "Clientes", icon: Users, color: "from-blue-500 to-blue-600" },
-  usuarios: { label: "Usuários", icon: Key, color: "from-violet-500 to-violet-600" },
-  imoveis: { label: "Imóveis", icon: Home, color: "from-emerald-500 to-emerald-600" },
-  alugueis: { label: "Aluguéis", icon: FileText, color: "from-orange-500 to-orange-600" },
+  usuarios: { label: "Usuï¿½rios", icon: Key, color: "from-violet-500 to-violet-600" },
+  imoveis: { label: "Imï¿½veis", icon: Home, color: "from-emerald-500 to-emerald-600" },
+  alugueis: { label: "Aluguï¿½is", icon: FileText, color: "from-orange-500 to-orange-600" },
 };
 
 // --- Sub-components ---
@@ -153,7 +222,7 @@ const PlanCard = ({ plan, isCurrent, onSelect }) => (
       <p className="text-2xl font-extrabold text-white mb-1">
         R$ {Number(plan.price).toFixed(2).replace(".", ",")}
         <span className="text-sm font-normal text-gray-400">
-          /{plan.billing_cycle === "yearly" ? "ano" : "mês"}
+          /{plan.billing_cycle === "yearly" || plan.billing_cycle === "anual" ? "ano" : "mes"}
         </span>
       </p>
     )}
@@ -210,16 +279,23 @@ const MinhaAssinaturaPage = () => {
       const headers = getAuthHeaders();
 
       const [usageRes, plansRes] = await Promise.all([
-        axios.get(`${API_URL}/plan-usage`, { headers }),
+        axios
+          .get(`${API_URL}/plan-usage`, { headers })
+          .catch((err) => {
+            if (err.response?.status === 402) {
+              return { data: null };
+            }
+            throw err;
+          }),
         axios.get(`${API_URL}/tenant/plans`, { headers }),
       ]);
 
-      setUsage(usageRes.data);
-      setPlans(plansRes.data?.plans || plansRes.data || []);
+      setUsage(normalizePlanUsage(usageRes.data));
+      setPlans((plansRes.data?.plans || plansRes.data || []).map(normalizePlan));
       setError(null);
     } catch (err) {
       console.error("Erro ao carregar dados da assinatura:", err);
-      setError("Não foi possível carregar os dados da assinatura.");
+      setError("Nï¿½o foi possï¿½vel carregar os dados da assinatura.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -284,14 +360,14 @@ const MinhaAssinaturaPage = () => {
     );
   }
 
-  const plan = usage?.plan || {};
-  const resources = usage?.usage || {};
+  const plan = usage?.plan || NO_PLAN_USAGE.plan;
+  const resources = usage?.resources || {};
   const limits = usage?.limits || plan.limits || {};
-  const features = usage?.features || plan.features || [];
+  const features = usage?.features || [];
   const statusInfo = getStatus(usage?.status);
 
-  const daysRemaining = usage?.days_remaining ?? null;
-  const billingCycle = usage?.billing_cycle || plan.billing_cycle;
+  const daysRemaining = usage?.daysRemaining ?? null;
+  const billingCycle = usage?.billingCycle || plan.billing_cycle;
 
   return (
     <MainLayout>
@@ -334,7 +410,7 @@ const MinhaAssinaturaPage = () => {
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Plano</p>
                   <p className="text-xl font-bold text-white flex items-center gap-2">
                     <Star className="w-5 h-5 text-caixa-orange" />
-                    {plan.name || "—"}
+                    {plan.name || "Nao definido"}
                   </p>
                 </div>
 
@@ -354,7 +430,11 @@ const MinhaAssinaturaPage = () => {
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Ciclo</p>
                   <p className="text-lg font-semibold text-white flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-gray-400" />
-                    {billingCycle === "yearly" ? "Anual" : "Mensal"}
+                    {billingCycle === "anual" || billingCycle === "yearly"
+                      ? "Anual"
+                      : billingCycle === "mensal" || billingCycle === "monthly"
+                      ? "Mensal"
+                      : "Nao definido"}
                   </p>
                 </div>
 
@@ -363,10 +443,16 @@ const MinhaAssinaturaPage = () => {
                   <p className="text-xs text-gray-500 uppercase tracking-wider">Dias Restantes</p>
                   <p className="text-lg font-semibold text-white flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
-                    {daysRemaining !== null ? `${daysRemaining} dias` : "—"}
+                    {daysRemaining !== null ? `${daysRemaining} dias` : "Nao definido"}
                   </p>
                 </div>
               </div>
+
+              {usage?.isNoPlan && (
+                <div className="mt-5 rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+                  Sua empresa ainda nao possui uma assinatura ativa. Escolha um plano abaixo para liberar os recursos do sistema.
+                </div>
+              )}
             </Card>
           </motion.div>
 
@@ -388,11 +474,11 @@ const MinhaAssinaturaPage = () => {
             </Card>
           </motion.div>
 
-          {/* Section 3: Features Disponíveis */}
+          {/* Section 3: Features Disponï¿½veis */}
           {features.length > 0 && (
             <motion.div variants={fadeUp}>
               <Card className="p-6">
-                <SectionTitle icon={Check} title="Features Disponíveis" />
+                <SectionTitle icon={Check} title="Features Disponï¿½veis" />
 
                 <motion.div
                   variants={stagger}
