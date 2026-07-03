@@ -1,2 +1,11 @@
 crmcorrespondente-deploy.tgz
 vps.md
+node_modules/
+dist/
+.next/
+.cache/
+__pycache__/
+*.pyc
+*.map
+*.log
+nul
