@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // Importação centralizada de rotas customizadas
 import customRoutes from './routes';
-import { SocketProvider } from './context/SocketContext';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useAuthPersistence } from './hooks/useAuthPersistence';
@@ -130,10 +129,6 @@ const AppContent = () => {
 
   // Usar hook de persistência
   useAuthPersistence();
-
-  // Para usar socket em qualquer página/componente:
-  // import { useSocket } from './context/SocketContext';
-  // const socket = useSocket();
   // socket.emit(...), socket.on(...)
 
   const handleLoadingComplete = () => {
@@ -600,13 +595,11 @@ const AppContent = () => {
 function App() {
   return (
     <DOMErrorBoundary>
-      <SocketProvider>
-        <Router>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </Router>
-      </SocketProvider>
+      <Router>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </Router>
     </DOMErrorBoundary>
   );
 }

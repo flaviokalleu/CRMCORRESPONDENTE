@@ -33,6 +33,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	g := rg.Group("/imoveis")
 	{
+		g.GET("", h.List)
 		g.GET("/", h.List)
 		g.GET("/imoveis", h.List)
 		g.GET("/busca", h.Busca)

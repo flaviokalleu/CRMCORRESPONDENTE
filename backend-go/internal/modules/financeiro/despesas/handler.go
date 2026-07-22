@@ -19,7 +19,9 @@ type Handler struct{ repo *Repository }
 func NewHandler(repo *Repository) *Handler { return &Handler{repo: repo} }
 
 func (h *Handler) Register(rg *gin.RouterGroup) {
+	rg.POST("", h.create)
 	rg.POST("/", h.create)
+	rg.GET("", h.list)
 	rg.GET("/", h.list)
 	rg.GET("/:id", h.get)
 	rg.PUT("/:id", h.update)

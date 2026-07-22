@@ -40,6 +40,7 @@ func (h *Handler) Register(rg *gin.RouterGroup, resolveTenant gin.HandlerFunc) {
 		protected.POST("/pix", h.criarPix)
 		protected.POST("/universal", h.criarUniversal)
 		protected.GET("/:id/pix-qrcode", h.pixQrCode)
+		protected.GET("", h.list)
 		protected.GET("/", h.list)
 		protected.GET("/:id", h.get)
 		protected.PUT("/:id", h.update)

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { io } from "socket.io-client";
 import { getSocketUrl } from "../utils/socketConfig";
 import {
   MessageCircle,
@@ -533,32 +532,54 @@ const WhatsAppQRCode = () => {
     }
   }, []);
 
-  // Conexão Socket.IO — substitui todo o polling
+  // Conexão WebSocket nativa (backend Go, GET /api/ws) — substitui todo o polling.
+  // Sem camada de compatibilidade: só o necessário para este único caso de uso
+  // (status do WhatsApp em tempo real). Envelope do servidor: { event, room, data }.
   useEffect(() => {
-    const socketUrl = getSocketUrl();
-    const socket = io(socketUrl, { withCredentials: true, transports: ['websocket', 'polling'] });
-    socketRef.current = socket;
+    let ws;
+    let reconnectTimer;
+    let closedByEffect = false;
 
-    socket.on('connect', () => {
-      console.log('[WA] Socket conectado:', socket.id);
-      if (user?.tenant_id) {
-        socket.emit('subscribe:whatsapp', { tenantId: user.tenant_id });
-      }
-    });
+    const connect = () => {
+      const base = getSocketUrl().replace(/^http/i, 'ws').replace(/\/+$/, '');
+      const token = localStorage.getItem('authToken');
+      ws = new WebSocket(`${base}/api/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+      socketRef.current = ws;
 
-    socket.on('whatsapp:update', (data) => {
-      // Filtro de segurança: ignora eventos de outros tenants
-      if (user?.tenant_id && data.tenantId && Number(data.tenantId) !== Number(user.tenant_id)) return;
-      handleWhatsAppEvent(data);
-    });
+      ws.onopen = () => {
+        console.log('[WA] WebSocket conectado');
+        if (user?.tenant_id) {
+          ws.send(JSON.stringify({ action: 'subscribe', channel: 'whatsapp', tenantId: user.tenant_id }));
+        }
+      };
 
-    socket.on('disconnect', () => console.log('[WA] Socket desconectado'));
+      ws.onmessage = (evt) => {
+        let envelope;
+        try {
+          envelope = JSON.parse(evt.data);
+        } catch {
+          return;
+        }
+        if (envelope?.event !== 'whatsapp:update') return;
+        const data = envelope.data || {};
+        // Filtro de segurança: ignora eventos de outros tenants
+        if (user?.tenant_id && data.tenantId && Number(data.tenantId) !== Number(user.tenant_id)) return;
+        handleWhatsAppEvent(data);
+      };
 
-    // Busca estado atual uma única vez (socket não repete eventos passados)
-    checkStatus();
+      ws.onclose = () => {
+        console.log('[WA] WebSocket desconectado');
+        if (!closedByEffect) reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+    checkStatus(); // busca estado atual uma única vez (WS não repete eventos passados)
 
     return () => {
-      socket.disconnect();
+      closedByEffect = true;
+      clearTimeout(reconnectTimer);
+      ws?.close();
       socketRef.current = null;
     };
   }, [user?.tenant_id, handleWhatsAppEvent, checkStatus]);

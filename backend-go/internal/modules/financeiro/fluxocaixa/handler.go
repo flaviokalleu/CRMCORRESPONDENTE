@@ -23,7 +23,9 @@ func NewHandler(repo *Repository, svc *Service) *Handler { return &Handler{repo:
 
 func (h *Handler) Register(rg *gin.RouterGroup) {
 	rg.GET("/dashboard", h.dashboard) // registrado antes de /:id para não colidir
+	rg.POST("", h.create)
 	rg.POST("/", h.create)
+	rg.GET("", h.list)
 	rg.GET("/", h.list)
 	rg.GET("/:id", h.get)
 	rg.PUT("/:id", h.update)

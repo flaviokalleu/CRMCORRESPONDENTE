@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, X, Check, CheckCheck, Clock, AlertTriangle, DollarSign, Calendar, FileText, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { getSocketUrl } from "../utils/socketConfig";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
@@ -64,26 +63,6 @@ const NotificationBell = () => {
     const id = setInterval(fetchCount, 30000);
     return () => clearInterval(id);
   }, [fetchCount]);
-
-  // Socket.io para real-time
-  useEffect(() => {
-    try {
-      const { io } = require("socket.io-client");
-      const socketUrl = getSocketUrl();
-      const socket = io(socketUrl, { transports: ["websocket"] });
-
-      // Escutar notificações do usuário
-      const userId = JSON.parse(atob(token?.split(".")[1] || "e30="))?.id;
-      if (userId) {
-        socket.on(`notification:${userId}`, () => {
-          fetchCount();
-          if (open) fetchNotificacoes();
-        });
-      }
-
-      return () => socket.disconnect();
-    } catch { /* Socket.io não disponível */ }
-  }, [token, open, fetchCount, fetchNotificacoes]);
 
   useEffect(() => {
     if (open) fetchNotificacoes();

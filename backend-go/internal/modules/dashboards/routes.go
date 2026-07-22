@@ -10,6 +10,12 @@ import "github.com/gin-gonic/gin"
 // `/dashboard/dashboard/aguardando-aprovacao`, gotcha §3). Mantemos um alias
 // idêntico ao path legado para não quebrar o frontend atual durante a transição.
 func Register(rg *gin.RouterGroup, h *Handler) {
+	// Registrado em "" (sem barra) e "/" — o frontend chama sem barra final
+	// (`/api/dashboard`), e sem este alias o Gin faz 301 redirect para
+	// "/api/dashboard/", cujo response NÃO carrega os headers de CORS
+	// (o middleware de CORS não roda no redirect interno do router), o que o
+	// navegador bloqueia como erro de CORS → fetch() falha com "Failed to fetch".
+	rg.GET("", h.Main)
 	rg.GET("/", h.Main)
 	rg.GET("/monthly", h.Monthly)
 	rg.GET("/weekly", h.Weekly)
