@@ -217,6 +217,37 @@ token via XSS) + carregamento o mais rápido possível. Isso muda a arquitetura 
 - `/financeiro/dashboard` usa um componente também chamado `DashboardPage` — colisão de
   nome com o dashboard principal, renomear no novo projeto.
 
+## 3.5 Status atual (2026-07-22) — fundação validada ponta a ponta
+
+✅ **Concluído e testado:**
+- Scaffold Next.js 16.2.11 + React 19.2.4 + Tailwind v4 + shadcn/ui (últimas versões).
+- Paleta Caixa (navy `#0B1426`/`#162a4a` + laranja `#F97316`) migrada para `@theme` (CSS-first, Tailwind v4) em `globals.css`. Fonte Plus Jakarta Sans via `next/font`.
+- **Auth BFF completo**: `lib/session.js` (cookies httpOnly via `next/headers`), Route Handlers `api/auth/{login,logout,me,refresh}`, proxy genérico `api/backend/[...path]` (Client Components chamam só isso, nunca o Go direto — inclui retry automático em 401).
+- `src/proxy.js` (renomeado de `middleware.js` no Next 16) — redirect otimista baseado em cookie, sem tocar JWT.
+- `AuthContext.jsx` (client) — bem mais simples que a SPA: sem token, só usuário + login/logout via BFF.
+- `AppShell` + `Sidebar` + `Header` portados da SPA (menu por role, dropdown de usuário via Radix).
+- Página `/login` (Server Component, redireciona se já logado) + `/dashboard` mínimo (Server Component, `apiGet` direto do Go).
+- **Testado de ponta a ponta via curl**: login grava cookie httpOnly → `/dashboard` com cookie retorna 200 com dados reais (15 clientes, 3 corretores, etc.) renderizados no servidor → `/dashboard` sem cookie retorna 307 redirect pro `/login` via `proxy.js`.
+
+⬜ **Pendente (52 das 56 rotas do inventário §0):**
+Todas as páginas exceto `/login` e `/dashboard` (versão mínima) ainda precisam ser
+portadas da SPA. Ver lista completa em §0. Prioridade: cluster SEO crítico primeiro
+(landing, vitrine de imóveis, detalhe do imóvel, busca, preços), depois o resto do CRM.
+
+## 3.6 Princípio obrigatório: mobile-first em TODA página
+
+Requisito do usuário: o sistema precisa funcionar perfeitamente em telas pequenas,
+para usuários leigos usando celular. Isso vale para TODA página migrada daqui pra
+frente, não só as que já existem:
+- Testar cada página em viewport mobile (~375px) antes de considerar pronta.
+- Touch targets grandes o suficiente (mínimo ~40px de altura em botões/links tocáveis).
+- Sidebar/Header já seguem esse princípio (AppShell tem breakpoint mobile com overlay).
+- Tabelas de listagem (clientes, imóveis, etc.) precisam de um layout alternativo em
+  mobile (cards empilhados em vez de scroll horizontal de tabela) — decidir por página
+  ao portar.
+- Formulários longos (AddCliente, etc.) precisam de inputs com `font-size` ≥16px
+  (evita zoom automático do iOS) e labels sempre visíveis (não só placeholder).
+
 ## 4. Ordem de execução proposta
 1. Scaffold do projeto Next.js (`frontend-next/`) + Tailwind/shadcn copiados.
 2. Migrar fundação: AuthContext, Sidebar, Header, layout `(app)` com guard.
