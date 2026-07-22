@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/logo-crm-imob.svg" alt="CRM IMOB" width="360" />
+<img src="frontend-next/public/logo-crm-imob.svg" alt="CRM IMOB" width="360" />
 
 # CRM IMOB
 
@@ -80,21 +80,16 @@ próprios dados.
 
 ## 🏗️ Arquitetura
 
-O projeto está em transição controlada (estratégia ***strangler-fig***): as
-versões originais em Node/React seguem funcionando em produção enquanto as novas
-versões (Go e Next.js) assumem as rotas gradualmente, sem downtime.
+Backend em Go e frontend em Next.js — a migração do stack original (Node +
+React/Vite) foi concluída; os componentes antigos foram removidos do repositório.
 
 ```mermaid
 flowchart LR
-    subgraph Frontends
-        F1["frontend\n(React + Vite)\nem produção"]
-        F2["frontend-next\n(Next.js 16 + React 19)\nem migração"]
-    end
+    F["frontend-next\n(Next.js 16 + React 19)"]
     DB[(PostgreSQL)]
     API["backend-go\n(Go + Gin + GORM)"]
 
-    F1 -->|REST + JWT| API
-    F2 -->|BFF: cookie httpOnly| API
+    F -->|BFF: cookie httpOnly| API
     API --> DB
     API <-->|whatsmeow| WA["WhatsApp"]
     API <-->|Asaas| PAY["Pagamentos"]
@@ -102,9 +97,8 @@ flowchart LR
 
 | Componente | Papel |
 |---|---|
-| 🐹 `backend-go` | API única consumida por **ambos** os frontends — backend real e definitivo do sistema. |
-| ⚛️ `frontend` | SPA em React/Vite, **em produção**. Vai sendo substituída página por página pelo `frontend-next`. |
-| ▲ `frontend-next` | Nova versão em Next.js, focada em SEO nas páginas públicas e em segurança de sessão. |
+| 🐹 `backend-go` | API do sistema — backend real e definitivo. |
+| ▲ `frontend-next` | Frontend único, em Next.js, focado em SEO nas páginas públicas e em segurança de sessão. |
 
 ---
 
@@ -129,19 +123,7 @@ Arquitetura interna em módulos por domínio
 (`internal/modules/{clientes,imoveis,alugueis,financeiro,pagamentos,whatsapp,
 dashboards,superadmin,...}`), cada um em camadas `handler → service → repository`.
 
-### ⚛️ Frontend em produção — `frontend`
-
-| Camada | Tecnologia |
-|---|---|
-| Framework | React 18 |
-| Build tool | [Vite](https://vitejs.dev) |
-| Estilo | Tailwind CSS v3 + componentes estilo shadcn (Radix UI + `class-variance-authority`) |
-| Gráficos | [Recharts](https://recharts.org) |
-| Animação | Framer Motion |
-| Ícones | Lucide |
-| Roteamento | React Router |
-
-### ▲ Nova versão — `frontend-next` *(em migração)*
+### ▲ Frontend — `frontend-next`
 
 | Camada | Tecnologia |
 |---|---|
@@ -151,18 +133,16 @@ dashboards,superadmin,...}`), cada um em camadas `handler → service → reposi
 | Autenticação | **Cookies httpOnly** via BFF — o JWT nunca é exposto ao JavaScript do navegador |
 | Renderização | Server Components com dados direto do servidor (SSR) no CRM; SSR/SSG + metadados dinâmicos (`generateMetadata`, Open Graph) nas páginas públicas |
 
-> **Por que migrar?** As páginas públicas (vitrine de imóveis, landing, detalhe de
-> cada imóvel) precisavam de SEO real e preview correto ao compartilhar links no
-> WhatsApp/redes sociais — algo que uma SPA pura não entrega. A migração também
-> eliminou token em `localStorage` (superfície de ataque XSS) e adotou as versões
-> mais recentes de todo o stack.
+> **Por que Next.js?** As páginas públicas (vitrine de imóveis, landing, detalhe
+> de cada imóvel) precisam de SEO real e preview correto ao compartilhar links no
+> WhatsApp/redes sociais — algo que uma SPA pura não entrega. A escolha também
+> eliminou token em `localStorage` (superfície de ataque XSS).
 
 ---
 
 ## 🚀 Rodando localmente
 
-Cada parte roda de forma independente. O `backend-go` é obrigatório para qualquer
-um dos dois frontends funcionar.
+O `backend-go` é obrigatório para o frontend funcionar.
 
 ### 🐹 Backend
 ```bash
@@ -172,14 +152,7 @@ migrate -path migrations -database "$DATABASE_URL" up   # recria o schema do zer
 go run ./cmd/api
 ```
 
-### ⚛️ Frontend (produção — Vite)
-```bash
-cd frontend
-npm install
-npm run st                  # dev server com hot reload
-```
-
-### ▲ Frontend (novo — Next.js)
+### ▲ Frontend
 ```bash
 cd frontend-next
 npm install
@@ -189,14 +162,14 @@ npm run dev
 
 ---
 
-## 📊 Status da migração
+## 📊 Status
 
 | Frente | Estado |
 |---|---|
-| Backend Node → Go | ✅ Migrado — `backend-go` é o backend real, todos os módulos de negócio implementados |
+| Backend Node → Go | ✅ Migrado — todos os módulos de negócio implementados |
 | Schema do banco | ✅ Versionado via `golang-migrate`, reproduzível do zero em qualquer ambiente |
-| Frontend Vite → Next.js | 🚧 Em andamento — fundação de autenticação (BFF + cookies httpOnly) validada ponta a ponta; páginas sendo portadas por cluster (SEO público primeiro, depois o restante do CRM) |
-| Design system | 🚧 React 19 + Tailwind v4 + shadcn/ui adotados no `frontend-next`; refinamento visual de cada página é uma etapa própria, após todas estarem funcionalmente portadas |
+| Frontend Vite → Next.js | ✅ Migrado — `frontend-next` é o único frontend do projeto |
+| Design system | 🚧 React 19 + Tailwind v4 + shadcn/ui adotados; refinamento visual de cada página é uma etapa em andamento |
 
 Consulte `backend-go/STATUS.md` e `frontend-next/MIGRATION.md` para o
 detalhamento técnico completo de cada frente.
