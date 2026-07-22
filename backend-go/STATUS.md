@@ -44,22 +44,34 @@ Asaas) e a exigência de `laudos.tenant_id` (ver migrations pendentes abaixo).
 - **Billing SaaS via Asaas** (assinatura de planos com cobrança real): `internal/modules/billing` gerencia o registro, mas não emite cobrança no Asaas ainda.
 - **Jobs com serviços reais**: o scheduler (`internal/jobs`) está rodando mas a maioria dos serviços de negócio (pagamentos, régua, score, reajuste, relatório mensal) está injetada como `nil` — precisam ser conectados aos services reais dos módulos.
 - **whatsmeow**: credenciais Baileys não migram — todo tenant precisará reescanear o QR Code uma vez no cutover.
-- **golang-migrate**: ainda não há baseline gerada (`migrations/README.md` tem o passo a passo). Precisa rodar antes de qualquer alteração de schema pelo Go.
-- **Migration pendente**: `ALTER TABLE laudos ADD COLUMN tenant_id` (o Node não tinha essa coluna).
+- **Migration pendente**: `ALTER TABLE laudos ADD COLUMN tenant_id` (o Node não tinha essa coluna) — ainda não incluída no baseline `0001`.
 - **Cartão de crédito tokenizado** no Asaas: suportado no client, mas sem rota HTTP própria ainda (Node também não tinha).
 
-## Não testado (precisa de ambiente real)
+## ✅ golang-migrate — baseline gerada e testada (2026-07-22)
 
-- Login/CRUD contra dados reais (só testei fail-fast de credencial errada).
-- Fluxo de pagamento Asaas ponta a ponta (sandbox).
-- Conexão WhatsApp real (whatsmeow exige QR scan).
-- WebSocket end-to-end com o frontend.
+`backend-go/migrations/0001_baseline_schema.{up,down}.sql` (36 tabelas, via `pg_dump --schema-only`
+do banco real, excluindo `whatsmeow_*` e `SequelizeMeta`) + `0002_baseline_seed.{up,down}.sql`
+(1 tenant, 3 planos, 1 admin `admin@admin.com`/`admin`, 27 estados, 5570 municípios — **sem**
+clientes de teste). Testado de ponta a ponta: `migrate up` rodado contra um banco Postgres
+**novo e vazio** (`crmjs_migrate_test`), recriou schema+dados idênticos, depois descartado. O
+`crmjs` real foi marcado como já na versão 2 (`migrate force 2`) sem re-executar — evita duplicar
+`CREATE TABLE`. Funciona igual `sequelize db:migrate`: `migrate -path migrations -database
+"postgres://user:pass@host/db?sslmode=disable" up` recria o banco inteiro em qualquer lugar. Ver
+`migrations/README.md`.
+
+## Testado com dados reais (2026-07-22)
+
+- ✅ Login (`admin@admin.com`/`admin`) — JWT emitido corretamente.
+- ✅ `/api/auth/me`, `/api/clientes` (tenant scoping funcionando), `/api/estados` (pública).
+- ✅ Frontend Vite (localhost:3000) + Backend Go (localhost:8001) rodando simultaneamente.
+- ⬜ Fluxo de pagamento Asaas ponta a ponta (sandbox) — não testado.
+- ⬜ Conexão WhatsApp real (whatsmeow exige QR scan) — não testado.
+- ⬜ WebSocket end-to-end com o frontend — não testado.
 
 ## Próximos passos sugeridos
 
-1. Configurar `.env` real (copiar do ambiente do Node) e rodar `go run ./cmd/api` contra o banco de verdade.
-2. Gerar a baseline golang-migrate + aplicar a migration de `laudos.tenant_id`.
-3. Testar login e 2-3 rotas de cada cluster manualmente (Postman/curl) comparando resposta com o Node.
-4. Escolher e implementar a lib de PDF (decisão já era "libs nativas Go").
-5. Conectar os `nil` do `jobs.Deps` aos services reais conforme forem validados.
-6. Planejar o corte de tráfego no nginx rota-por-rota (strangler-fig).
+1. Adicionar a migration `ALTER TABLE laudos ADD COLUMN tenant_id` como `0003_laudos_tenant_id`.
+2. Testar mais rotas de cada cluster manualmente (Postman/curl) comparando resposta com o Node.
+3. Escolher e implementar a lib de PDF (decisão já era "libs nativas Go").
+4. Conectar os `nil` do `jobs.Deps` aos services reais conforme forem validados.
+5. Planejar o corte de tráfego no nginx rota-por-rota (strangler-fig).

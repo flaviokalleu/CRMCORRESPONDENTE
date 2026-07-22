@@ -67,6 +67,16 @@ func (r *Repository) TouchAccess(ctx context.Context, refresh, newAccess string)
 		Updates(map[string]any{"token": newAccess, "expires_at": time.Now().Add(AccessTTL), "updated_at": time.Now()}).Error
 }
 
+// ExtendExpiry estende expires_at (+AccessTTL) da linha localizada pelo próprio
+// access token — usado por /auth/check-auth (sessão deslizante, sem reemitir JWT).
+func (r *Repository) ExtendExpiry(ctx context.Context, token string) (time.Time, error) {
+	newExpiry := time.Now().Add(AccessTTL)
+	err := r.db.WithContext(ctx).Model(&models.Token{}).
+		Where("token = ?", token).
+		Updates(map[string]any{"expires_at": newExpiry, "updated_at": time.Now()}).Error
+	return newExpiry, err
+}
+
 func (r *Repository) DeleteByAccess(ctx context.Context, token string) error {
 	return r.db.WithContext(ctx).Where("token = ?", token).Delete(&models.Token{}).Error
 }

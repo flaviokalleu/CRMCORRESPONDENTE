@@ -10,120 +10,94 @@ import {
   UserCog,
   ShieldCheck,
   Building2,
-  CreditCard,
   List,
   Bell,
   Users,
   ClipboardList,
   Banknote,
   QrCode,
-  BarChart3,
   PanelLeftClose,
   X,
   Crown,
-  Sparkles,
   Building,
   CalendarCheck,
   FileText,
+  Handshake,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import { Separator } from "./ui/separator";
+import { cn } from "../lib/utils";
 
 // ─── Componentes FORA do Sidebar (estáveis, não recriam a cada render) ───
 
-const UserAvatar = ({ name, photo, photoUrl, size = 44 }) => {
-  const [imgError, setImgError] = useState(false);
-
-  if (photo && photoUrl && !imgError) {
-    return (
-      <img
-        src={photoUrl}
-        alt={name}
-        className="h-full w-full object-cover"
-        onError={() => setImgError(true)}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
-  const colors = [
-    '#F97316', '#4A8CB8', '#6B8F71', '#8B6B9F', '#B85A4A',
-    '#4AB8A8', '#E67E22', '#5A7EB8', '#9F6B8B', '#6B9F71',
-  ];
-  const charCode = (name || 'U').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  const bgColor = colors[charCode % colors.length];
-  const initials = (name || 'U')
-    .split(' ')
+const initialsOf = (name) =>
+  (name || "U")
+    .split(" ")
     .map((w) => w[0])
+    .filter(Boolean)
     .slice(0, 2)
-    .join('')
+    .join("")
     .toUpperCase();
 
-  return (
-    <svg width={size} height={size} viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-      <rect width="44" height="44" rx="22" fill={bgColor} />
-      <text x="22" y="22" textAnchor="middle" dominantBaseline="central"
-        fill="white" fontSize="16" fontWeight="600" fontFamily="sans-serif">
-        {initials}
-      </text>
-    </svg>
-  );
-};
-
-const NavItem = ({ to, icon: Icon, label, isActive }) => {
-  const active = to && isActive;
-  return (
-    <Link
-      to={to}
-      className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-        active
-          ? "bg-caixa-orange/20 text-caixa-orange"
-          : "text-white/60 hover:bg-white/5 hover:text-white"
-      }`}
-    >
-      <Icon
-        className={`h-[18px] w-[18px] flex-shrink-0 ${
-          active ? "text-caixa-orange" : "text-white/30 group-hover:text-white/60"
-        }`}
-        strokeWidth={1.8}
-      />
-      {label}
-    </Link>
-  );
-};
-
-const DropdownSection = ({ icon: Icon, label, isOpen, onToggle, items, pathname }) => (
-  <>
-    <button
-      onClick={onToggle}
-      className="group flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-white/60 transition-all duration-200 hover:bg-white/5 hover:text-white"
-    >
-      <span className="flex items-center gap-3">
-        <Icon className="h-[18px] w-[18px] text-white/30 group-hover:text-white/60" strokeWidth={1.8} />
-        {label}
-      </span>
-      <motion.span animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
-        <ChevronRight className="h-4 w-4 text-white/20" />
-      </motion.span>
-    </button>
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="overflow-hidden"
-        >
-          <div className="ml-5 space-y-0.5 border-l border-white/10 pl-3 py-1">
-            {items.map((item) => (
-              <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </>
+const NavItem = ({ to, icon: Icon, label, isActive, nested = false }) => (
+  <Link
+    to={to}
+    className={cn(
+      "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+      nested && "py-1.5",
+      isActive
+        ? "bg-white/[0.09] text-white"
+        : "text-white/55 hover:bg-white/[0.05] hover:text-white/90"
+    )}
+  >
+    {isActive && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-caixa-orange" />}
+    <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-caixa-orange" : "text-white/35 group-hover:text-white/60")} strokeWidth={1.75} />
+    <span className="truncate">{label}</span>
+  </Link>
 );
+
+const NavGroup = ({ groupKey, icon: Icon, label, isOpen, onToggle, items, pathname }) => {
+  const hasActiveChild = items.some((i) => i.to === pathname);
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className={cn(
+          "group flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+          isOpen || hasActiveChild ? "bg-white/[0.04] text-white/90" : "text-white/55 hover:bg-white/[0.05] hover:text-white/90"
+        )}
+      >
+        <span className="flex items-center gap-3">
+          <Icon className={cn("h-4 w-4", hasActiveChild ? "text-caixa-orange" : "text-white/35 group-hover:text-white/60")} strokeWidth={1.75} />
+          {label}
+        </span>
+        <ChevronRight
+          className={cn("h-3.5 w-3.5 text-white/25 transition-transform duration-200", isOpen && "rotate-90")}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key={groupKey}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="ml-[18px] mt-1 space-y-0.5 border-l border-white/10 pl-3 py-0.5">
+              {items.map((item) => (
+                <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} nested />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 // ─── Sidebar principal ───
 
@@ -134,8 +108,10 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
   const location = useLocation();
 
   const [timeRemaining, setTimeRemaining] = useState("...");
-  const [addOpen, setAddOpen] = useState(false);
-  const [listOpen, setListOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
+  const toggleGroup = useCallback((key) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || "CRM IMOB";
 
@@ -220,196 +196,193 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
     [user?.first_name, user?.last_name]
   );
 
-  // Menu items memoizados — só recriam se roles mudarem
-  const menu = useMemo(() => {
-    const items = { add: [], list: [], extra: [], secondary: [] };
+  // Estrutura em árvore: itens de topo (sem submenu) + grupos com submenu.
+  const { top, groups, bottomExtra } = useMemo(() => {
+    const top = [{ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" }];
+    const groups = [];
+    const bottomExtra = [];
 
-    items.extra.push({ to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" });
-    items.secondary.push({ to: "/visitas", icon: CalendarCheck, label: "Visitas" });
-    items.secondary.push({ to: "/propostas", icon: FileText, label: "Propostas" });
+    const isStaff = hasRole("administrador") || hasRole("correspondente");
+    const isCorretor = hasRole("corretor");
 
-    if (hasRole("corretor")) {
-      items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
-      items.list.push(
-        { to: "/clientes/lista", icon: List, label: "Clientes" },
-        { to: "/imoveis/lista", icon: ClipboardList, label: "Imóveis" }
-      );
+    // Vendas — visitas/propostas, visível a todos os perfis operacionais
+    groups.push({
+      key: "vendas",
+      icon: Handshake,
+      label: "Vendas",
+      items: [
+        { to: "/visitas", icon: CalendarCheck, label: "Visitas" },
+        { to: "/propostas", icon: FileText, label: "Propostas" },
+      ],
+    });
+
+    // Clientes
+    if (isCorretor || isStaff) {
+      const items = [{ to: "/clientes/lista", icon: List, label: "Listar Clientes" }];
+      if (isStaff || isCorretor) items.unshift({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
+      groups.push({ key: "clientes", icon: Users, label: "Clientes", items });
     }
 
-    if (hasRole("correspondente")) {
-      if (!items.add.some((i) => i.to === "/clientes/adicionar"))
-        items.add.push({ to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
-      if (!items.list.some((i) => i.to === "/clientes/lista"))
-        items.list.push({ to: "/clientes/lista", icon: List, label: "Clientes" });
+    // Imóveis
+    if (isCorretor || isStaff) {
+      const items = [{ to: "/imoveis/lista", icon: ClipboardList, label: "Listar Imóveis" }];
+      if (isStaff) items.unshift({ to: "/imoveis/adicionar", icon: Building2, label: "Adicionar Imóvel" });
+      groups.push({ key: "imoveis", icon: Building2, label: "Imóveis", items });
     }
 
-    if (hasRole("administrador") || hasRole("correspondente")) {
-      [
-        { to: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" },
-        { to: "/corretores/adicionar", icon: UserCog, label: "Adicionar Corretor" },
-        { to: "/correspondentes/adicionar", icon: ShieldCheck, label: "Adicionar Correspondente" },
-        { to: "/imoveis/adicionar", icon: Building2, label: "Adicionar Imóvel" },
-      ].forEach((i) => { if (!items.add.some((e) => e.to === i.to)) items.add.push(i); });
+    // Pessoas (equipe) — só staff
+    if (isStaff) {
+      groups.push({
+        key: "pessoas",
+        icon: UserCog,
+        label: "Equipe",
+        items: [
+          { to: "/corretores/adicionar", icon: UserPlus, label: "Adicionar Corretor" },
+          { to: "/corretores/lista", icon: UserCog, label: "Corretores" },
+          { to: "/correspondentes/adicionar", icon: UserPlus, label: "Adicionar Correspondente" },
+          { to: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
+          { to: "/proprietarios/lista", icon: Users, label: "Proprietários" },
+        ],
+      });
 
-      [
-        { to: "/proprietarios/lista", icon: Users, label: "Proprietários" },
-        { to: "/lembretes", icon: Bell, label: "Lembretes" },
-        { to: "/clientes/lista", icon: List, label: "Clientes" },
-        { to: "/imoveis/lista", icon: ClipboardList, label: "Imóveis" },
-        { to: "/corretores/lista", icon: UserCog, label: "Corretores" },
-        { to: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
-        { to: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" },
-      ].forEach((i) => { if (!items.list.some((e) => e.to === i.to)) items.list.push(i); });
+      // Aluguéis
+      groups.push({
+        key: "alugueis",
+        icon: KeyRound,
+        label: "Aluguéis",
+        items: [
+          { to: "/alugueis/adicionar", icon: Building2, label: "Adicionar Imóvel p/ Locação" },
+          { to: "/alugueis", icon: Building2, label: "Imóveis em Locação" },
+          { to: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
+          { to: "/contratos/lista", icon: FileText, label: "Contratos" },
+        ],
+      });
 
-      [
-        { to: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" },
-      ].forEach((i) => { if (!items.extra.some((e) => e.to === i.to)) items.extra.push(i); });
+      // Financeiro
+      groups.push({
+        key: "financeiro",
+        icon: Banknote,
+        label: "Financeiro",
+        items: [
+          { to: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" },
+        ],
+      });
 
-      // Itens de aluguel
-      items.list.push(
-        { to: "/alugueis", icon: Building2, label: "Imoveis Aluguel" },
-        { to: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
-        { to: "/contratos/lista", icon: FileText, label: "Contratos" }
-      );
-      items.add.push(
-        { to: "/alugueis/adicionar", icon: Building2, label: "Adicionar Imovel Aluguel" }
-      );
+      bottomExtra.push({ to: "/lembretes", icon: Bell, label: "Lembretes" });
+      bottomExtra.push({ to: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" });
     }
 
-    // ✅ Itens SaaS
     if (isSuperAdmin) {
-      items.extra.push({ to: "/super-admin", icon: Crown, label: "Super Admin" });
+      bottomExtra.push({ to: "/super-admin", icon: Crown, label: "Super Admin" });
     }
     if (hasRole("administrador")) {
-      items.extra.push({ to: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" });
+      bottomExtra.push({ to: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" });
     }
 
-    return items;
+    return { top, groups, bottomExtra };
   }, [hasRole, isSuperAdmin]);
 
   const pathname = location.pathname;
 
   return (
-    <div className="flex h-full flex-col bg-caixa-gradient border-r border-white/10 text-white">
+    <div className="flex h-full flex-col bg-caixa-primary text-white">
       {/* Header */}
-      <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-5 bg-caixa-primary/50 backdrop-blur-md">
+      <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <Link to="/dashboard" className="flex items-center gap-2.5">
-          <img src="/logo-crm-imob.svg" alt={nomeSistema} className="h-7 w-auto" />
-          <span className="text-sm font-bold text-white">{nomeSistema}</span>
+          <img src="/logo-crm-imob.svg" alt={nomeSistema} className="h-6 w-auto" />
+          <span className="text-sm font-semibold tracking-tight text-white">{nomeSistema}</span>
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {onToggleVisibility && (
             <button
               onClick={onToggleVisibility}
-              className="hidden h-7 w-7 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/10 hover:text-white md:flex"
+              className="hidden h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white md:flex"
               title="Recolher menu"
             >
-              <PanelLeftClose className="h-4 w-4" />
+              <PanelLeftClose className="h-4 w-4" strokeWidth={1.75} />
             </button>
           )}
           <button
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white md:hidden"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.75} />
           </button>
         </div>
       </div>
 
       {/* User Profile */}
-      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4 bg-caixa-primary/30">
-        <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border-2 border-caixa-orange/50 shadow-lg">
-          <UserAvatar name={fullName} photo={user?.photo} photoUrl={photoUrl} size={44} />
-        </div>
+      <div className="mx-3 mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3">
+        <Avatar className="h-9 w-9 border border-white/10">
+          {photoUrl && <AvatarImage src={photoUrl} alt={fullName} />}
+          <AvatarFallback>{initialsOf(fullName)}</AvatarFallback>
+        </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">{fullName}</p>
-          <div className="mt-0.5 flex items-center gap-2">
-            <span className="text-[11px] text-white/40">{displayRole}</span>
-            <div className="flex gap-1">
-              {hasRole("administrador") && (
-                <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400 border border-red-400/30">ADM</span>
-              )}
-              {hasRole("correspondente") && (
-                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 border border-white/20">COR</span>
-              )}
-              {hasRole("corretor") && (
-                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 border border-white/20">BRK</span>
-              )}
+          <p className="truncate text-sm font-medium text-white">{fullName}</p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span className="text-[11px] text-white/45">{displayRole}</span>
+            <span className="text-white/20">·</span>
+            <div className="flex items-center gap-1">
+              <div className={cn("h-1.5 w-1.5 rounded-full", timeRemaining === "Expirado" ? "bg-red-400" : "bg-emerald-400")} />
+              <span className={cn("font-mono text-[10px]", timeRemaining === "Expirado" ? "text-red-400" : "text-white/40")}>
+                {timeRemaining}
+              </span>
             </div>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className={`h-1.5 w-1.5 rounded-full ${timeRemaining === "Expirado" ? "bg-red-400 animate-pulse" : "bg-emerald-400"}`} />
-            <span className={`font-mono text-[10px] ${timeRemaining === "Expirado" ? "text-red-400" : "text-white/30"}`}>
-              {timeRemaining}
-            </span>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
+      <nav className="flex-1 overflow-y-auto px-2.5 py-3">
         <div className="space-y-0.5">
-          {menu.extra.map((item) => (
+          {top.map((item) => (
             <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
           ))}
         </div>
 
-        {menu.add.length > 0 && <div className="my-3 border-t border-white/10" />}
-
-        {menu.add.length > 0 && (
-          <div className="space-y-0.5">
-            <p className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-wider text-white/20">
-              Cadastros
-            </p>
-            <DropdownSection
-              icon={UserPlus}
-              label="Adicionar"
-              isOpen={addOpen}
-              onToggle={() => setAddOpen((p) => !p)}
-              items={menu.add}
+        <p className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+          Menu
+        </p>
+        <div className="space-y-0.5">
+          {groups.map((g) => (
+            <NavGroup
+              key={g.key}
+              groupKey={g.key}
+              icon={g.icon}
+              label={g.label}
+              isOpen={!!openGroups[g.key]}
+              onToggle={() => toggleGroup(g.key)}
+              items={g.items}
               pathname={pathname}
             />
-          </div>
-        )}
+          ))}
+        </div>
 
-        {menu.list.length > 0 && (
-          <div className="mt-1 space-y-0.5">
-            <DropdownSection
-              icon={ClipboardList}
-              label="Listagens"
-              isOpen={listOpen}
-              onToggle={() => setListOpen((p) => !p)}
-              items={menu.list}
-              pathname={pathname}
-            />
-          </div>
-        )}
-
-        {menu.secondary.length > 0 && (
-          <div className="mt-2 space-y-0.5">
-            {menu.secondary.map((item) => (
+        {bottomExtra.length > 0 && (
+          <div className="mt-4 space-y-0.5">
+            {bottomExtra.map((item) => (
               <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} isActive={pathname === item.to} />
             ))}
           </div>
         )}
 
-        <div className="my-3 border-t border-white/10" />
+        <Separator className="my-3 bg-white/10" />
 
         <div className="space-y-0.5">
           <NavItem to="/configuracoes" icon={Settings} label="Configurações" isActive={pathname === "/configuracoes"} />
           <button
             onClick={handleLogout}
-            className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/60 transition-all duration-200 hover:bg-red-500/15 hover:text-red-400"
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/55 transition-colors hover:bg-red-500/10 hover:text-red-400"
           >
-            <LogOut className="h-[18px] w-[18px] text-white/30 group-hover:text-red-400" strokeWidth={1.8} />
+            <LogOut className="h-4 w-4 text-white/35 group-hover:text-red-400" strokeWidth={1.75} />
             Sair
           </button>
         </div>
       </nav>
 
       {/* Footer */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-caixa-primary/30 px-5 py-3">
-        <p className="text-center text-[10px] text-white/20">
+      <div className="flex-shrink-0 border-t border-white/10 px-4 py-3">
+        <p className="text-center text-[10px] text-white/25">
           &copy; {new Date().getFullYear()} {nomeSistema}
         </p>
       </div>

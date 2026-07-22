@@ -150,3 +150,31 @@ func (h *Handler) Me(c *gin.Context) {
 		"is_super_admin": user.IsSuperAdmin,
 	})
 }
+
+// CheckAuth é a sessão deslizante: roda atrás de Required() (que já validou
+// registro+assinatura+usuário), e apenas estende expires_at (+1h) sem reemitir
+// o JWT. Contrato preservado 1:1 com o Node (ver 01-spec §2.1) — o frontend
+// chama isso no boot do AuthProvider e periodicamente; sem essa rota, o
+// AuthProvider derruba a sessão do usuário logo após o login.
+func (h *Handler) CheckAuth(c *gin.Context) {
+	user, _ := UserFrom(c)
+	raw := bearer(c)
+
+	newExpiry, err := h.repo.ExtendExpiry(c.Request.Context(), raw)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao estender sessão"})
+		return
+	}
+
+	role := user.Role()
+	c.JSON(http.StatusOK, gin.H{
+		"authenticated":  true,
+		"user":           userPayload(user),
+		"type":           role,
+		"role":           role,
+		"token":          raw,
+		"expiresAt":      newExpiry,
+		"tenant_id":      user.TenantID,
+		"is_super_admin": user.IsSuperAdmin,
+	})
+}

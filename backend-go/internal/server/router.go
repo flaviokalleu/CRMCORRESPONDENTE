@@ -101,6 +101,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	authGroup.POST("/logout", authHandler.Required(), authHandler.Logout)
 	authGroup.POST("/validate-token", authHandler.Required(), authHandler.Validate)
 	authGroup.GET("/me", authHandler.Required(), authHandler.Me)
+	authGroup.GET("/check-auth", authHandler.Required(), authHandler.CheckAuth)
 
 	authed := func() gin.HandlerFunc { return authHandler.Required() }
 	tenantScoped := middleware.ResolveTenant(db)
