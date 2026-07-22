@@ -1,0 +1,151 @@
+"use client";
+
+import { useState } from "react";
+
+const STATUS_MAP = {
+  agendada: { label: "Agendada", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  realizada: { label: "Realizada", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  cancelada: { label: "Cancelada", color: "bg-red-500/20 text-red-400 border-red-500/30" },
+  reagendada: { label: "Reagendada", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+};
+
+// Client Component: lista de visitas (recebida via SSR) + form de criação e
+// ações de status, tudo via proxy `/api/backend/visitas`.
+export function VisitasManager({ initialVisitas, clientes, imoveis }) {
+  const [visitas, setVisitas] = useState(initialVisitas || []);
+  const [form, setForm] = useState({ cliente_id: "", imovel_id: "", data_visita: "", observacoes: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!form.cliente_id || !form.imovel_id || !form.data_visita) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/backend/visitas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error("Erro ao agendar visita");
+      const nova = await res.json();
+      setVisitas((prev) => [...prev, nova.data || nova]);
+      setForm({ cliente_id: "", imovel_id: "", data_visita: "", observacoes: "" });
+    } catch (err) {
+      setError(err.message || "Erro ao agendar visita");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      await fetch(`/api/backend/visitas/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      setVisitas((prev) => prev.map((v) => (v.id === id ? { ...v, status } : v)));
+    } catch {
+      setError("Erro ao atualizar visita");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Excluir esta visita?")) return;
+    try {
+      await fetch(`/api/backend/visitas/${id}`, { method: "DELETE" });
+      setVisitas((prev) => prev.filter((v) => v.id !== id));
+    } catch {
+      setError("Erro ao excluir visita");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 grid gap-3 sm:grid-cols-4">
+        <select
+          value={form.cliente_id}
+          onChange={(e) => setForm((p) => ({ ...p, cliente_id: e.target.value }))}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          required
+        >
+          <option value="">Cliente...</option>
+          {(clientes || []).map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
+        <select
+          value={form.imovel_id}
+          onChange={(e) => setForm((p) => ({ ...p, imovel_id: e.target.value }))}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          required
+        >
+          <option value="">Imóvel...</option>
+          {(imoveis || []).map((i) => (
+            <option key={i.id} value={i.id}>{i.nome_imovel || i.endereco}</option>
+          ))}
+        </select>
+        <input
+          type="datetime-local"
+          value={form.data_visita}
+          onChange={(e) => setForm((p) => ({ ...p, data_visita: e.target.value }))}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          required
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-caixa-orange px-4 py-2 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50"
+        >
+          {saving ? "Salvando..." : "Agendar visita"}
+        </button>
+        <input
+          type="text"
+          placeholder="Observações"
+          value={form.observacoes}
+          onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50 sm:col-span-4"
+        />
+      </form>
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <div className="space-y-3">
+        {visitas.length === 0 ? (
+          <p className="text-white/30 text-sm">Nenhuma visita encontrada.</p>
+        ) : (
+          visitas.map((v) => {
+            const s = STATUS_MAP[v.status] || STATUS_MAP.agendada;
+            return (
+              <div key={v.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${s.color}`}>{s.label}</span>
+                      <span className="text-sm font-semibold text-white">{v.cliente?.nome || "Cliente"}</span>
+                    </div>
+                    <p className="text-xs text-white/40">
+                      {v.imovel?.nome_imovel || v.imovel?.endereco || "Imóvel"} — {v.data_visita ? new Date(v.data_visita).toLocaleString("pt-BR") : ""}
+                    </p>
+                    {v.observacoes && <p className="text-xs text-white/30">{v.observacoes}</p>}
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    {v.status === "agendada" && (
+                      <>
+                        <button onClick={() => updateStatus(v.id, "realizada")} className="text-emerald-400 hover:underline">Realizada</button>
+                        <button onClick={() => updateStatus(v.id, "cancelada")} className="text-red-400 hover:underline">Cancelar</button>
+                      </>
+                    )}
+                    <button onClick={() => handleDelete(v.id)} className="text-white/40 hover:text-red-400 hover:underline">Excluir</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
