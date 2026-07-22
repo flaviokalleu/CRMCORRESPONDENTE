@@ -59,6 +59,28 @@ func scopeSQL(ctx context.Context, user *models.User) (string, []interface{}) {
 	return " AND " + strings.Join(clauses, " AND "), args
 }
 
+// scopeSQLQualified é como scopeSQL, mas qualifica as colunas com o alias de
+// tabela informado (necessário em queries com JOIN entre tabelas que também
+// têm tenant_id/user_id, como `users` — senão o Postgres rejeita a coluna
+// como ambígua).
+func scopeSQLQualified(ctx context.Context, user *models.User, alias string) (string, []interface{}) {
+	var clauses []string
+	var args []interface{}
+
+	if scope, ok := tenant.From(ctx); ok && scope.TenantID != nil {
+		clauses = append(clauses, alias+".tenant_id = ?")
+		args = append(args, *scope.TenantID)
+	}
+	if uid := scopeUserID(user); uid != nil {
+		clauses = append(clauses, alias+".user_id = ?")
+		args = append(args, *uid)
+	}
+	if len(clauses) == 0 {
+		return "", nil
+	}
+	return " AND " + strings.Join(clauses, " AND "), args
+}
+
 // applyModelScope aplica o filtro user_id (quando corretor puro) numa query
 // Model-based; tenant_id já é injetado pelo callback global.
 func applyModelScope(q *gorm.DB, user *models.User) *gorm.DB {
@@ -214,7 +236,10 @@ func (s *Service) MainDashboard(ctx context.Context, user *models.User) (*MainDa
 			Clientes  int64
 		}
 		var topRows []topRow
-		clause, args := scopeSQL(ctx, user)
+		// Qualificado com "c." (não usa scopeSQL genérico): a query faz JOIN com
+		// `users`, que também tem coluna tenant_id — sem qualificar, o Postgres
+		// rejeita com "referência à coluna tenant_id é ambígua" (SQLSTATE 42702).
+		clause, args := scopeSQLQualified(ctx, user, "c")
 		q := fmt.Sprintf(`
 			SELECT c.user_id AS user_id, u.first_name AS first_name, u.last_name AS last_name,
 			       u.email AS email, COUNT(c.id) AS clientes
