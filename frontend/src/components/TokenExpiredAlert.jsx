@@ -1,38 +1,19 @@
-// src/components/TokenExpiredAlert.js
+// src/components/TokenExpiredAlert.jsx
 import React from 'react';
-import { Button } from '@mui/material'; // ou outro componente de botão que você esteja usando
-import { styled } from '@mui/material/styles';
-
-const Overlay = styled('div')({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 9999,
-});
-
-const MessageBox = styled('div')({
-  backgroundColor: '#fff',
-  padding: '20px',
-  borderRadius: '5px',
-  textAlign: 'center',
-});
 
 const TokenExpiredAlert = () => {
   return (
-    <Overlay>
-      <MessageBox>
+    <div className="fixed inset-0 w-full h-full bg-black/80 flex items-center justify-center z-[9999]">
+      <div className="bg-white rounded-md p-5 text-center">
         <h2>Your session has expired. Please log in again.</h2>
-        <Button variant="contained" color="primary" onClick={() => window.location.href = '/login'}>
+        <button
+          className="mt-3 px-4 py-2 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          onClick={() => window.location.href = '/login'}
+        >
           Go to Login
-        </Button>
-      </MessageBox>
-    </Overlay>
+        </button>
+      </div>
+    </div>
   );
 };
 

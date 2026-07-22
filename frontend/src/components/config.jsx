@@ -119,7 +119,7 @@ export const useFetchWeeklyClients = () => {
   return lineChartData;
 };
 
-// Opções do gráfico de linha
+// OpÃ§Ãµes do grÃ¡fico de linha
 export const LINE_CHART_OPTIONS = {
   plugins: {
     legend: {
@@ -158,7 +158,7 @@ export const LINE_CHART_OPTIONS = {
   elements: {
     line: {
       borderWidth: 3,
-      borderColor: "linear-gradient(to right, #1E3A8A, #10B981)", // Degradê da linha
+      borderColor: "linear-gradient(to right, #1E3A8A, #10B981)", // DegradÃª da linha
       tension: 0.4,
     },
     point: {
@@ -170,7 +170,7 @@ export const LINE_CHART_OPTIONS = {
   },
 };
 
-// Opções do gráfico de barras
+// OpÃ§Ãµes do grÃ¡fico de barras
 export const BAR_CHART_OPTIONS = {
   plugins: {
     legend: {

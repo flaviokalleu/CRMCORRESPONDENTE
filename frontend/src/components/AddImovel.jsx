@@ -74,10 +74,10 @@ const TagSelector = ({ tags, setTags }) => {
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const predefinedTags = [
-    "100% Financiado", "Alto Padr„o", "Apartamento", "Casa", "Duplex",
-    "Em construÁ„o", "Exclusivos", "Melhores Ofertas", "PrÛximo ao Centro",
-    "PrÛximo ‡ Escola", "PrÛximo ao ComÈrcio", "Aceita Financiamento",
-    "Reformado", "Com Lazer", "Garagem", "Jardim", "¡rea Privativa"
+    "100% Financiado", "Alto Padr√£o", "Apartamento", "Casa", "Duplex",
+    "Em constru√ß√£o", "Exclusivos", "Melhores Ofertas", "Pr√≥ximo ao Centro",
+    "Pr√≥ximo √† Escola", "Pr√≥ximo ao Com√©rcio", "Aceita Financiamento",
+    "Reformado", "Com Lazer", "Garagem", "Jardim", "√Årea Privativa"
   ];
 
   const addCustomTag = () => {
@@ -190,7 +190,7 @@ const FileUploadField = ({ label, accept, onChange, multiple = false, icon: Icon
             Clique ou arraste arquivos
           </p>
           <p className="text-[9px] text-white/20 mt-1">
-            {accept === 'image/*' ? 'PNG, JPG atÈ 10MB' : accept === '.pdf' ? 'PDF atÈ 10MB' : 'Qualquer arquivo'}
+            {accept === 'image/*' ? 'PNG, JPG at√© 10MB' : accept === '.pdf' ? 'PDF at√© 10MB' : 'Qualquer arquivo'}
           </p>
         </div>
         {value && (
@@ -209,8 +209,8 @@ const AddImovel = () => {
   const [formData, setFormData] = useState({
     nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo",
     quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "",
-    localizacao: "Valparaiso de Goi·s - Goi·s", exclusivo: "n„o",
-    temInquilino: "n„o", situacaoImovel: "", observacoes: ""
+    localizacao: "Valparaiso de Goi√°s - Goi√°s", exclusivo: "n√£o",
+    temInquilino: "n√£o", situacaoImovel: "", observacoes: ""
   });
   const [tags, setTags] = useState([]);
   const [files, setFiles] = useState({ documentacao: null, imagens: [], imagemCapa: null });
@@ -236,24 +236,24 @@ const AddImovel = () => {
 
   const validateForm = () => {
     const e = {};
-    if (!formData.nomeImovel.trim()) e.nomeImovel = "Nome È obrigatÛrio";
-    if (!formData.endereco.trim()) e.endereco = "EndereÁo È obrigatÛrio";
-    if (!formData.quartos) e.quartos = "Quartos È obrigatÛrio";
-    if (!formData.banheiro) e.banheiro = "Banheiros È obrigatÛrio";
-    if (!formData.valorVenda) e.valorVenda = "Valor de venda È obrigatÛrio";
-    if (!formData.situacaoImovel.trim()) e.situacaoImovel = "SituaÁ„o È obrigatÛria";
+    if (!formData.nomeImovel.trim()) e.nomeImovel = "Nome √© obrigat√≥rio";
+    if (!formData.endereco.trim()) e.endereco = "Endere√ßo √© obrigat√≥rio";
+    if (!formData.quartos) e.quartos = "Quartos √© obrigat√≥rio";
+    if (!formData.banheiro) e.banheiro = "Banheiros √© obrigat√≥rio";
+    if (!formData.valorVenda) e.valorVenda = "Valor de venda √© obrigat√≥rio";
+    if (!formData.situacaoImovel.trim()) e.situacaoImovel = "Situa√ß√£o √© obrigat√≥ria";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const resetForm = () => {
-    setFormData({ nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo", quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "", localizacao: "Valparaiso de Goi·s - Goi·s", exclusivo: "n„o", temInquilino: "n„o", situacaoImovel: "", observacoes: "" });
+    setFormData({ nomeImovel: "", descricaoImovel: "", endereco: "", tipo: "novo", quartos: "", banheiro: "", valorAvaliacao: "", valorVenda: "", localizacao: "Valparaiso de Goi√°s - Goi√°s", exclusivo: "n√£o", temInquilino: "n√£o", situacaoImovel: "", observacoes: "" });
     setTags([]); setFiles({ documentacao: null, imagens: [], imagemCapa: null }); setMessage({ type: '', text: '' }); setErrors({});
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!validateForm()) { setMessage({ type: 'error', text: 'Corrija os erros no formul·rio.' }); return; }
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Corrija os erros no formul√°rio.' }); return; }
     setLoading(true); setMessage({ type: '', text: '' });
     const submitData = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -271,10 +271,10 @@ const AddImovel = () => {
     if (files.imagemCapa) submitData.append("imagem_capa", files.imagemCapa);
     try {
       await axios.post(`${API_URL}/imoveis`, submitData, { headers: { "Content-Type": "multipart/form-data" } });
-      setMessage({ type: 'success', text: 'ImÛvel cadastrado com sucesso!' });
+      setMessage({ type: 'success', text: 'Im√≥vel cadastrado com sucesso!' });
       setTimeout(() => resetForm(), 2000);
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao cadastrar imÛvel.' });
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao cadastrar im√≥vel.' });
     } finally {
       setLoading(false);
       notificationRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -292,20 +292,20 @@ const AddImovel = () => {
             <Home className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de ImÛvel</h1>
-            <p className="text-[11px] text-white/40">Preencha as informaÁıes para cadastrar um novo imÛvel</p>
+            <h1 className="text-xl font-bold text-white tracking-tight">Cadastro de Im√≥vel</h1>
+            <p className="text-[11px] text-white/40">Preencha as informa√ß√µes para cadastrar um novo im√≥vel</p>
           </div>
         </motion.div>
 
         <form onSubmit={handleSubmit}>
           <motion.div className="space-y-4" initial="hidden" animate="show" variants={stagger}>
 
-            {/* --- INFORMA«’ES B¡SICAS --- */}
-            <FormSection icon={<Building className="w-4 h-4 text-white" />} title="InformaÁıes B·sicas"
-              subtitle="Nome, tipo e descriÁ„o do imÛvel">
+            {/* --- INFORMA√á√ïES B√ÅSICAS --- */}
+            <FormSection icon={<Building className="w-4 h-4 text-white" />} title="Informa√ß√µes B√°sicas"
+              subtitle="Nome, tipo e descri√ß√£o do im√≥vel">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <InputField label="Nome do ImÛvel" name="nomeImovel" icon={Home} required
+                  <InputField label="Nome do Im√≥vel" name="nomeImovel" icon={Home} required
                     placeholder="Ex: Residencial Jardim Europa" value={formData.nomeImovel}
                     onChange={(e) => handleInputChange('nomeImovel', e.target.value)} error={errors.nomeImovel} />
                 </div>
@@ -316,44 +316,44 @@ const AddImovel = () => {
                       className={selectClass} style={inputStyle} required>
                       <option value="novo">Novo</option>
                       <option value="usado">Usado</option>
-                      <option value="agio">¡gio</option>
+                      <option value="agio">√Ågio</option>
                     </select>
                   </InputField>
                 </div>
               </div>
               <div>
-                <InputField label="DescriÁ„o" name="descricaoImovel" icon={FileText}
+                <InputField label="Descri√ß√£o" name="descricaoImovel" icon={FileText}
                   value={formData.descricaoImovel} onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}>
                   <textarea value={formData.descricaoImovel}
                     onChange={(e) => handleInputChange('descricaoImovel', e.target.value)}
                     className={`${inputClass} resize-y min-h-[80px]`} style={inputStyle} rows="3"
-                    placeholder="Descreva detalhes, diferenciais e caracterÌsticas..." />
+                    placeholder="Descreva detalhes, diferenciais e caracter√≠sticas..." />
                 </InputField>
               </div>
             </FormSection>
 
-            {/* --- LOCALIZA«√O --- */}
-            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="LocalizaÁ„o"
-              subtitle="EndereÁo e cidade do imÛvel">
+            {/* --- LOCALIZA√á√ÉO --- */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Localiza√ß√£o"
+              subtitle="Endere√ßo e cidade do im√≥vel">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <InputField label="EndereÁo" name="endereco" icon={MapPin} required
-                  placeholder="Rua, n˙mero, bairro" value={formData.endereco}
+                <InputField label="Endere√ßo" name="endereco" icon={MapPin} required
+                  placeholder="Rua, n√∫mero, bairro" value={formData.endereco}
                   onChange={(e) => handleInputChange('endereco', e.target.value)} error={errors.endereco} />
                 <InputField label="Cidade/Estado" name="localizacao" icon={Globe}
                   value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}>
                   <select value={formData.localizacao} onChange={(e) => handleInputChange('localizacao', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="Valparaiso de Goi·s - Goi·s">ValparaÌso de Goi·s - GO</option>
+                    <option value="Valparaiso de Goi√°s - Goi√°s">Valpara√≠so de Goi√°s - GO</option>
                     <option value="Cidade Ocidental - Goias">Cidade Ocidental - GO</option>
-                    <option value="Luziania - Goias">Luzi‚nia - GO</option>
-                    <option value="Jardim Inga - Goias">Jardim Ing· - GO</option>
+                    <option value="Luziania - Goias">Luzi√¢nia - GO</option>
+                    <option value="Jardim Inga - Goias">Jardim Ing√° - GO</option>
                   </select>
                 </InputField>
               </div>
             </FormSection>
 
-            {/* --- CARACTERÕSTICAS --- */}
-            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="CaracterÌsticas"
+            {/* --- CARACTER√çSTICAS --- */}
+            <FormSection icon={<Bed className="w-4 h-4 text-white" />} title="Caracter√≠sticas"
               subtitle="Quartos, banheiros e valores">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <InputField label="Quartos" name="quartos" type="number" icon={Bed} required
@@ -362,7 +362,7 @@ const AddImovel = () => {
                 <InputField label="Banheiros" name="banheiro" type="number" icon={Bath} required
                   placeholder="2" value={formData.banheiro}
                   onChange={(e) => handleInputChange('banheiro', e.target.value)} error={errors.banheiro} />
-                <InputField label="Valor AvaliaÁ„o" name="valorAvaliacao" icon={DollarSign}
+                <InputField label="Valor Avalia√ß√£o" name="valorAvaliacao" icon={DollarSign}
                   placeholder="R$ 350.000" value={formatCurrency(formData.valorAvaliacao)}
                   onChange={(e) => handleCurrencyChange('valorAvaliacao', e.target.value)} />
                 <InputField label="Valor Venda" name="valorVenda" icon={DollarSign} required
@@ -372,23 +372,23 @@ const AddImovel = () => {
             </FormSection>
 
             {/* --- TAGS --- */}
-            <FormSection icon={<Tag className="w-4 h-4 text-white" />} title="Tags do ImÛvel"
-              subtitle="Selecione caracterÌsticas e diferenciais">
+            <FormSection icon={<Tag className="w-4 h-4 text-white" />} title="Tags do Im√≥vel"
+              subtitle="Selecione caracter√≠sticas e diferenciais">
               <TagSelector tags={tags} setTags={setTags} />
             </FormSection>
 
             {/* --- DETALHES ADICIONAIS --- */}
             <FormSection icon={<FileText className="w-4 h-4 text-white" />} title="Detalhes Adicionais"
-              subtitle="SituaÁ„o, exclusividade e observaÁıes">
+              subtitle="Situa√ß√£o, exclusividade e observa√ß√µes">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <InputField label="SituaÁ„o do ImÛvel" name="situacaoImovel" icon={Home} required
+                <InputField label="Situa√ß√£o do Im√≥vel" name="situacaoImovel" icon={Home} required
                   placeholder="Pronto para morar" value={formData.situacaoImovel}
                   onChange={(e) => handleInputChange('situacaoImovel', e.target.value)} error={errors.situacaoImovel} />
                 <InputField label="Exclusivo" name="exclusivo" icon={Shield}
                   value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}>
                   <select value={formData.exclusivo} onChange={(e) => handleInputChange('exclusivo', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="n„o">N„o</option>
+                    <option value="n√£o">N√£o</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
@@ -396,30 +396,30 @@ const AddImovel = () => {
                   value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}>
                   <select value={formData.temInquilino} onChange={(e) => handleInputChange('temInquilino', e.target.value)}
                     className={selectClass} style={inputStyle}>
-                    <option value="n„o">N„o</option>
+                    <option value="n√£o">N√£o</option>
                     <option value="sim">Sim</option>
                   </select>
                 </InputField>
               </div>
               <div>
-                <InputField label="ObservaÁıes" name="observacoes" icon={FileText}
+                <InputField label="Observa√ß√µes" name="observacoes" icon={FileText}
                   value={formData.observacoes} onChange={(e) => handleInputChange('observacoes', e.target.value)}>
                   <textarea value={formData.observacoes}
                     onChange={(e) => handleInputChange('observacoes', e.target.value)}
                     className={`${inputClass} resize-y min-h-[70px]`} style={inputStyle} rows="3"
-                    placeholder="InformaÁıes adicionais sobre o imÛvel..." />
+                    placeholder="Informa√ß√µes adicionais sobre o im√≥vel..." />
                 </InputField>
               </div>
             </FormSection>
 
             {/* --- DOCUMENTOS E IMAGENS --- */}
             <FormSection icon={<Upload className="w-4 h-4 text-white" />} title="Documentos e Imagens"
-              subtitle="Anexe documentaÁ„o e fotos do imÛvel">
+              subtitle="Anexe documenta√ß√£o e fotos do im√≥vel">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <FileUploadField label="DocumentaÁ„o (PDF)" accept=".pdf" icon={Paperclip}
+                <FileUploadField label="Documenta√ß√£o (PDF)" accept=".pdf" icon={Paperclip}
                   onChange={(e) => setFiles(prev => ({ ...prev, documentacao: e.target.files[0] }))}
                   value={files.documentacao} />
-                <FileUploadField label="Imagens do ImÛvel" accept="image/*" multiple icon={ImageIcon}
+                <FileUploadField label="Imagens do Im√≥vel" accept="image/*" multiple icon={ImageIcon}
                   onChange={(e) => setFiles(prev => ({ ...prev, imagens: Array.from(e.target.files) }))}
                   value={files.imagens} />
                 <FileUploadField label="Imagem de Capa" accept="image/*" icon={Camera}
@@ -428,7 +428,7 @@ const AddImovel = () => {
               </div>
             </FormSection>
 
-            {/* --- BOT’ES --- */}
+            {/* --- BOT√ïES --- */}
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 type="button" onClick={resetForm}
@@ -445,7 +445,7 @@ const AddImovel = () => {
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Cadastrando...</>
                 ) : (
-                  <><Save className="w-4 h-4" />Cadastrar ImÛvel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
+                  <><Save className="w-4 h-4" />Cadastrar Im√≥vel<ArrowRight className="w-3.5 h-3.5 ml-1" /></>
                 )}
               </motion.button>
             </motion.div>

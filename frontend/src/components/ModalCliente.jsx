@@ -14,7 +14,7 @@ import {
 } from "react-icons/fa";
 import { 
   MdVisibility, MdAttachFile, MdLocationOn, 
-  MdWork, MdFamily, MdDateRange, MdKeyboardArrowDown 
+  MdWork, MdDateRange, MdKeyboardArrowDown
 } from "react-icons/md";
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';

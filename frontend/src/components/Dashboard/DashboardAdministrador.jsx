@@ -69,7 +69,7 @@ const DashboardAdministrador = () => {
           if (sum !== data.totalCount) monthlyArr[monthlyArr.length - 1] += data.totalCount - sum;
         }
 
-        const weekLabels = weekly.labels || ["Dom","Seg","Ter","Qua","Qui","Sex","S·b"];
+        const weekLabels = weekly.labels || ["Dom","Seg","Ter","Qua","Qui","Sex","S√°b"];
         const weeklyArr = weekly.weeklyData || Array(7).fill(0);
         const prevWeekArr = weekly.previousWeekData || Array(7).fill(0);
 
@@ -88,7 +88,7 @@ const DashboardAdministrador = () => {
       } else {
         setChartData({
           monthly: ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].map(l => ({ name: l, clientes: 0, crescimento: 0 })),
-          weekly: ["Dom","Seg","Ter","Qua","Qui","Sex","S·b"].map(l => ({ name: l, atual: 0, anterior: 0 })),
+          weekly: ["Dom","Seg","Ter","Qua","Qui","Sex","S√°b"].map(l => ({ name: l, atual: 0, anterior: 0 })),
           totalYear: 0, averageMonth: 0, totalWeek: 0, weeklyGrowth: 0,
         });
       }
@@ -139,7 +139,7 @@ const DashboardAdministrador = () => {
       const u = item.user || {};
       return {
         id: u.id,
-        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Usu·rio',
+        name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Usu√°rio',
         value: item.clientes || 0,
       };
     });
@@ -153,9 +153,9 @@ const DashboardAdministrador = () => {
 
     // Radial data for gauge
     const radialData = [
-      { name: 'AprovaÁ„o', value: pctAprov, fill: '#10b981' },
-      { name: 'RejeiÁ„o', value: pctRejeit, fill: '#ef4444' },
-      { name: 'PendÍncia', value: pctAguar, fill: '#eab308' },
+      { name: 'Aprova√ß√£o', value: pctAprov, fill: '#10b981' },
+      { name: 'Rejei√ß√£o', value: pctRejeit, fill: '#ef4444' },
+      { name: 'Pend√™ncia', value: pctAguar, fill: '#eab308' },
     ];
 
     return {
@@ -213,8 +213,8 @@ const DashboardAdministrador = () => {
       <motion.div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4"
         initial="hidden" animate="show" variants={stagger}>
 
-        {/* --- VIS√O GERAL ó 6 KPIs --- */}
-        <SectionHeader icon={<BarChart3 className="w-3.5 h-3.5" />} title="Vis„o Geral"
+        {/* --- VIS√ÉO GERAL ‚Äî 6 KPIs --- */}
+        <SectionHeader icon={<BarChart3 className="w-3.5 h-3.5" />} title="Vis√£o Geral"
           subtitle={new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -223,7 +223,7 @@ const DashboardAdministrador = () => {
           <KPICard index={1} title="Correspondentes" value={fmtNum(d.totalCorretores)}
             sub="cadastrados" icon={<ClipboardList className="w-4 h-4" />} accent="#F97316" />
           <KPICard index={2} title="Aguardando" value={fmtNum(d.aguardando.length)}
-            sub="aprovaÁ„o" icon={<Clock className="w-4 h-4" />} accent="#eab308" />
+            sub="aprova√ß√£o" icon={<Clock className="w-4 h-4" />} accent="#eab308" />
           <KPICard index={3} title="Aprovados" value={fmtNum(d.clientesAprovados)}
             sub={`${d.pctAprov}%`} icon={<CheckCircle className="w-4 h-4" />} accent="#10b981" />
           <KPICard index={4} title="Reprovados" value={fmtNum(d.clientesReprovados)}
@@ -232,45 +232,45 @@ const DashboardAdministrador = () => {
             sub="ativos agora" icon={<Signal className="w-4 h-4" />} accent="#06b6d4" />
         </motion.div>
 
-        {/* --- CONTROLE DETALHADO ó 8 KPIs --- */}
+        {/* --- CONTROLE DETALHADO ‚Äî 8 KPIs --- */}
         <SectionHeader icon={<Activity className="w-3.5 h-3.5" />} title="Controle Detalhado"
-          subtitle="MÈtricas de crescimento e performance" />
+          subtitle="M√©tricas de crescimento e performance" />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
           <KPICard index={0} title="Hoje" value={fmtNum(d.clientesHoje)}
             sub="cadastros" icon={<UserPlus className="w-4 h-4" />} accent="#3b82f6" />
           <KPICard index={1} title="Semana" value={fmtNum(d.clientesSemana)}
             icon={<Calendar className="w-4 h-4" />} accent="#8b5cf6" trend={d.crescimentoSemanal} />
-          <KPICard index={2} title="Este MÍs" value={fmtNum(d.clientesEsteMes)}
+          <KPICard index={2} title="Este M√™s" value={fmtNum(d.clientesEsteMes)}
             sub={`ant: ${d.clientesMesAnterior}`} icon={<Activity className="w-4 h-4" />} accent="#06b6d4" trend={d.crescimentoMensal} />
           <KPICard index={3} title="No Ano" value={fmtNum(chartData.totalYear)}
-            sub={`mÈdia: ${chartData.averageMonth}/mÍs`} icon={<Globe className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={4} title="AprovaÁ„o" value={fmtPct(d.performance?.taxaAprovacao || d.pctAprov)}
+            sub={`m√©dia: ${chartData.averageMonth}/m√™s`} icon={<Globe className="w-4 h-4" />} accent="#10b981" />
+          <KPICard index={4} title="Aprova√ß√£o" value={fmtPct(d.performance?.taxaAprovacao || d.pctAprov)}
             icon={<Target className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={5} title="RejeiÁ„o" value={fmtPct(d.performance?.taxaRejeicao || d.pctRejeit)}
+          <KPICard index={5} title="Rejei√ß√£o" value={fmtPct(d.performance?.taxaRejeicao || d.pctRejeit)}
             icon={<TrendingDown className="w-4 h-4" />} accent="#ef4444" />
-          <KPICard index={6} title="EficiÍncia" value={`${d.performance?.eficienciaMedia || 0}`}
+          <KPICard index={6} title="Efici√™ncia" value={`${d.performance?.eficienciaMedia || 0}`}
             icon={<Zap className="w-4 h-4" />} accent="#F97316" />
-          <KPICard index={7} title="Usu·rios" value={fmtNum(d.performance?.totalUsuarios || systemStats?.totalUsuarios || 0)}
+          <KPICard index={7} title="Usu√°rios" value={fmtNum(d.performance?.totalUsuarios || systemStats?.totalUsuarios || 0)}
             sub="no sistema" icon={<UserCheck className="w-4 h-4" />} accent="#ec4899" />
         </motion.div>
 
-        {/* --- AN¡LISE DE RENDA ó 4 mini cards --- */}
-        <SectionHeader icon={<DollarSign className="w-3.5 h-3.5" />} title="An·lise Financeira"
+        {/* --- AN√ÅLISE DE RENDA ‚Äî 4 mini cards --- */}
+        <SectionHeader icon={<DollarSign className="w-3.5 h-3.5" />} title="An√°lise Financeira"
           subtitle="Perfil de renda dos clientes" />
 
         <motion.div variants={stagger} className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <KPICard index={0} title="Renda MÈdia" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMedia || 0))}
+          <KPICard index={0} title="Renda M√©dia" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMedia || 0))}
             icon={<DollarSign className="w-4 h-4" />} accent="#10b981" />
-          <KPICard index={1} title="Renda M·xima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMaxima || 0))}
+          <KPICard index={1} title="Renda M√°xima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMaxima || 0))}
             icon={<TrendingUp className="w-4 h-4" />} accent="#3b82f6" />
-          <KPICard index={2} title="Renda MÌnima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMinima || 0))}
+          <KPICard index={2} title="Renda M√≠nima" value={fmtR$(parseFloat(d.rendaAnalysis?.rendaMinima || 0))}
             icon={<TrendingDown className="w-4 h-4" />} accent="#eab308" />
           <KPICard index={3} title="Com Renda" value={fmtNum(d.rendaAnalysis?.clientesComRenda || 0)}
             sub="clientes informaram" icon={<Wallet className="w-4 h-4" />} accent="#8b5cf6" />
         </motion.div>
 
-        {/* --- PERFORMANCE RINGS + RESUMO ó 2 cols --- */}
+        {/* --- PERFORMANCE RINGS + RESUMO ‚Äî 2 cols --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
           {/* Performance rings */}
@@ -283,12 +283,12 @@ const DashboardAdministrador = () => {
               <p className="text-xs font-bold text-white">Performance</p>
             </div>
             <motion.div variants={stagger} className="grid grid-cols-3 gap-2">
-              <EffRing index={0} title="AprovaÁ„o" value={fmtPct(d.pctAprov)} pct={d.pctAprov} accent="#10b981" />
-              <EffRing index={1} title="RejeiÁ„o" value={fmtPct(d.pctRejeit)} pct={d.pctRejeit} accent="#ef4444" />
+              <EffRing index={0} title="Aprova√ß√£o" value={fmtPct(d.pctAprov)} pct={d.pctAprov} accent="#10b981" />
+              <EffRing index={1} title="Rejei√ß√£o" value={fmtPct(d.pctRejeit)} pct={d.pctRejeit} accent="#ef4444" />
               <EffRing index={2} title="Aguardando" value={fmtPct(d.pctAguar)} pct={d.pctAguar} accent="#eab308" />
               <EffRing index={3} title="Cresc. Semanal" value={`${d.crescimentoSemanal}%`} pct={Math.min(100, Math.abs(d.crescimentoSemanal))} accent="#3b82f6" />
               <EffRing index={4} title="Cresc. Mensal" value={`${d.crescimentoMensal}%`} pct={Math.min(100, Math.abs(d.crescimentoMensal))} accent="#8b5cf6" />
-              <EffRing index={5} title="EficiÍncia" value={`${d.performance?.eficienciaMedia || 0}`} pct={(d.performance?.eficienciaMedia || 0) * 10} accent="#F97316" />
+              <EffRing index={5} title="Efici√™ncia" value={`${d.performance?.eficienciaMedia || 0}`} pct={(d.performance?.eficienciaMedia || 0) * 10} accent="#F97316" />
             </motion.div>
           </motion.div>
 
@@ -304,7 +304,7 @@ const DashboardAdministrador = () => {
             </div>
             <div className="grid grid-cols-3 gap-2">
               <MiniStat icon={<Database className="w-3 h-3" />} label="Total Registros" value={fmtNum(systemStats?.totalRegistros || 0)} accent="#3b82f6" />
-              <MiniStat icon={<Users className="w-3 h-3" />} label="Total Usu·rios" value={fmtNum(systemStats?.totalUsuarios || 0)} accent="#F97316" />
+              <MiniStat icon={<Users className="w-3 h-3" />} label="Total Usu√°rios" value={fmtNum(systemStats?.totalUsuarios || 0)} accent="#F97316" />
               <MiniStat icon={<Activity className="w-3 h-3" />} label="Atividade 24h" value={fmtNum(systemStats?.atividadeRecente || 0)} accent="#10b981" />
               <MiniStat icon={<Signal className="w-3 h-3" />} label="Online 24h" value={fmtNum(systemStats?.usuariosRecentes || 0)} accent="#06b6d4" />
               <MiniStat icon={<Zap className="w-3 h-3" />} label="Efic. Geral" value={activityMetrics?.eficienciaGeral?.toFixed(1) || '0'} accent="#8b5cf6" />
@@ -313,14 +313,14 @@ const DashboardAdministrador = () => {
           </motion.div>
         </div>
 
-        {/* --- GR¡FICOS ó 4 cards --- */}
-        <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Gr·ficos"
-          subtitle="TendÍncias, comparativos e distribuiÁ„o" />
+        {/* --- GR√ÅFICOS ‚Äî 4 cards --- */}
+        <SectionHeader icon={<TrendingUp className="w-3.5 h-3.5" />} title="Gr√°ficos"
+          subtitle="Tend√™ncias, comparativos e distribui√ß√£o" />
 
         <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
           {/* Monthly trend area */}
-          <ChartCard index={0} title="EvoluÁ„o Mensal" sub={`Total no ano: ${fmtNum(chartData.totalYear)} ∑ MÈdia: ${chartData.averageMonth}/mÍs`}
+          <ChartCard index={0} title="Evolu√ß√£o Mensal" sub={`Total no ano: ${fmtNum(chartData.totalYear)} ¬∑ M√©dia: ${chartData.averageMonth}/m√™s`}
             icon={<TrendingUp className="w-3 h-3" />}>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -349,7 +349,7 @@ const DashboardAdministrador = () => {
           </ChartCard>
 
           {/* Weekly comparison bar */}
-          <ChartCard index={1} title="Comparativo Semanal" sub={`Total semana: ${fmtNum(chartData.totalWeek)} ∑ Cresc: ${chartData.weeklyGrowth}%`}
+          <ChartCard index={1} title="Comparativo Semanal" sub={`Total semana: ${fmtNum(chartData.totalWeek)} ¬∑ Cresc: ${chartData.weeklyGrowth}%`}
             icon={<BarChart3 className="w-3 h-3" />}>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -367,7 +367,7 @@ const DashboardAdministrador = () => {
           </ChartCard>
 
           {/* Approval donut */}
-          <ChartCard index={2} title="Status dos Clientes" sub="DistribuiÁ„o por status de aprovaÁ„o"
+          <ChartCard index={2} title="Status dos Clientes" sub="Distribui√ß√£o por status de aprova√ß√£o"
             icon={<PieChartIcon className="w-3 h-3" />}>
             <div className="h-52 flex items-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -432,14 +432,14 @@ const DashboardAdministrador = () => {
           </ChartCard>
         </motion.div>
 
-        {/* --- RANKING + ALERTAS + ATIVIDADE ó 3 cols --- */}
+        {/* --- RANKING + ALERTAS + ATIVIDADE ‚Äî 3 cols --- */}
         <SectionHeader icon={<Trophy className="w-3.5 h-3.5" />} title="Ranking & Alertas"
-          subtitle="Top performers e notificaÁıes" />
+          subtitle="Top performers e notifica√ß√µes" />
 
         <motion.div variants={stagger} className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
           {/* Ranking */}
-          <RankingCard index={0} title="Ranking do MÍs" icon={<Trophy className="w-3.5 h-3.5" />}
+          <RankingCard index={0} title="Ranking do M√™s" icon={<Trophy className="w-3.5 h-3.5" />}
             items={d.rankingItems} formatValue={v => `${v} clientes`} accent="#F97316" />
 
           {/* Alertas */}
@@ -450,14 +450,14 @@ const DashboardAdministrador = () => {
                 style={{ background: 'linear-gradient(135deg, #ef4444, #f87171)' }}>
                 <AlertTriangle className="w-3.5 h-3.5 text-white" />
               </div>
-              <p className="text-xs font-bold text-white">AtenÁ„o</p>
+              <p className="text-xs font-bold text-white">Aten√ß√£o</p>
             </div>
             <div className="space-y-2">
               {d.aguardando.length > 0 && (
                 <div className="flex items-center justify-between px-2.5 py-2 rounded-lg" style={{ backgroundColor: 'rgba(234,179,8,0.08)' }}>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" style={{ color: '#eab308' }} />
-                    <p className="text-[10px] font-medium text-white/70">Aguardando aprovaÁ„o</p>
+                    <p className="text-[10px] font-medium text-white/70">Aguardando aprova√ß√£o</p>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#eab308' }}>{d.aguardando.length}</span>
@@ -494,7 +494,7 @@ const DashboardAdministrador = () => {
             </div>
           </motion.div>
 
-          {/* Resumo r·pido */}
+          {/* Resumo r√°pido */}
           <motion.div variants={fadeUp} className="rounded-xl p-4 space-y-3 backdrop-blur-md"
             style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
             <div className="flex items-center gap-2">
@@ -502,16 +502,16 @@ const DashboardAdministrador = () => {
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}>
                 <Activity className="w-3.5 h-3.5 text-white" />
               </div>
-              <p className="text-xs font-bold text-white">Resumo do PerÌodo</p>
+              <p className="text-xs font-bold text-white">Resumo do Per√≠odo</p>
             </div>
             <div className="space-y-1.5">
               {[
                 { label: 'Cadastros hoje', value: d.clientesHoje, accent: '#3b82f6' },
                 { label: 'Cadastros na semana', value: d.clientesSemana, accent: '#8b5cf6' },
-                { label: 'Cadastros no mÍs', value: d.clientesEsteMes, accent: '#F97316' },
-                { label: 'MÍs anterior', value: d.clientesMesAnterior, accent: '#06b6d4' },
+                { label: 'Cadastros no m√™s', value: d.clientesEsteMes, accent: '#F97316' },
+                { label: 'M√™s anterior', value: d.clientesMesAnterior, accent: '#06b6d4' },
                 { label: 'Total no ano', value: chartData.totalYear, accent: '#10b981' },
-                { label: 'MÈdia mensal', value: chartData.averageMonth, accent: '#eab308' },
+                { label: 'M√©dia mensal', value: chartData.averageMonth, accent: '#eab308' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-md"
                   style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
@@ -524,7 +524,7 @@ const DashboardAdministrador = () => {
         </motion.div>
 
         {/* --- TABELA AGUARDANDO --- */}
-        <SectionHeader icon={<Database className="w-3.5 h-3.5" />} title="Clientes Aguardando AprovaÁ„o"
+        <SectionHeader icon={<Database className="w-3.5 h-3.5" />} title="Clientes Aguardando Aprova√ß√£o"
           subtitle={`${d.aguardando.length} pendentes`} />
 
         <motion.div variants={fadeUp} className="rounded-2xl overflow-hidden backdrop-blur-md"
@@ -578,7 +578,7 @@ const DashboardAdministrador = () => {
                   <tr>
                     <td colSpan={5} className="text-center py-8 text-xs text-white/40">
                       <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: 'rgba(16,185,129,0.3)' }} />
-                      Nenhum cliente aguardando aprovaÁ„o
+                      Nenhum cliente aguardando aprova√ß√£o
                     </td>
                   </tr>
                 )}
@@ -589,7 +589,7 @@ const DashboardAdministrador = () => {
 
         {/* Footer */}
         <motion.div variants={fadeUp} className="text-center py-3">
-          <span className="text-[11px] font-medium text-white/40">AtualizaÁ„o autom·tica a cada 30 segundos</span>
+          <span className="text-[11px] font-medium text-white/40">Atualiza√ß√£o autom√°tica a cada 30 segundos</span>
         </motion.div>
 
       </motion.div>

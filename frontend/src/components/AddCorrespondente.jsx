@@ -104,7 +104,7 @@ const AddCorrespondente = () => {
       setMessage({ type: 'error', text: 'Por favor, selecione apenas arquivos de imagem' }); return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Imagem muito grande. Máximo: 5MB' }); return;
+      setMessage({ type: 'error', text: 'Imagem muito grande. MÃ¡ximo: 5MB' }); return;
     }
     setPhoto(file);
     const reader = new FileReader();
@@ -117,20 +117,20 @@ const AddCorrespondente = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.username || formData.username.length < 3) newErrors.username = 'Username deve ter pelo menos 3 caracteres';
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email inválido';
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Email invÃ¡lido';
     if (!formData.first_name || formData.first_name.length < 2) newErrors.first_name = 'Nome deve ter pelo menos 2 caracteres';
     if (!formData.last_name || formData.last_name.length < 2) newErrors.last_name = 'Sobrenome deve ter pelo menos 2 caracteres';
     if (!formData.phone || formData.phone.length < 10) newErrors.phone = 'Telefone deve ter pelo menos 10 caracteres';
     if (!formData.password || formData.password.length < 6) newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não conferem';
-    if (!photo) newErrors.photo = 'Foto é obrigatória';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas nÃ£o conferem';
+    if (!photo) newErrors.photo = 'Foto Ã© obrigatÃ³ria';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) { setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulário' }); return; }
+    if (!validateForm()) { setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulÃ¡rio' }); return; }
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
@@ -184,7 +184,7 @@ const AddCorrespondente = () => {
 
             {/* --- FOTO --- */}
             <FormSection icon={<Camera className="w-4 h-4 text-white" />} title="Foto do Correspondente"
-              subtitle="Imagem de perfil para identificação">
+              subtitle="Imagem de perfil para identificaÃ§Ã£o">
               <div className="flex flex-col sm:flex-row items-center gap-5">
                 <div className="relative">
                   {photoPreview ? (
@@ -213,7 +213,7 @@ const AddCorrespondente = () => {
                     <Upload className="h-3.5 w-3.5" /> Escolher Foto
                     <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
                   </motion.label>
-                  <p className="text-[10px] text-white/30">PNG, JPG, GIF até 5MB</p>
+                  <p className="text-[10px] text-white/30">PNG, JPG, GIF atÃ© 5MB</p>
                   {errors.photo && (
                     <p className="text-red-400 text-[10px] flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />{errors.photo}
@@ -225,7 +225,7 @@ const AddCorrespondente = () => {
 
             {/* --- DADOS PESSOAIS --- */}
             <FormSection icon={<User className="w-4 h-4 text-white" />} title="Dados Pessoais"
-              subtitle="Informações de identificação do correspondente">
+              subtitle="InformaÃ§Ãµes de identificaÃ§Ã£o do correspondente">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <InputField label="Username" name="username" icon={User} required
                   placeholder="Digite o username" value={formData.username}
@@ -245,12 +245,12 @@ const AddCorrespondente = () => {
               </div>
             </FormSection>
 
-            {/* --- ENDEREÇO & PIX --- */}
-            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="Endereço & Pagamento"
-              subtitle="Localização e dados bancários">
+            {/* --- ENDEREÃ‡O & PIX --- */}
+            <FormSection icon={<MapPin className="w-4 h-4 text-white" />} title="EndereÃ§o & Pagamento"
+              subtitle="LocalizaÃ§Ã£o e dados bancÃ¡rios">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <InputField label="Endereço" name="address" icon={MapPin}
-                  placeholder="Endereço completo" value={formData.address}
+                <InputField label="EndereÃ§o" name="address" icon={MapPin}
+                  placeholder="EndereÃ§o completo" value={formData.address}
                   onChange={handleInputChange} error={errors.address} />
                 <InputField label="PIX / Conta" name="pix_account" icon={Wallet}
                   placeholder="Chave PIX ou dados da conta" value={formData.pix_account}
@@ -258,12 +258,12 @@ const AddCorrespondente = () => {
               </div>
             </FormSection>
 
-            {/* --- SEGURANÇA --- */}
-            <FormSection icon={<Shield className="w-4 h-4 text-white" />} title="Segurança"
+            {/* --- SEGURANÃ‡A --- */}
+            <FormSection icon={<Shield className="w-4 h-4 text-white" />} title="SeguranÃ§a"
               subtitle="Defina a senha de acesso do correspondente">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <InputField label="Senha" name="password" type="password" icon={Lock} required
-                  placeholder="Mínimo 6 caracteres" value={formData.password}
+                  placeholder="MÃ­nimo 6 caracteres" value={formData.password}
                   onChange={handleInputChange} error={errors.password}
                   showPassword={showPassword} togglePassword={() => setShowPassword(!showPassword)} />
                 <InputField label="Confirmar Senha" name="confirmPassword" type="password" icon={Lock} required
@@ -273,7 +273,7 @@ const AddCorrespondente = () => {
               </div>
             </FormSection>
 
-            {/* --- BOTÕES --- */}
+            {/* --- BOTÃ•ES --- */}
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-3">
               <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                 type="button" onClick={resetForm}
