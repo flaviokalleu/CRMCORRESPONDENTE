@@ -56,7 +56,7 @@ const SessionManager = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/sessions`
+        `${import.meta.env.VITE_API_URL}/whatsapp/sessions`
         , { headers: getAuthHeaders() }
       );
       const data = await response.json();
@@ -82,7 +82,7 @@ const SessionManager = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/session/create`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/session/create`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -115,7 +115,7 @@ const SessionManager = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/session/${sessionToDelete.id}?force=${forceDelete}`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/session/${sessionToDelete.id}?force=${forceDelete}`,
         { method: "DELETE", headers: getAuthHeaders() }
       );
       const data = await response.json();
@@ -140,7 +140,7 @@ const SessionManager = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/session/switch`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/session/switch`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -166,7 +166,7 @@ const SessionManager = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/sessions/cleanup`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/sessions/cleanup`,
         { method: "POST", headers: getAuthHeaders() }
       );
       const data = await response.json();
@@ -508,7 +508,7 @@ const WhatsAppQRCode = () => {
   // Checar status inicial (UMA vez) — sem inicializar nada
   const checkStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/qr-code`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/qr-code`, {
         headers: getAuthHeaders(),
       });
       if (!response.ok) return;
@@ -583,7 +583,7 @@ const WhatsAppQRCode = () => {
       setError("");
       setIdle(false);
       setBlocked(false);
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/connect`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/connect`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({ sessionId: currentSessionId }),
@@ -606,7 +606,7 @@ const WhatsAppQRCode = () => {
     try {
       setLoading(true);
       setError("");
-      await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/reset`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/reset`, {
         method: "POST",
         headers: getAuthHeaders(),
       });
@@ -626,7 +626,7 @@ const WhatsAppQRCode = () => {
   const handleDisconnect = async () => {
     try {
       setLoading(true);
-      await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/disconnect`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/disconnect`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({ deleteSession: false }),

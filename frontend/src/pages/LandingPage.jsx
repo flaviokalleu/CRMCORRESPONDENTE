@@ -91,13 +91,13 @@ const EXEMPLO_IMOVEIS = [
 ];
 
 const LandingPage = () => {
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || 'CRM IMOB';
+  const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || 'CRM IMOB';
   const [imoveis, setImoveis] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${process.env.REACT_APP_API_URL}/imoveis?limit=6`, { signal: controller.signal })
+    fetch(`${import.meta.env.VITE_API_URL}/imoveis?limit=6`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error('Falha ao carregar imóveis');
         return res.json();

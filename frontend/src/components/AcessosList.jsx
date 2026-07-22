@@ -77,7 +77,7 @@ const AcessosList = () => {
       const params = new URLSearchParams(paramsObj);
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/acessos?${params}`
+        `${import.meta.env.VITE_API_URL}/acessos?${params}`
       );
       const data = await response.json();
 
@@ -94,7 +94,7 @@ const AcessosList = () => {
   const fetchStats = async () => {
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/acessos/stats?period=${filters.period}`
+        `${import.meta.env.VITE_API_URL}/acessos/stats?period=${filters.period}`
       );
       const data = await response.json();
       setStats(data);
@@ -106,7 +106,7 @@ const AcessosList = () => {
   const fetchUserData = async () => {
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/user/me`
+        `${import.meta.env.VITE_API_URL}/user/me`
       );
       const data = await response.json();
       setUserFirstName(data.first_name);

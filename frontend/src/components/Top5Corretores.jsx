@@ -1,7 +1,7 @@
 import React from "react";
 
 const Top5Usuarios = ({ usuarios }) => {
-  const API_URL = process.env.REACT_APP_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
 
   if (!Array.isArray(usuarios) || usuarios.length === 0) {
     return <p className="text-white">Nenhum usuário encontrado.</p>;

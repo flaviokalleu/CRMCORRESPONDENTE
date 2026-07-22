@@ -58,7 +58,7 @@ const StatusButton = ({ status, onChange, disabled, clienteId, onStatusUpdate, c
     setIsLoading(true);
     try {
       await axios.patch(
-        `${process.env.REACT_APP_API_URL}/clientes/${clienteId}/status`,
+        `${import.meta.env.VITE_API_URL}/clientes/${clienteId}/status`,
         { status: selectedStatus },
         { headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` } }
       );
@@ -440,7 +440,7 @@ const ListaClientes = () => {
 
   const handleStatusUpdate = async (clienteId, newStatus) => {
     const token = localStorage.getItem('authToken');
-    await axios.patch(`${process.env.REACT_APP_API_URL}/clientes/${clienteId}/status`,
+    await axios.patch(`${import.meta.env.VITE_API_URL}/clientes/${clienteId}/status`,
       { status: newStatus }, { headers: { Authorization: `Bearer ${token}` } });
     setAllClientes(prev => prev.map(c => c.id === clienteId ? { ...c, status: newStatus } : c));
   };
@@ -454,7 +454,7 @@ const ListaClientes = () => {
       if (filters.corretor !== "Todos") corretorParam = filters.corretor;
       else if (isCorretor) corretorParam = user?.id;
 
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/clientes`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/clientes`, {
         params: { status: statusParam, corretor: corretorParam, page: pageNum, limit: 20 },
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -485,7 +485,7 @@ const ListaClientes = () => {
   const fetchCorretores = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/corretor?all=true`,
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/corretor?all=true`,
         { headers: { Authorization: `Bearer ${token}` } });
       let c = [];
       if (response.data?.success && Array.isArray(response.data.data)) c = response.data.data;
@@ -511,7 +511,7 @@ const ListaClientes = () => {
     try {
       const token = localStorage.getItem('authToken');
       let corretorParam; if (isCorretor) corretorParam = user?.id;
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/clientes`,
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/clientes`,
         { params: { limit: 10000, corretor: corretorParam }, headers: { Authorization: `Bearer ${token}` } });
       let todos = []; if (Array.isArray(response.data)) todos = response.data; else if (response.data?.clientes) todos = response.data.clientes;
       const data = todos.map(c => ({
@@ -534,7 +534,7 @@ const ListaClientes = () => {
     if (!window.confirm("Excluir este cliente?")) return;
     try {
       const token = localStorage.getItem('authToken');
-      await axios.delete(`${process.env.REACT_APP_API_URL}/clientes/${clienteId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${import.meta.env.VITE_API_URL}/clientes/${clienteId}`, { headers: { Authorization: `Bearer ${token}` } });
       setAllClientes(prev => prev.filter(c => c.id !== clienteId));
     } catch { alert("Erro ao excluir."); }
   };

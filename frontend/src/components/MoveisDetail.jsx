@@ -167,7 +167,7 @@ const ImovelCard = ({ imovel, index, delay = 0 }) => {
         <div className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden transform-gpu">
           <div className="relative h-56 overflow-hidden">
             <motion.img
-              src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`}
+              src={`${import.meta.env.VITE_API_URL}/${imovel.imagem_capa}`}
               alt={imovel.nome_imovel}
               className="w-full h-full object-cover"
               animate={{
@@ -304,7 +304,7 @@ const ImovelDetail = () => {
     const fetchImovel = async () => {
       try {
         const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/imoveis/${id}`
+          `${import.meta.env.VITE_API_URL}/imoveis/${id}`
         );
 
         if (!response.ok) {
@@ -325,14 +325,14 @@ const ImovelDetail = () => {
         setImageList(
           images.map(
             (img) =>
-              `${process.env.REACT_APP_API_URL}/${img.replace(/\\/g, "/")}`
+              `${import.meta.env.VITE_API_URL}/${img.replace(/\\/g, "/")}`
           )
         );
 
         // Fetch de imóveis semelhantes
         try {
           const responseSemelhantes = await fetch(
-            `${process.env.REACT_APP_API_URL}/imoveis/${id}/semelhantes`
+            `${import.meta.env.VITE_API_URL}/imoveis/${id}/semelhantes`
           );
 
           if (responseSemelhantes.ok) {
@@ -346,7 +346,7 @@ const ImovelDetail = () => {
         // Fetch de todos os imóveis para a seção expandida
         try {
           const responseTodos = await fetch(
-            `${process.env.REACT_APP_API_URL}/imoveis`
+            `${import.meta.env.VITE_API_URL}/imoveis`
           );
 
           if (responseTodos.ok) {
@@ -446,7 +446,7 @@ const ImovelDetail = () => {
   } = imovel || {};
 
   const imageUrl = imagem_capa
-    ? `${process.env.REACT_APP_API_URL}/${imagem_capa}`
+    ? `${import.meta.env.VITE_API_URL}/${imagem_capa}`
     : "https://via.placeholder.com/800x600";
 
   const whatsappMessage = `Olá! Estou interessado no imóvel "${nome_imovel}" no valor de ${new Intl.NumberFormat("pt-BR", {

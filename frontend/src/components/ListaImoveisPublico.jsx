@@ -15,7 +15,7 @@ const ListaImoveisPublico = ({ filters }) => {
       setLoading(true); // Inicia o carregamento
       try {
         const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/imoveis`
+          `${import.meta.env.VITE_API_URL}/imoveis`
         );
         setImoveis(response.data);
       } catch (err) {
@@ -99,7 +99,7 @@ const ListaImoveisPublico = ({ filters }) => {
           >
             <img
               className="p-4 rounded-t-lg w-full h-48 object-cover"
-              src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`}
+              src={`${import.meta.env.VITE_API_URL}/${imovel.imagem_capa}`}
               alt={`Imagem de ${imovel.nome_imovel}`}
               loading="lazy"
               onError={(e) => {

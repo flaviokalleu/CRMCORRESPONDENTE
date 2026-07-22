@@ -13,7 +13,7 @@ import { MdWork, MdVisibility } from "react-icons/md";
 import Toast from "./Toast";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const STEPS = [
   { id: 1, title: "Dados Pessoais", icon: FaUser, color: "from-blue-500 to-blue-600" },

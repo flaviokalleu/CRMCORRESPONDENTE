@@ -35,14 +35,14 @@ const PublicImoveisPage = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CRMIMOB";
+  const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || "CRMIMOB";
 
   // Buscar imóveis da API
   useEffect(() => {
     const fetchImoveis = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/imoveis`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/imoveis`);
         setImoveis(Array.isArray(response.data) ? response.data : (response.data.data || []));
       } catch (err) {
         setError("Erro ao carregar imóveis");

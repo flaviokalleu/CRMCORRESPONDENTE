@@ -14,9 +14,9 @@ const toSocketOrigin = (value) => {
 
 export const getSocketUrl = () => {
   const configuredUrl =
-    process.env.REACT_APP_SOCKET_URL ||
-    process.env.REACT_APP_WS_URL ||
-    process.env.REACT_APP_API_URL;
+    import.meta.env.VITE_SOCKET_URL ||
+    import.meta.env.VITE_WS_URL ||
+    import.meta.env.VITE_API_URL;
 
   const resolvedConfiguredUrl = toSocketOrigin(configuredUrl);
   if (resolvedConfiguredUrl) {

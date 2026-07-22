@@ -178,8 +178,8 @@ export default function FormInquilino({ onSuccess, onBack, clienteId, initialDat
       if (files.fiador_documento_id) fd.append('fiador_documento_id', files.fiador_documento_id);
 
       const url = isEditing
-        ? `${process.env.REACT_APP_API_URL}/clientealuguel/${clienteId}`
-        : `${process.env.REACT_APP_API_URL}/clientealuguel`;
+        ? `${import.meta.env.VITE_API_URL}/clientealuguel/${clienteId}`
+        : `${import.meta.env.VITE_API_URL}/clientealuguel`;
 
       const res = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

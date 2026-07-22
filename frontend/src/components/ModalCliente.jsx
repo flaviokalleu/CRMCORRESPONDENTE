@@ -17,7 +17,7 @@ import {
   MdWork, MdFamily, MdDateRange, MdKeyboardArrowDown 
 } from "react-icons/md";
 
-const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 console.log('🔍 API URL configurada:', apiUrl);
 

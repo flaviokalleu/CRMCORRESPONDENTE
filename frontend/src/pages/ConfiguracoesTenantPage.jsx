@@ -24,7 +24,7 @@ import MainLayout from "../layouts/MainLayout";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ConfiguracoesTenantPage = () => {
   const { user } = useAuth();

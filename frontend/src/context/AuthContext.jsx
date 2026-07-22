@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/auth/check-auth`,
+        `${import.meta.env.VITE_API_URL}/auth/check-auth`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/login`,
+        `${import.meta.env.VITE_API_URL}/auth/login`,
         loginData,
         {
           headers: {
@@ -165,7 +165,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           await axios.post(
-            `${process.env.REACT_APP_API_URL}/auth/logout`,
+            `${import.meta.env.VITE_API_URL}/auth/logout`,
             {},
             {
               headers: {
@@ -203,7 +203,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/refresh-token`,
+        `${import.meta.env.VITE_API_URL}/auth/refresh-token`,
         { refreshToken },
         {
           headers: {
@@ -325,7 +325,7 @@ export const AuthProvider = ({ children }) => {
       if (!token) return;
 
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/plan-usage`,
+        `${import.meta.env.VITE_API_URL}/plan-usage`,
         {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000

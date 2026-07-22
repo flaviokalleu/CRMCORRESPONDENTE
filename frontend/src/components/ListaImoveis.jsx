@@ -36,7 +36,7 @@ const ListaImoveis = () => {
     setError(null);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/imoveis`,
+        `${import.meta.env.VITE_API_URL}/imoveis`,
         {
           timeout: 10000,
           headers: { 'Content-Type': 'application/json' },
@@ -75,7 +75,7 @@ const ListaImoveis = () => {
     if (user?.role !== "corretor") {
       if (window.confirm("Tem certeza que deseja excluir este imóvel?")) {
         try {
-          await axios.delete(`${process.env.REACT_APP_API_URL}/imoveis/${id}`);
+          await axios.delete(`${import.meta.env.VITE_API_URL}/imoveis/${id}`);
           setImoveis(imoveis.filter((imovel) => imovel.id !== id));
         } catch (error) {
           console.error("Erro ao deletar imóvel:", error);
@@ -86,7 +86,7 @@ const ListaImoveis = () => {
   };
 
   const handleDownload = (id) => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/imoveis/${id}/download-imagens`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/imoveis/${id}/download-imagens`;
   };
 
   // Função de ordenação
@@ -147,7 +147,7 @@ const ListaImoveis = () => {
       <div className="relative overflow-hidden">
         <img
           src={imovel.imagem_capa
-            ? `${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`
+            ? `${import.meta.env.VITE_API_URL}/${imovel.imagem_capa}`
             : '/placeholder-image.jpg'
           }
           alt={imovel.nome_imovel || 'Imóvel'}
@@ -318,7 +318,7 @@ const ListaImoveis = () => {
         <div className="flex-shrink-0">
           <img
             src={imovel.imagem_capa
-              ? `${process.env.REACT_APP_API_URL}/${imovel.imagem_capa}`
+              ? `${import.meta.env.VITE_API_URL}/${imovel.imagem_capa}`
               : '/placeholder-image.jpg'
             }
             alt={imovel.nome_imovel || 'Imóvel'}

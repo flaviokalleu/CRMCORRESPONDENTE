@@ -26,7 +26,7 @@ const RelatorioPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/report/relatorio`,
+        `${import.meta.env.VITE_API_URL}/report/relatorio`,
         {
           method: "GET",
           headers: {
@@ -61,7 +61,7 @@ const RelatorioPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/report/relatorio/download`,
+        `${import.meta.env.VITE_API_URL}/report/relatorio/download`,
         {
           method: "GET",
         }
@@ -99,7 +99,7 @@ const RelatorioPage = () => {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/report/relatorio/dados`,
+        `${import.meta.env.VITE_API_URL}/report/relatorio/dados`,
         {
           method: "GET",
           headers: {

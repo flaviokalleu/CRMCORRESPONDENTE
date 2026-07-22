@@ -48,7 +48,7 @@ const WhatsAppSessionManager = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/sessions`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/sessions`);
       const data = await response.json();
       
       if (data.success) {
@@ -75,7 +75,7 @@ const WhatsAppSessionManager = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/session/create`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/session/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -111,7 +111,7 @@ const WhatsAppSessionManager = () => {
       setError('');
       
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/whatsapp/session/${sessionToDelete.id}?force=${forceDelete}`,
+        `${import.meta.env.VITE_API_URL}/whatsapp/session/${sessionToDelete.id}?force=${forceDelete}`,
         { method: 'DELETE' }
       );
       
@@ -139,7 +139,7 @@ const WhatsAppSessionManager = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/session/switch`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/session/switch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId })
@@ -166,7 +166,7 @@ const WhatsAppSessionManager = () => {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/whatsapp/sessions/cleanup`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/whatsapp/sessions/cleanup`, {
         method: 'POST'
       });
       

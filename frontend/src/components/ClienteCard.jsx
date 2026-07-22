@@ -2,7 +2,7 @@ import React from 'react';
 import { Eye, Download, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClienteDocumentViewer = ({ cliente }) => {
   const documentFields = [

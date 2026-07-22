@@ -14,7 +14,7 @@ const Filtro = ({ filters, handleFilterChange }) => {
   const fetchImoveis = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/imoveis`
+        `${import.meta.env.VITE_API_URL}/imoveis`
       );
       const imoveis = response.data;
 

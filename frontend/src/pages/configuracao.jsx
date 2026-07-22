@@ -78,7 +78,7 @@ const Configuracoes = () => {
 
       // Carregar configurações do sistema
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/config/system`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/config/system`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -111,7 +111,7 @@ const Configuracoes = () => {
       setLoading(true);
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/config/user/profile`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/config/user/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,7 +144,7 @@ const Configuracoes = () => {
       setLoading(true);
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/config/user/password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/config/user/password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +198,7 @@ const Configuracoes = () => {
         formData.append('logo', logoFile);
       }
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/config/system`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/config/system`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -528,7 +528,7 @@ const Configuracoes = () => {
                       <div className="flex items-center gap-4">
                         {(logoPreview || systemConfig.logo_url) && (
                           <img
-                            src={logoPreview || `${process.env.REACT_APP_API_URL}/uploads/system/${systemConfig.logo_url}`}
+                            src={logoPreview || `${import.meta.env.VITE_API_URL}/uploads/system/${systemConfig.logo_url}`}
                             alt="Logo"
                             className="w-16 h-16 object-contain bg-white/10 rounded-lg p-2"
                           />

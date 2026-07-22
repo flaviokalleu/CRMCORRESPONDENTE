@@ -134,7 +134,7 @@ const CardGrid = ({ imoveis = [], loading = false }) => {
                   <div className="relative h-56 overflow-hidden">
                     {imovel.imagem_capa ? (
                       <img
-                        src={`${process.env.REACT_APP_API_URL}/${imovel.imagem_capa.replace(/\\/g, '/')}`}
+                        src={`${import.meta.env.VITE_API_URL}/${imovel.imagem_capa.replace(/\\/g, '/')}`}
                         alt={imovel.nome_imovel || 'Imóvel'}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                         loading="lazy"

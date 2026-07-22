@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
-const API_URL = process.env.REACT_APP_API_URL;
-const ESTADOS_API_URL = process.env.REACT_APP_ESTADOS_API_URL || `${process.env.REACT_APP_API_URL}/estados`;
-const MUNICIPIOS_API_URL = process.env.REACT_APP_MUNICIPIOS_API_URL || `${process.env.REACT_APP_API_URL}/municipios`;
+const API_URL = import.meta.env.VITE_API_URL;
+const ESTADOS_API_URL = import.meta.env.VITE_ESTADOS_API_URL || `${import.meta.env.VITE_API_URL}/estados`;
+const MUNICIPIOS_API_URL = import.meta.env.VITE_MUNICIPIOS_API_URL || `${import.meta.env.VITE_API_URL}/municipios`;
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const CARD = 'rgba(255,255,255,0.06)';

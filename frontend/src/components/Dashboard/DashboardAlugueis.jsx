@@ -16,7 +16,7 @@ const DashboardAlugueis = () => {
   const fetchDashboard = useCallback(async () => {
     try {
       const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard/alugueis`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/dashboard/alugueis`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',

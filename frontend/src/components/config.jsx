@@ -4,7 +4,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 
 export const API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:8000/api/";
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/";
 
 // Hook para buscar dados mensais de clientes
 export const useFetchMonthlyClients = () => {

@@ -10,7 +10,7 @@ import {
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 const Footer = () => {
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || 'CRM IMOB';
+  const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || 'CRM IMOB';
   const currentYear = new Date().getFullYear();
 
   const quickLinks = [

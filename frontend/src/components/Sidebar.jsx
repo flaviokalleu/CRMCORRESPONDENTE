@@ -137,7 +137,7 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
   const [addOpen, setAddOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
 
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CRM IMOB";
+  const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || "CRM IMOB";
 
   // Refs para evitar recriação do interval
   const logoutRef = useRef(logout);
@@ -212,7 +212,7 @@ const Sidebar = ({ open, onClose, onToggleVisibility }) => {
       : hasRole("corretor")
       ? "corretor"
       : "imagem_user";
-    return `${process.env.REACT_APP_API_URL}/uploads/${dir}/${user.photo}`;
+    return `${import.meta.env.VITE_API_URL}/uploads/${dir}/${user.photo}`;
   }, [user?.photo, hasRole]);
 
   const fullName = useMemo(

@@ -20,7 +20,7 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
 
   useEffect(() => {
     if (isOpen) {
-      fetch(`${process.env.REACT_APP_API_URL}/alugueis-disponiveis`)
+      fetch(`${import.meta.env.VITE_API_URL}/alugueis-disponiveis`)
         .then(res => res.json())
         .then(data => setImoveis(Array.isArray(data) ? data : []))
         .catch(() => setImoveis([]));
@@ -59,7 +59,7 @@ const AddClienteAluguel = ({ isOpen, onClose, onAddCliente }) => {
       const telefoneSemFormato = cliente.telefone.replace(/\D/g, "");
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/clientealuguel`,
+        `${import.meta.env.VITE_API_URL}/clientealuguel`,
         {
           method: "POST",
           headers: {

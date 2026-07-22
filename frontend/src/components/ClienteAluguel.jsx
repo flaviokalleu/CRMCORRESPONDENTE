@@ -159,7 +159,7 @@ const ClienteAluguel = () => {
   const carregarClientes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(process.env.REACT_APP_API_URL + "/clientealuguel");
+      const response = await fetch(import.meta.env.VITE_API_URL + "/clientealuguel");
       const data = await response.json();
       if (Array.isArray(data)) {
         setClientes(data);
@@ -242,7 +242,7 @@ const ClienteAluguel = () => {
   const carregarCobrancas = async (clienteId) => {
     try {
       setLoadingAsaas(true);
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${clienteId}/cobrancas`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${clienteId}/cobrancas`);
       const data = await response.json();
       setCobrancas(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -274,7 +274,7 @@ const ClienteAluguel = () => {
     setModalRepasses(true);
     setLoadingRepasses(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/repasses?cliente_aluguel_id=${cliente.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/repasses?cliente_aluguel_id=${cliente.id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
       const data = await res.json();
@@ -290,7 +290,7 @@ const ClienteAluguel = () => {
   const retentarRepasse = async (repasseId) => {
     setLoadingRepasses(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/repasses/${repasseId}/transferir`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/repasses/${repasseId}/transferir`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
       });
@@ -317,7 +317,7 @@ const ClienteAluguel = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/clientealuguel/${clienteSelecionado.id}/pagamento`,
+        `${import.meta.env.VITE_API_URL}/clientealuguel/${clienteSelecionado.id}/pagamento`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -342,7 +342,7 @@ const ClienteAluguel = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/clientealuguel/${clienteSelecionado.id}/pagamento/${pagamentoParaDeletar.id}`,
+        `${import.meta.env.VITE_API_URL}/clientealuguel/${clienteSelecionado.id}/pagamento/${pagamentoParaDeletar.id}`,
         { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
       );
       if (response.ok) {
@@ -366,7 +366,7 @@ const ClienteAluguel = () => {
     setLoadingAsaas(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/clientealuguel/${clienteSelecionado.id}/cobranca-avulsa`,
+        `${import.meta.env.VITE_API_URL}/clientealuguel/${clienteSelecionado.id}/cobranca-avulsa`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -392,7 +392,7 @@ const ClienteAluguel = () => {
     setLoadingAsaas(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/sincronizar-asaas`,
+        `${import.meta.env.VITE_API_URL}/clientealuguel/${cliente.id}/sincronizar-asaas`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } }
       );
       if (response.ok) {
@@ -663,7 +663,7 @@ Testemunha 2
     if (!clienteSelecionado) return;
     try {
       setLoadingContratoTexto(true);
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${clienteSelecionado.id}/contrato/texto?modelo=padrao`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${clienteSelecionado.id}/contrato/texto?modelo=padrao`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
       });
       const raw = await res.text();
@@ -685,7 +685,7 @@ Testemunha 2
   const gerarContrato = async (cliente, textoPersonalizado = '') => {
     setLoadingAsaas(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${cliente.id}/contrato`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -695,7 +695,7 @@ Testemunha 2
       });
       if (res.ok) {
         alert('Contrato gerado! Baixando...');
-        const downloadRes = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/contrato`, {
+        const downloadRes = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${cliente.id}/contrato`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
         });
         if (!downloadRes.ok) {
@@ -734,7 +734,7 @@ Testemunha 2
 
   const simularReajuste = async (cliente) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/reajuste`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${cliente.id}/reajuste`);
       if (res.ok) {
         const data = await res.json();
         alert(`Simulacao de Reajuste (${data.indice_nome}):\n\nValor atual: R$ ${data.valor_atual.toFixed(2)}\nIndice: ${data.indice_percentual}%\nNovo valor: R$ ${data.valor_reajustado.toFixed(2)}\nDiferenca: +R$ ${data.diferenca.toFixed(2)}${data.dias_para_reajuste ? '\nReajuste em: ' + data.dias_para_reajuste + ' dias' : ''}`);
@@ -745,7 +745,7 @@ Testemunha 2
   const recalcularScore = async (cliente) => {
     setLoadingAsaas(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/clientealuguel/${cliente.id}/score`, { method: 'POST' });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/clientealuguel/${cliente.id}/score`, { method: 'POST' });
       if (res.ok) {
         await carregarClientes();
       }

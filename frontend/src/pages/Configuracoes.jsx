@@ -74,7 +74,7 @@ const Configuracoes = () => {
 
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/user/me`,
+        `${import.meta.env.VITE_API_URL}/user/me`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`
@@ -284,7 +284,7 @@ const Configuracoes = () => {
 
   // URL da foto do usuário
   const userPhotoUrl = userInfo.photo 
-    ? `${process.env.REACT_APP_API_URL}/uploads/imagem_usuario/${userInfo.photo}`
+    ? `${import.meta.env.VITE_API_URL}/uploads/imagem_usuario/${userInfo.photo}`
     : null;
 
   // Informações do papel do usuário
@@ -320,7 +320,7 @@ const Configuracoes = () => {
       }
 
       const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/user/${userInfo.id}`,
+        `${import.meta.env.VITE_API_URL}/user/${userInfo.id}`,
         formData,
         {
           headers: {

@@ -53,7 +53,7 @@ const useUser = () => {
                 }
             };
 
-            const response = await axios.get(`${process.env.REACT_APP_API_URL}/user/me`, config);
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/me`, config);
             
             if (response.data && response.data.user) {
                 const userData = response.data.user;
@@ -118,7 +118,7 @@ const useUser = () => {
             };
 
             const response = await axios.put(
-                `${process.env.REACT_APP_API_URL}/user/profile`, 
+                `${import.meta.env.VITE_API_URL}/user/profile`, 
                 userData, 
                 config
             );

@@ -115,8 +115,8 @@ const ModalLaudo = ({ isOpen, onClose, laudo, modoEdicao, onSalvar }) => {
 
       // ✅ CORREÇÃO: URL corrigida removendo duplicação
       const url = modoEdicao 
-        ? `${process.env.REACT_APP_API_URL}/laudos/${laudo.id}`
-        : `${process.env.REACT_APP_API_URL}/laudos`;
+        ? `${import.meta.env.VITE_API_URL}/laudos/${laudo.id}`
+        : `${import.meta.env.VITE_API_URL}/laudos`;
       
       const method = modoEdicao ? 'PUT' : 'POST';
 

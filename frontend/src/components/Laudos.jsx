@@ -75,7 +75,7 @@ const Laudos = () => {
         status: filtros.status === 'todos' ? '' : filtros.status
       });
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/laudos?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/laudos?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -153,7 +153,7 @@ const Laudos = () => {
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/laudos/relatorios/estatisticas`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/laudos/relatorios/estatisticas`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -204,7 +204,7 @@ const Laudos = () => {
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/laudos/${laudoId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/laudos/${laudoId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -231,7 +231,7 @@ const Laudos = () => {
       const token = localStorage.getItem('authToken');
       
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/laudos/${laudoId}/arquivo/${categoria}/${filename}`,
+        `${import.meta.env.VITE_API_URL}/laudos/${laudoId}/arquivo/${categoria}/${filename}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

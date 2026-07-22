@@ -27,7 +27,7 @@ const DashboardCorretor = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;

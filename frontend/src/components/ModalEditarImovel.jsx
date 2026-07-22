@@ -16,7 +16,7 @@ const ModalEditarImovel = ({ imovel, isOpen, onClose, onUpdate }) => {
     e.preventDefault();
     try {
       await axios.put(
-        `${process.env.REACT_APP_API_URL}/imoveis/${imovel.id}`,
+        `${import.meta.env.VITE_API_URL}/imoveis/${imovel.id}`,
         formData
       );
       onUpdate(formData);

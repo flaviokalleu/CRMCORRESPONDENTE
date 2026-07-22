@@ -22,7 +22,7 @@ const Busca = () => {
   const fetchProperties = async (busca) => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/imoveis/busca`,
+        `${import.meta.env.VITE_API_URL}/imoveis/busca`,
         {
           params: { busca },
         }
@@ -52,7 +52,7 @@ const Busca = () => {
                 <img
                   src={
                     property.imagem_capa
-                      ? `${process.env.REACT_APP_API_URL}/${property.imagem_capa}`
+                      ? `${import.meta.env.VITE_API_URL}/${property.imagem_capa}`
                       : "https://via.placeholder.com/500"
                   }
                   alt={property.nome_imovel}

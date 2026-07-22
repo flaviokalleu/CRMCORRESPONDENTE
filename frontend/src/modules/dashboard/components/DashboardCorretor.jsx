@@ -20,10 +20,10 @@ const DashboardCorretor = () => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
   // Nome do sistema do .env
-  const nomeSistema = process.env.REACT_APP_NOME_SISTEMA || "CAIXA CRM";
+  const nomeSistema = import.meta.env.VITE_NOME_SISTEMA || "CAIXA CRM";
 
   // Função para buscar dados APENAS do corretor logado
   const fetchDashboardData = async () => {

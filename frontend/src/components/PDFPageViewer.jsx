@@ -11,7 +11,7 @@ import {
   FaExclamationTriangle
 } from 'react-icons/fa';
 
-const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const PDFPageViewer = ({ clienteId, tipo, isOpen, onClose, showToast }) => {
   const [pdfInfo, setPdfInfo] = useState(null);
