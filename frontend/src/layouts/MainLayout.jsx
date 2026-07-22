@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, PanelLeft } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import NotificationBell from "../components/NotificationBell";
-import { useAuth } from "../context/AuthContext";
+import Header from "../components/Header";
 
 const MainLayout = ({ children }) => {
   const location = useLocation();
-  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
@@ -35,15 +32,17 @@ const MainLayout = ({ children }) => {
       {/* Sidebar */}
       {sidebarVisible && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 p-2 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar
-            open={sidebarOpen}
-            onClose={() => isMobile && setSidebarOpen(false)}
-            onToggleVisibility={() => setSidebarVisible(false)}
-          />
+          <div className="h-full overflow-hidden rounded-2xl shadow-xl">
+            <Sidebar
+              open={sidebarOpen}
+              onClose={() => isMobile && setSidebarOpen(false)}
+              onToggleVisibility={() => setSidebarVisible(false)}
+            />
+          </div>
         </aside>
       )}
 
@@ -62,34 +61,13 @@ const MainLayout = ({ children }) => {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-40 bg-caixa-primary/80 backdrop-blur-md border-b border-white/10">
-          <div className="flex items-center justify-between px-4 py-2">
-            <div className="flex items-center gap-2">
-              {isMobile && sidebarVisible && (
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <Menu className="h-6 w-6 text-white/70" />
-                </button>
-              )}
-              {!sidebarVisible && (
-                <button
-                  onClick={() => setSidebarVisible(true)}
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                  title="Mostrar Menu"
-                >
-                  <PanelLeft className="h-6 w-6 text-white/70" />
-                  <span className="text-white/70 text-sm">Menu</span>
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <NotificationBell />
-            </div>
-          </div>
-        </header>
+        <Header
+          isMobile={isMobile}
+          sidebarVisible={sidebarVisible}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebarOpen={() => setSidebarOpen((v) => !v)}
+          onShowSidebar={() => setSidebarVisible(true)}
+        />
 
         {/* Content Area */}
         <div className="flex-1 w-full overflow-y-auto">
@@ -97,7 +75,7 @@ const MainLayout = ({ children }) => {
         </div>
 
         {/* Footer */}
-        <footer className="bg-caixa-primary/50 border-t border-white/10">
+        <footer className="border-t border-white/10 bg-caixa-primary/50">
           <Footer />
         </footer>
       </div>
