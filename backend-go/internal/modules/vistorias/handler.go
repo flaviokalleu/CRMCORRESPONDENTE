@@ -18,13 +18,15 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 // nenhuma autenticação. Recomendamos exigir auth+tenant no Go (o chamador
 // decide isso ao montar o grupo — ver wiring doc). A ordem das rotas
 // preserva a resolução do Node: `/vistorias/cliente/:id` e
-// `/vistorias/:clienteId/comparativo` usam segmentos literais que o Gin
+// `/vistorias/:id/comparativo` usam segmentos literais que o Gin
 // resolve antes do padrão genérico `/vistorias/:id` (04-spec Gotcha 14) —
-// por isso são registradas primeiro.
+// por isso são registradas primeiro. Gin exige o MESMO nome de wildcard em
+// todas as rotas de um mesmo nível da árvore — por isso ":id" (não
+// ":clienteId") é usado aqui, embora semanticamente identifique o cliente.
 func (h *Handler) Register(r *gin.RouterGroup) {
 	r.POST("/vistorias", h.Create)
 	r.GET("/vistorias/cliente/:id", h.ListByCliente)
-	r.GET("/vistorias/:clienteId/comparativo", h.Comparativo)
+	r.GET("/vistorias/:id/comparativo", h.Comparativo)
 	r.GET("/vistorias/:id", h.Get)
 	r.PUT("/vistorias/:id", h.Update)
 	r.POST("/vistorias/:id/fotos", h.AddFotos)
@@ -143,7 +145,7 @@ func (h *Handler) GerarPDF(c *gin.Context) {
 }
 
 func (h *Handler) Comparativo(c *gin.Context) {
-	id, ok := parseID(c, "clienteId")
+	id, ok := parseID(c, "id")
 	if !ok {
 		return
 	}

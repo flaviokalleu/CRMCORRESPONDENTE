@@ -225,7 +225,10 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	repassesSvc := repasses.NewService(repasses.NewRepository(db), db)
 	repassesHandler := repasses.NewHandler(repassesSvc)
 	repassesHandler.Register(api.Group("/repasses", financeiroAuth...))
-	repassesHandler.RegisterPublic(api) // GET /api/clientealuguel/:id/multa-juros — sem auth (gotcha replicado)
+	// RegisterPublic (GET /api/clientealuguel/:id/multa-juros sem auth) foi INTENCIONALMENTE
+	// omitido: o cluster 04 (aluguéis) já registra essa mesma rota, consolidada e protegida
+	// por auth+tenant, dentro de cluster04 abaixo — manter as duas causava panic de rota
+	// duplicada no Gin, e a versão pública replicava um gotcha de segurança do Node.
 
 	// ================= Cluster 04 — Aluguéis =================
 

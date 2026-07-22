@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // registra o driver database/sql "pgx"
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
@@ -28,7 +29,7 @@ func OpenContainer(ctx context.Context, cfg *config.Config, logger waLog.Logger)
 		cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.Name, cfg.DB.SSLMode,
 	)
 
-	container, err := sqlstore.New(ctx, "postgres", dsn, logger)
+	container, err := sqlstore.New(ctx, "pgx", dsn, logger)
 	if err != nil {
 		return nil, fmt.Errorf("whatsapp: abrir sqlstore: %w", err)
 	}
