@@ -1,5 +1,6 @@
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -26,7 +27,13 @@ export default function RootLayout({ children }) {
       lang="pt-BR"
       className={`${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* AuthProvider no layout raiz — useAuth() funciona em TODA página,
+            inclusive públicas (/login, /registro, vitrine). Sem initialUser
+            aqui: cada página decide se precisa buscar o usuário (a maioria
+            das públicas não precisa). */}
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
