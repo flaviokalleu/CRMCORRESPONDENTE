@@ -47,6 +47,37 @@ func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	}
 }
 
+// RegisterPublicRoutes monta só os endpoints de LEITURA (sem auth) para a
+// vitrine pública (SEO) — nunca Create/Update/Delete/DownloadImagens. O grupo
+// `rg` já deve ter `middleware.PublicTenantScope(id)` aplicado. Usa
+// `ListPublico` (não `List`) para nunca vazar imóveis vendidos/reservados.
+func (h *Handler) RegisterPublicRoutes(rg *gin.RouterGroup) {
+	g := rg.Group("/imoveis")
+	{
+		g.GET("", h.ListPublico)
+		g.GET("/", h.ListPublico)
+		g.GET("/busca", h.Busca)
+		g.GET("/:id/semelhantes", h.Semelhantes)
+		g.GET("/:id", h.Get)
+	}
+}
+
+// ListPublico é igual a List, mas força ApenasDisponiveis=true.
+func (h *Handler) ListPublico(c *gin.Context) {
+	f := Filters{
+		Categoria:         c.Query("categoria"),
+		Localizacao:       c.Query("localizacao"),
+		Busca:             c.Query("busca"),
+		ApenasDisponiveis: true,
+	}
+	list, err := h.svc.List(c.Request.Context(), f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao listar imóveis"})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
 func (h *Handler) List(c *gin.Context) {
 	f := Filters{Categoria: c.Query("categoria"), Localizacao: c.Query("localizacao"), Busca: c.Query("busca")}
 	list, err := h.svc.List(c.Request.Context(), f)

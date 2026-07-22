@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -184,10 +185,23 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	notasHandler := notas.NewHandler(notas.NewService(notas.NewRepository(db)))
 	notasHandler.RegisterRoutes(api)
 
+	imoveisHandler := imoveis.NewHandler(imoveis.NewService(imoveis.NewRepository(db)))
+
+	// Vitrine pública (SEO) — sem auth, escopada a um tenant fixo via env
+	// PUBLIC_TENANT_ID (default 1). Ver middleware.PublicTenantScope.
+	publicTenantID := uint(1)
+	if v := os.Getenv("PUBLIC_TENANT_ID"); v != "" {
+		if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+			publicTenantID = uint(parsed)
+		}
+	}
+	publicGroup := api.Group("/public")
+	publicGroup.Use(middleware.PublicTenantScope(publicTenantID))
+	imoveisHandler.RegisterPublicRoutes(publicGroup)
+
 	cluster02 := api.Group("")
 	cluster02.Use(authed(), tenantScoped)
 	{
-		imoveisHandler := imoveis.NewHandler(imoveis.NewService(imoveis.NewRepository(db)))
 		imoveisHandler.RegisterRoutes(cluster02)
 
 		clientesRepo := clientes.NewRepository(db)

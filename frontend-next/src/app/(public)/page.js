@@ -13,7 +13,7 @@ export const metadata = {
 };
 
 export default async function LandingPage() {
-  const data = await apiGet("/imoveis?limit=6");
+  const data = await apiGet("/public/imoveis?limit=6");
   const imoveis = Array.isArray(data) ? data : data?.data || [];
 
   return (

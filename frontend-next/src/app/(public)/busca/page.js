@@ -17,7 +17,7 @@ export default async function BuscaPage({ searchParams }) {
 
   let imoveis = [];
   if (termo) {
-    const data = await apiGet(`/imoveis/busca?busca=${encodeURIComponent(termo)}`);
+    const data = await apiGet(`/public/imoveis/busca?busca=${encodeURIComponent(termo)}`);
     imoveis = Array.isArray(data) ? data : data?.data || [];
   }
 

@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 export default async function ImoveisPublicosPage() {
-  const data = await apiGet("/imoveis");
+  const data = await apiGet("/public/imoveis");
   const imoveis = Array.isArray(data) ? data : data?.data || [];
 
   return (

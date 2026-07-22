@@ -12,7 +12,7 @@ export default async function sitemap() {
     { url: `${SITE_URL}/precos`, changeFrequency: "monthly", priority: 0.7 },
   ].map((entry) => ({ ...entry, lastModified: new Date() }));
 
-  const data = await apiGet("/imoveis");
+  const data = await apiGet("/public/imoveis");
   const imoveis = Array.isArray(data) ? data : data?.data || [];
 
   const imovelRoutes = imoveis

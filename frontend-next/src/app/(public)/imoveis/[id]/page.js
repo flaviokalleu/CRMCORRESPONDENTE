@@ -11,7 +11,7 @@ import ImovelCard, { formatMoeda, imovelImagemUrl } from "@/components/public/Im
 // openGraph — é o motivo real da migração (preview correto ao compartilhar
 // no WhatsApp/Facebook).
 async function getImovel(id) {
-  const res = await apiGet(`/imoveis/${id}`);
+  const res = await apiGet(`/public/imoveis/${id}`);
   if (!res) return null;
   return res.data || res;
 }
@@ -87,7 +87,7 @@ export default async function ImovelDetailPage({ params }) {
     whatsappMessage
   )}`;
 
-  const semelhantesData = await apiGet(`/imoveis/${id}/semelhantes`);
+  const semelhantesData = await apiGet(`/public/imoveis/${id}/semelhantes`);
   const semelhantes = Array.isArray(semelhantesData) ? semelhantesData : semelhantesData?.data || [];
 
   return (

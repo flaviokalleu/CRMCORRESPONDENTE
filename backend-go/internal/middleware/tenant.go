@@ -65,3 +65,21 @@ func ResolveTenant(db *gorm.DB) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// PublicTenantScope injeta um Scope de tenant FIXO no contexto, sem exigir
+// autenticação — usado por vitrines/páginas públicas (SEO) que precisam listar
+// dados de UM tenant específico sem que o visitante esteja logado. Diferente
+// de ResolveTenant, não roda atrás de auth.Required().
+//
+// Limitação consciente: hoje serve só o tenant configurado (não resolve
+// dinamicamente por domínio/subdomínio) — suficiente enquanto há um único
+// tenant real em produção. Se o SaaS crescer para múltiplos tenants com
+// vitrine pública própria, isso precisa evoluir para resolução por domínio.
+func PublicTenantScope(tenantID uint) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		scope := tenant.Scope{TenantID: &tenantID}
+		ctx := tenant.With(c.Request.Context(), scope)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}

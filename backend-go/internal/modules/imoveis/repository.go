@@ -20,6 +20,10 @@ type Filters struct {
 	Categoria   string
 	Localizacao string
 	Busca       string
+	// ApenasDisponiveis restringe a "situacao_imovel = 'disponivel'" — usado
+	// pela vitrine PÚBLICA para nunca vazar imóveis vendidos/reservados a
+	// visitantes anônimos. Handlers internos (staff autenticado) deixam false.
+	ApenasDisponiveis bool
 }
 
 func (r *Repository) List(ctx context.Context, f Filters) ([]models.Imovel, error) {
@@ -36,6 +40,9 @@ func (r *Repository) List(ctx context.Context, f Filters) ([]models.Imovel, erro
 			"nome_imovel ILIKE ? OR descricao_imovel ILIKE ? OR endereco ILIKE ? OR tipo ILIKE ? OR localizacao ILIKE ?",
 			like, like, like, like, like,
 		)
+	}
+	if f.ApenasDisponiveis {
+		q = q.Where("situacao_imovel = ?", "disponivel")
 	}
 	var imoveis []models.Imovel
 	err := q.Order(`"createdAt" DESC`).Find(&imoveis).Error
