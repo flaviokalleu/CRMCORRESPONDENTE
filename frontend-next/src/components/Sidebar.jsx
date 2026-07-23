@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, LogOut, Settings, LayoutDashboard, UserPlus, UserCog,
   ShieldCheck, Building2, List, Bell, Users, ClipboardList, Banknote,
-  QrCode, PanelLeftClose, X, Crown, Building, CalendarCheck, FileText,
+  QrCode, PanelLeftClose, X, Crown, Building, FileText,
   Handshake, KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -110,7 +110,6 @@ export function Sidebar({ onClose, onToggleVisibility }) {
       icon: Handshake,
       label: "Vendas",
       items: [
-        { href: "/visitas", icon: CalendarCheck, label: "Visitas" },
         { href: "/propostas", icon: FileText, label: "Propostas" },
       ],
     });
@@ -174,6 +173,9 @@ export function Sidebar({ onClose, onToggleVisibility }) {
     <div className="flex h-full flex-col bg-caixa-primary text-white">
       <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-xs font-bold text-white shadow-md shadow-caixa-orange/20">
+            {nomeSistema.slice(0, 1)}
+          </span>
           <span className="text-sm font-semibold tracking-tight text-white">{nomeSistema}</span>
         </Link>
         <div className="flex items-center gap-0.5">
@@ -187,6 +189,7 @@ export function Sidebar({ onClose, onToggleVisibility }) {
           </button>
         </div>
       </div>
+      <div aria-hidden="true" className="h-px bg-gradient-to-r from-transparent via-caixa-orange/50 to-transparent" />
 
       <div className="mx-3 mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3">
         <Avatar className="h-9 w-9 border border-white/10">

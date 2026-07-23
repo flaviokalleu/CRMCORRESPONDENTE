@@ -37,16 +37,14 @@ export function AppShell({ children }) {
 
       {sidebarVisible && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 p-2 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="h-full overflow-hidden rounded-2xl shadow-xl">
-            <Sidebar
-              onClose={() => isMobile && setSidebarOpen(false)}
-              onToggleVisibility={() => setSidebarVisible(false)}
-            />
-          </div>
+          <Sidebar
+            onClose={() => isMobile && setSidebarOpen(false)}
+            onToggleVisibility={() => setSidebarVisible(false)}
+          />
         </aside>
       )}
 

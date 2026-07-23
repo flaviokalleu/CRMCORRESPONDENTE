@@ -162,6 +162,44 @@
   }
 }
 
+/* O app inteiro é escuro, mas <select> nativo herda o "color-scheme" claro
+   do SO por padrão — isso deixa o popup de opções com fundo branco
+   enquanto o texto (herdado do nosso CSS) continua branco, ficando
+   invisível. Forçamos color-scheme: dark + cor explícita em <option> para
+   que o popup nativo (Chrome/Firefox/Edge no Windows) renderize escuro. */
+select {
+  color-scheme: dark;
+}
+select option,
+select optgroup {
+  background-color: #0f1c33 !important;
+  color: #ffffff !important;
+}
+
+/* Impressão do editor de contratos — o PDF gerado por "Imprimir/Salvar
+   PDF" precisa ser o PRÓPRIO DOM renderizado (faixa navy, pílulas, ícones),
+   não uma reconstrução à parte. Em vez do truque "visibility:hidden em
+   tudo" (que quebra dentro de um container com scroll/flex — o
+   position:absolute do alvo fica preso ao ancestral posicionado errado e
+   corta/desloca o conteúdo), escondemos SÓ o chrome do editor (link
+   voltar, cabeçalho, barra de ações) via `print:hidden` no próprio
+   componente, e o documento imprime em fluxo normal, sem position hacks. */
+@media print {
+  .terminal-surface {
+    background: #ffffff !important;
+  }
+  .aurora {
+    display: none !important;
+  }
+  #contract-print-area,
+  #contract-print-area * {
+    box-shadow: none !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Landing "Casa & Ouro" — utilitários cinematográficos de luxo.
    Escopados por classe, só usados nas páginas públicas premium.
@@ -248,6 +286,78 @@
   .text-gold-shimmer,
   .aurora-drift,
   .marquee-track {
+    animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard "Terminal Caixa" — estética financeira/tech sobre o navy já
+   usado no resto do app (não um void quase-preto à parte). Laranja é a
+   cor líder (identidade Caixa como o cliente reconhece), azul e branco
+   completam — grid de pontos sutil dá o toque "tech".
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Mesmo gradiente base do AppShell, sem cor extra — evita costura visível
+   entre o conteúdo do dashboard e a moldura (sidebar/header) ao redor. */
+.terminal-surface {
+  background: linear-gradient(135deg, #0b1426 0%, #122240 50%, #162a4a 100%);
+}
+
+/* grid de pontos técnico — textura de fundo bem discreta */
+.terminal-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 70% 100% at 50% 0%, black, transparent 100%);
+}
+
+/* linha de glow no topo dos cartões — "circuito ligado" */
+.circuit-edge {
+  position: relative;
+}
+.circuit-edge::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 154, 74, 0.6), transparent);
+}
+
+/* indicador "ao vivo" pulsante */
+.pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #34d399;
+}
+.pulse-dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: #34d399;
+  opacity: 0.5;
+  animation: pulse-ring 2s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot::after {
     animation: none !important;
   }
 }

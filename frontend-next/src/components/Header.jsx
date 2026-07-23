@@ -53,6 +53,7 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-caixa-primary/90 backdrop-blur-md">
+      <div aria-hidden="true" className="h-px bg-gradient-to-r from-transparent via-caixa-orange/50 to-transparent" />
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-3">
           {isMobile && sidebarVisible && (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { FileText } from "lucide-react";
 
 const STATUS_MAP = {
   pendente: { label: "Pendente", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
@@ -72,6 +74,16 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Link
+          href="/propostas/contratos"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-caixa-orange/30 bg-caixa-orange/10 px-3 py-2 text-xs font-semibold text-caixa-orange-light hover:bg-caixa-orange/15"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Modelos de contrato
+        </Link>
+      </div>
+
       <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 grid gap-3 sm:grid-cols-3">
         <select
           value={form.cliente_id}
@@ -163,6 +175,10 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
                         <button onClick={() => updateStatus(p.id, "recusada")} className="text-red-400 hover:underline">Recusar</button>
                       </>
                     )}
+                    <Link href={`/propostas/contratos?proposta=${p.id}`} className="inline-flex items-center gap-1 text-caixa-orange-light hover:underline">
+                      <FileText className="h-3 w-3" />
+                      Gerar contrato
+                    </Link>
                     <button onClick={() => handleDelete(p.id)} className="text-white/40 hover:text-red-400 hover:underline">Excluir</button>
                   </div>
                 </div>
