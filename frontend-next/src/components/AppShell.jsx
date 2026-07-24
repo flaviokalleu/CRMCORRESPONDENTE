@@ -31,13 +31,13 @@ export function AppShell({ children }) {
 
   return (
     <div
-      className="flex h-screen overflow-hidden"
+      className="app-shell-root flex h-screen overflow-hidden"
       style={{ background: "linear-gradient(135deg, #0B1426 0%, #122240 50%, #162a4a 100%)" }}
     >
 
       {sidebarVisible && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -60,14 +60,16 @@ export function AppShell({ children }) {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        <Header
-          isMobile={isMobile}
-          sidebarVisible={sidebarVisible}
-          onToggleSidebarOpen={() => setSidebarOpen((v) => !v)}
-          onShowSidebar={() => setSidebarVisible(true)}
-        />
-        <div className="flex-1 w-full overflow-y-auto">
+      <div className="app-shell-main flex flex-1 flex-col min-w-0 overflow-hidden">
+        <div className="print:hidden">
+          <Header
+            isMobile={isMobile}
+            sidebarVisible={sidebarVisible}
+            onToggleSidebarOpen={() => setSidebarOpen((v) => !v)}
+            onShowSidebar={() => setSidebarVisible(true)}
+          />
+        </div>
+        <div className="app-shell-scroll flex-1 w-full overflow-y-auto">
           <div className="h-full w-full">{children}</div>
         </div>
       </div>

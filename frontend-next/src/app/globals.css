@@ -185,6 +185,22 @@ select optgroup {
    voltar, cabeçalho, barra de ações) via `print:hidden` no próprio
    componente, e o documento imprime em fluxo normal, sem position hacks. */
 @media print {
+  /* Neutraliza o shell do app (sidebar/header já são print:hidden): tira a
+     altura fixa (h-screen) e os overflow hidden/auto que prendiam e cortavam
+     o documento, deixando-o fluir por quantas páginas precisar. */
+  .app-shell-root {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+  .app-shell-main,
+  .app-shell-scroll,
+  .app-shell-scroll > div {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   .terminal-surface {
     background: #ffffff !important;
   }
