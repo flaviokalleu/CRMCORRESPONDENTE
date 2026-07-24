@@ -10,7 +10,7 @@ export default function AdicionarClientePage() {
   return (
     <div className="p-6">
       <h1 className="text-xl font-semibold text-white mb-1">Adicionar Cliente</h1>
-      <p className="text-sm text-white/50 mb-6">Cadastro simplificado — campos principais do cliente.</p>
+      <p className="text-sm text-white/50 mb-6">Cadastro completo — dados pessoais, renda, cônjuge, fiador e documentos.</p>
       <AddClienteForm />
     </div>
   );

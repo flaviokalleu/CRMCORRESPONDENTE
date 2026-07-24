@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -95,6 +96,13 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	})
 
 	api := r.Group("/api")
+
+	// Fotos de imóveis são conteúdo PÚBLICO da vitrine — servidas estaticamente
+	// (sem auth). NÃO servir /uploads inteiro: documentos de cliente ficam sob
+	// rotas autenticadas (ver clientes.VerifyDocument). Só imoveis/ e tenants/.
+	uploadsBase := clientes.UploadsRoot()
+	api.Static("/uploads/imoveis", filepath.Join(uploadsBase, "imoveis"))
+	api.Static("/uploads/tenants", filepath.Join(uploadsBase, "tenants"))
 
 	authGroup := api.Group("/auth")
 	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), authHandler.Login)

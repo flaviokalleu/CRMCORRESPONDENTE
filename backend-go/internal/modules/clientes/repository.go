@@ -69,6 +69,9 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente,
 	var clientes []models.Cliente
 	err := q.Preload("User").
 		Preload("Notas", func(db *gorm.DB) *gorm.DB { return db.Select("id", "cliente_id") }).
+		// Clientes "aguardando_aprovacao" sempre no topo (independe da página),
+		// depois os mais recentes primeiro.
+		Order("(status = 'aguardando_aprovacao') DESC").
 		Order("created_at DESC").
 		Limit(limit).Offset((page - 1) * limit).
 		Find(&clientes).Error
