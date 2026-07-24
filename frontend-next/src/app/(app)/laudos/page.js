@@ -1,72 +1,66 @@
 import { apiGet } from "@/lib/api-server";
+import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
+import { FileBarChart2 } from "lucide-react";
 
 export const metadata = { title: "Laudos" };
 
-function formatCurrency(value) {
-  const n = Number(value);
-  if (!value || Number.isNaN(n)) return "-";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
-}
-
 function formatDate(value) {
-  if (!value) return "-";
+  if (!value) return "—";
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("pt-BR");
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
 }
 
-const STATUS_LABEL = {
-  vencido: "Vencido",
-  vencendo: "Vencendo",
-  vigente: "Vigente",
+const STATUS = {
+  vencido: { label: "Vencido", dot: "#f87171" },
+  vencendo: { label: "Vencendo", dot: "#fbbf24" },
+  vigente: { label: "Vigente", dot: "#34d399" },
 };
 
-// Server Component: lista de laudos via apiGet direto no Go. Endpoint antigo
-// respondia { success, data, pagination } — cobrimos os dois formatos.
 export default async function LaudosPage() {
   const data = await apiGet("/laudos");
   const laudos = Array.isArray(data) ? data : data?.data ?? [];
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold text-white">Laudos</h1>
-        <p className="text-sm text-white/40">Gestão de laudos de avaliação imobiliária.</p>
-      </div>
+      <PageHeader title="Laudos" subtitle="Gestão de laudos de avaliação imobiliária." />
 
       {!data ? (
-        <p className="text-sm text-white/50">Não foi possível carregar os laudos.</p>
+        <EmptyState icon={FileBarChart2} title="Não foi possível carregar os laudos" />
       ) : laudos.length === 0 ? (
-        <p className="text-sm text-white/50">Nenhum laudo encontrado.</p>
+        <EmptyState icon={FileBarChart2} title="Nenhum laudo encontrado" />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-wide text-white/40">
-              <tr>
-                <th className="px-4 py-3">Parceiro</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Endereço</th>
-                <th className="px-4 py-3">Valor Solicitado</th>
-                <th className="px-4 py-3">Valor Liberado</th>
-                <th className="px-4 py-3">Vencimento</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {laudos.map((laudo) => (
-                <tr key={laudo.id} className="border-t border-white/5 text-white/80 hover:bg-white/[0.03]">
-                  <td className="px-4 py-3 font-medium text-white">{laudo.parceiro}</td>
-                  <td className="px-4 py-3 capitalize">{laudo.tipo_imovel}</td>
-                  <td className="px-4 py-3">{laudo.endereco}</td>
-                  <td className="px-4 py-3">{formatCurrency(laudo.valor_solicitado)}</td>
-                  <td className="px-4 py-3">{formatCurrency(laudo.valor_liberado)}</td>
-                  <td className="px-4 py-3">{formatDate(laudo.vencimento)}</td>
-                  <td className="px-4 py-3">{STATUS_LABEL[laudo.status] || laudo.status || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table className="min-w-[900px]">
+          <Thead>
+            <Th>Parceiro</Th>
+            <Th>Tipo</Th>
+            <Th>Endereço</Th>
+            <Th right>Solicitado</Th>
+            <Th right>Liberado</Th>
+            <Th>Vencimento</Th>
+            <Th>Status</Th>
+          </Thead>
+          <tbody>
+            {laudos.map((l) => {
+              const st = STATUS[l.status] || { label: l.status || "—", dot: "#94a3b8" };
+              return (
+                <Row key={l.id}>
+                  <Td className="font-medium text-white">{l.parceiro}</Td>
+                  <Td muted className="capitalize">{l.tipo_imovel}</Td>
+                  <Td muted>{l.endereco}</Td>
+                  <Td right className="tabular-nums">{formatBRL(l.valor_solicitado)}</Td>
+                  <Td right className="tabular-nums">{formatBRL(l.valor_liberado)}</Td>
+                  <Td muted className="tabular-nums">{formatDate(l.vencimento)}</Td>
+                  <Td>
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70">
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
+                      {st.label}
+                    </span>
+                  </Td>
+                </Row>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
     </div>
   );

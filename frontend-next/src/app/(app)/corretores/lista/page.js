@@ -1,55 +1,61 @@
-import Link from "next/link";
 import { apiGet } from "@/lib/api-server";
+import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
+import { UsersRound, Phone, BadgeCheck } from "lucide-react";
 
 export const metadata = { title: "Lista de Corretores" };
 
-// Server Component: GET /corretor direto no Go. A API antiga retorna
-// { success, data: [...] } (ver frontend/src/components/ListaCorretores.jsx) —
-// tratamos também o caso de vir um array puro.
 export default async function ListaCorretoresPage() {
   const data = await apiGet("/corretor?all=true");
   const corretores = Array.isArray(data) ? data : data?.data ?? [];
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Corretores</h1>
-          <p className="text-sm text-white/50">{corretores.length} corretor(es) encontrado(s)</p>
-        </div>
-        <Link href="/corretores/adicionar"
-          className="rounded-lg bg-orange-600 hover:bg-orange-700 px-4 py-2 text-sm font-semibold text-white transition-colors">
-          + Adicionar Corretor
-        </Link>
-      </div>
+      <PageHeader
+        title="Corretores"
+        subtitle={`${corretores.length} corretor${corretores.length === 1 ? "" : "es"}`}
+        actionHref="/corretores/adicionar"
+        actionLabel="Adicionar corretor"
+      />
 
       {corretores.length === 0 ? (
-        <p className="text-white/50 text-sm">Nenhum corretor cadastrado ou não foi possível carregar os dados.</p>
+        <EmptyState icon={UsersRound} title="Nenhum corretor cadastrado" hint="Adicione o primeiro corretor da equipe." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-white/[0.04] text-white/50 text-xs uppercase">
-              <tr>
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Username</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Telefone</th>
-                <th className="px-4 py-3">CRECI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {corretores.map((c) => (
-                <tr key={c.id} className="border-t border-white/10 hover:bg-white/[0.03]">
-                  <td className="px-4 py-3 text-white font-medium">{c.first_name} {c.last_name}</td>
-                  <td className="px-4 py-3 text-white/60">@{c.username}</td>
-                  <td className="px-4 py-3 text-white/60">{c.email}</td>
-                  <td className="px-4 py-3 text-white/60">{c.telefone}</td>
-                  <td className="px-4 py-3 text-white/60">{c.creci || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table className="min-w-[720px]">
+          <Thead>
+            <Th>Corretor</Th>
+            <Th>Usuário</Th>
+            <Th>Contato</Th>
+            <Th>CRECI</Th>
+          </Thead>
+          <tbody>
+            {corretores.map((c) => (
+              <Row key={c.id}>
+                <Td>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={`${c.first_name} ${c.last_name}`} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-white">{c.first_name} {c.last_name}</p>
+                      <p className="truncate text-xs text-white/40">{c.email || "sem e-mail"}</p>
+                    </div>
+                  </div>
+                </Td>
+                <Td muted>@{c.username}</Td>
+                <Td muted>
+                  {c.telefone ? (
+                    <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-white">
+                      <Phone className="h-3.5 w-3.5" /> {c.telefone}
+                    </a>
+                  ) : "—"}
+                </Td>
+                <Td muted>
+                  {c.creci ? (
+                    <span className="inline-flex items-center gap-1.5"><BadgeCheck className="h-3.5 w-3.5 text-white/35" /> {c.creci}</span>
+                  ) : "—"}
+                </Td>
+              </Row>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

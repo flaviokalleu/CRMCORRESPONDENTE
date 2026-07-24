@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { VisitasManager } from "@/components/VisitasManager";
+import { PageHeader } from "@/components/ui/page";
 
 export const metadata = { title: "Visitas" };
 
@@ -17,11 +18,8 @@ export default async function VisitasPage() {
   const imoveis = imoveisRes?.imoveis || imoveisRes?.data || (Array.isArray(imoveisRes) ? imoveisRes : []);
 
   return (
-    <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-white">Agenda de Visitas</h1>
-        <p className="text-sm text-white/50 mt-1">Gerencie visitas a imóveis.</p>
-      </div>
+    <div className="space-y-4 p-6">
+      <PageHeader title="Agenda de Visitas" subtitle="Gerencie visitas a imóveis." />
       <VisitasManager initialVisitas={initialVisitas} clientes={clientes} imoveis={imoveis} />
     </div>
   );

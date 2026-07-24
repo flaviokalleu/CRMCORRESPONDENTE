@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { PropostasManager } from "@/components/PropostasManager";
+import { PageHeader } from "@/components/ui/page";
 
 export const metadata = { title: "Propostas" };
 
@@ -16,11 +17,8 @@ export default async function PropostasPage() {
   const imoveis = imoveisRes?.imoveis || imoveisRes?.data || (Array.isArray(imoveisRes) ? imoveisRes : []);
 
   return (
-    <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-white">Propostas</h1>
-        <p className="text-sm text-white/50 mt-1">Pipeline de ofertas de compra.</p>
-      </div>
+    <div className="space-y-4 p-6">
+      <PageHeader title="Propostas" subtitle="Pipeline de ofertas de compra." />
       <PropostasManager initialPropostas={initialPropostas} clientes={clientes} imoveis={imoveis} />
     </div>
   );

@@ -191,9 +191,22 @@ select optgroup {
   .aurora {
     display: none !important;
   }
+  /* CRÍTICO: por padrão o navegador NÃO imprime cores de fundo (faixa navy,
+     pílulas, friso/avatares teal, rodapé bege) — o documento sairia desbotado.
+     `print-color-adjust: exact` força o print a preservar exatamente as cores
+     que aparecem na tela, deixando o PDF idêntico ao documento renderizado. */
   #contract-print-area,
   #contract-print-area * {
     box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Evita que um bloco (parte/cláusula/assinatura) seja cortado entre páginas. */
+  #contract-print-area .contract-block,
+  #contract-print-area h1,
+  #contract-print-area h2,
+  #contract-print-area h3 {
+    break-inside: avoid;
   }
   @page {
     margin: 12mm;

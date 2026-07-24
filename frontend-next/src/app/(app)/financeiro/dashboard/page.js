@@ -1,37 +1,37 @@
 import { apiGet } from "@/lib/api-server";
+import { PageHeader, EmptyState, formatBRL } from "@/components/ui/page";
+import { Wallet, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 
 export const metadata = { title: "Dashboard Financeiro" };
 
-// Server Component: dashboard financeiro (fluxo de caixa) — NÃO confundir com
-// o dashboard principal do CRM em src/app/(app)/dashboard/page.js (não mexido).
-// Referência: frontend/src/pages/financeiro/DashboardPage.jsx.
-// Shape do Go (internal/modules/financeiro/fluxocaixa/dto.go DashboardResponse):
-// { totalReceitas, totalDespesas, lucro, pendencias }.
+function Stat({ label, value, icon: Icon, tone }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+      <div className="mb-2 flex items-center gap-2 text-white/45">
+        {Icon && <Icon className="h-4 w-4" style={tone ? { color: tone } : undefined} />}
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em]">{label}</span>
+      </div>
+      <p className="text-2xl font-semibold tabular-nums text-white" style={tone ? { color: tone } : undefined}>{value}</p>
+    </div>
+  );
+}
+
 export default async function FinanceiroDashboardPage() {
   const data = await apiGet("/fluxocaixa/dashboard");
 
   return (
     <div className="p-6">
-      <h1 className="text-xl font-semibold text-white mb-4">Dashboard Financeiro</h1>
+      <PageHeader title="Dashboard Financeiro" subtitle="Fluxo de caixa consolidado." />
       {data ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Stat label="Total de Receitas" value={`R$ ${Number(data.totalReceitas ?? 0).toFixed(2)}`} />
-          <Stat label="Total de Despesas" value={`R$ ${Number(data.totalDespesas ?? 0).toFixed(2)}`} />
-          <Stat label="Lucro" value={`R$ ${Number(data.lucro ?? 0).toFixed(2)}`} />
-          <Stat label="Pendências" value={data.pendencias ?? 0} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Receitas" value={formatBRL(data.totalReceitas)} icon={TrendingUp} tone="#34d399" />
+          <Stat label="Despesas" value={formatBRL(data.totalDespesas)} icon={TrendingDown} tone="#f87171" />
+          <Stat label="Lucro" value={formatBRL(data.lucro)} icon={Wallet} />
+          <Stat label="Pendências" value={data.pendencias ?? 0} icon={AlertCircle} tone="#fbbf24" />
         </div>
       ) : (
-        <p className="text-white/50 text-sm">Não foi possível carregar o dashboard financeiro.</p>
+        <EmptyState icon={Wallet} title="Não foi possível carregar o dashboard financeiro" />
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-white/50 mt-1">{label}</p>
     </div>
   );
 }

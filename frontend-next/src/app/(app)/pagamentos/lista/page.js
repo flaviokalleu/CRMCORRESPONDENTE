@@ -1,69 +1,70 @@
-import Link from "next/link";
 import { apiGet } from "@/lib/api-server";
 import { PagamentoRowActions } from "@/components/PagamentoRowActions";
+import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
+import { Receipt } from "lucide-react";
 
 export const metadata = { title: "Pagamentos" };
 
-// Server Component: busca a lista de pagamentos direto do Go (Bearer via
-// cookie httpOnly). Referência: frontend/src/components/Pagamentos/ListaPagamentos.jsx
-// (porta a lógica de listagem — edição/reenvio de notificações ficam fora do
-// escopo mínimo funcional pedido).
+// Tom semântico do status do pagamento (Asaas).
+function statusDot(status) {
+  const s = (status || "").toLowerCase();
+  if (/receb|confirm|pago/.test(s)) return "#34d399";
+  if (/vencid|overdue|atras/.test(s)) return "#f87171";
+  if (/pend|aguard/.test(s)) return "#fbbf24";
+  return "#94a3b8";
+}
+
 export default async function ListaPagamentosPage() {
   const data = await apiGet("/pagamentos");
   const pagamentos = data?.pagamentos ?? [];
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Pagamentos</h1>
-          <p className="text-sm text-white/50">Cobranças avulsas via Asaas (boleto, PIX, universal)</p>
-        </div>
-        <Link
-          href="/pagamentos/criar"
-          className="rounded-md bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-4 py-2"
-        >
-          Criar pagamento
-        </Link>
-      </div>
+      <PageHeader
+        title="Pagamentos"
+        subtitle="Cobranças avulsas via Asaas (boleto, PIX, universal)"
+        actionHref="/pagamentos/criar"
+        actionLabel="Criar pagamento"
+      />
 
       {!data ? (
-        <p className="text-white/50 text-sm">Não foi possível carregar os pagamentos.</p>
+        <EmptyState icon={Receipt} title="Não foi possível carregar os pagamentos" />
       ) : pagamentos.length === 0 ? (
-        <p className="text-white/50 text-sm">Nenhum pagamento cadastrado ainda.</p>
+        <EmptyState icon={Receipt} title="Nenhum pagamento cadastrado" hint="Crie a primeira cobrança avulsa." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-white/[0.04] text-white/50 text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2">ID</th>
-                <th className="text-left px-4 py-2">Título</th>
-                <th className="text-left px-4 py-2">Tipo</th>
-                <th className="text-left px-4 py-2">Valor</th>
-                <th className="text-left px-4 py-2">Status</th>
-                <th className="text-left px-4 py-2">Vencimento</th>
-                <th className="text-right px-4 py-2">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {pagamentos.map((p) => (
-                <tr key={p.id} className="text-white/80">
-                  <td className="px-4 py-2 whitespace-nowrap">#{p.id}</td>
-                  <td className="px-4 py-2">{p.titulo}</td>
-                  <td className="px-4 py-2 uppercase text-xs text-white/50">{p.tipo}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">R$ {p.valor}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{p.status}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    {p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString("pt-BR") : "-"}
-                  </td>
-                  <td className="px-4 py-2">
-                    <PagamentoRowActions pagamento={p} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table className="min-w-[820px]">
+          <Thead>
+            <Th>#</Th>
+            <Th>Título</Th>
+            <Th>Tipo</Th>
+            <Th right>Valor</Th>
+            <Th>Status</Th>
+            <Th>Vencimento</Th>
+            <Th right>Ações</Th>
+          </Thead>
+          <tbody>
+            {pagamentos.map((p) => (
+              <Row key={p.id}>
+                <Td muted className="tabular-nums">#{p.id}</Td>
+                <Td className="font-medium text-white">{p.titulo}</Td>
+                <Td muted className="text-xs uppercase">{p.tipo}</Td>
+                <Td right className="tabular-nums">{formatBRL(p.valor)}</Td>
+                <Td>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusDot(p.status) }} />
+                    {p.status}
+                  </span>
+                </Td>
+                <Td muted className="tabular-nums">
+                  {p.data_vencimento ? new Date(p.data_vencimento).toLocaleDateString("pt-BR") : "—"}
+                </Td>
+                <Td right>
+                  <PagamentoRowActions pagamento={p} />
+                </Td>
+              </Row>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

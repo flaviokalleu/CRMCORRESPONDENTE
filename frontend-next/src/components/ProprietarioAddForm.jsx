@@ -42,11 +42,11 @@ export function ProprietarioAddForm() {
   };
 
   const inputClass =
-    "w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50";
+    "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-colors focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/25";
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <h2 className="mb-3 text-sm font-semibold text-white/70">Adicionar proprietário</h2>
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+      <h2 className="mb-4 text-sm font-semibold text-white">Adicionar proprietário</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <input
           className={inputClass}
@@ -75,9 +75,9 @@ export function ProprietarioAddForm() {
       <button
         type="submit"
         disabled={saving}
-        className="mt-3 rounded-md bg-caixa-orange px-4 py-2 text-sm font-semibold text-white hover:bg-caixa-orange/90 disabled:opacity-50"
+        className="mt-4 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
       >
-        {saving ? "Salvando..." : "Salvar Proprietário"}
+        {saving ? "Salvando..." : "Salvar proprietário"}
       </button>
     </form>
   );
