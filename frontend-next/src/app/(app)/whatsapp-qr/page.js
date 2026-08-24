@@ -224,7 +224,7 @@ export default function WhatsAppQRPage() {
             <p className="text-cx-muted text-sm text-center max-w-sm">
               O WhatsApp bloqueou esta sessão. Isso acontece quando a sessão expira ou há muitas tentativas.
             </p>
-            <button onClick={handleReset} className="rounded-lg bg-caixa-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-caixa-orange-dark">
+            <button onClick={handleReset} className="rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark">
               Resetar e tentar novamente
             </button>
           </div>
@@ -255,7 +255,7 @@ export default function WhatsAppQRPage() {
             <p className="text-cx-muted text-sm text-center max-w-sm">
               Clique no botão abaixo para gerar o QR Code e conectar o WhatsApp da empresa {empresaLabel} ao sistema.
             </p>
-            <button onClick={handleConnect} disabled={connecting} className="rounded-lg bg-caixa-orange px-6 py-3 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50">
+            <button onClick={handleConnect} disabled={connecting} className="rounded-lg bg-cx-orange px-6 py-3 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50">
               Conectar WhatsApp
             </button>
           </div>

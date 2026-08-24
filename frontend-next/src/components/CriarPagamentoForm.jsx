@@ -240,7 +240,7 @@ export function CriarPagamentoForm() {
         <button
           type="submit"
           disabled={loading || loadingClientes}
-          className="w-full rounded-md bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5"
+          className="w-full rounded-md bg-cx-orange hover:bg-cx-orange-dark disabled:opacity-50 text-white text-sm font-semibold py-2.5"
         >
           {loading ? "Criando..." : "Criar pagamento"}
         </button>

@@ -129,7 +129,7 @@ export function ContratoVincularForm({ opcoes }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+          className="rounded-md bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange disabled:opacity-60"
         >
           {saving ? "Salvando..." : "Vincular contrato"}
         </button>

@@ -59,7 +59,7 @@ export function LuxImovelCard({ imovel }) {
             </h3>
             <p className="truncate text-sm text-[#9aa6b4]">{localizacao || "Localização não informada"}</p>
           </div>
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caixa-orange/10 text-caixa-orange transition-colors group-hover:bg-caixa-orange group-hover:text-white">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cx-orange/10 text-caixa-orange transition-colors group-hover:bg-cx-orange group-hover:text-white">
             <ArrowUpRight className="h-4 w-4" />
           </span>
         </div>

@@ -175,7 +175,7 @@ export default function PortalInquilinoPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+              className="w-full py-3 bg-orange-500 hover:bg-cx-orange text-white font-bold rounded-xl transition-all disabled:opacity-50"
             >
               {loading ? "Entrando..." : "Entrar"}
             </button>
@@ -233,7 +233,7 @@ export default function PortalInquilinoPage() {
                     href={proximaCobranca.invoice_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-block px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600"
+                    className="mt-3 inline-block px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-cx-orange"
                   >
                     Pagar agora
                   </a>
@@ -315,7 +315,7 @@ export default function PortalInquilinoPage() {
                       href={c.invoice_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 text-center"
+                      className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-cx-orange text-center"
                     >
                       Pagar
                     </a>
@@ -348,7 +348,7 @@ export default function PortalInquilinoPage() {
             <div className="space-y-3">
               <button
                 onClick={() => setModalChamado(true)}
-                className="w-full py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600"
+                className="w-full py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-cx-orange"
               >
                 Abrir novo chamado
               </button>
@@ -459,7 +459,7 @@ export default function PortalInquilinoPage() {
               >
                 Cancelar
               </button>
-              <button onClick={abrirChamado} className="flex-1 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600">
+              <button onClick={abrirChamado} className="flex-1 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-cx-orange">
                 Enviar
               </button>
             </div>

@@ -33,6 +33,12 @@ export function AppShell({ children }) {
     <div
       className="app-shell-root bg-aqua-frame flex h-screen overflow-hidden"
     >
+      <a
+        href="#conteudo"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-cx-blue focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        Pular para o conteúdo
+      </a>
 
       {sidebarVisible && (
         <aside
@@ -72,9 +78,12 @@ export function AppShell({ children }) {
             A moldura (sidebar/header) fica no azul institucional escuro e o
             conteúdo em cinza levíssimo, com os cartões em branco — o mesmo
             arranjo dos portais da Caixa. */}
-        <div className="app-shell-scroll cx-page flex-1 w-full overflow-y-auto">
+        {/* <main> é o landmark que o leitor de tela usa para pular direto ao
+            conteúdo — sem ele o usuário precisa tabular por todo o menu a
+            cada página. `id` para o link de pular navegação. */}
+        <main id="conteudo" className="app-shell-scroll cx-page flex-1 w-full overflow-y-auto">
           <div className="h-full w-full">{children}</div>
-        </div>
+        </main>
       </div>
     </div>
   );

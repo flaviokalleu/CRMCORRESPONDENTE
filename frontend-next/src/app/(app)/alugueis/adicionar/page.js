@@ -202,7 +202,7 @@ export default function AddAluguelPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-orange-500 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+          className="w-full rounded-md bg-orange-500 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange disabled:opacity-50"
         >
           {loading ? "Cadastrando..." : "Cadastrar imóvel"}
         </button>

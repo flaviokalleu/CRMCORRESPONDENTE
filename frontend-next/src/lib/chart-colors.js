@@ -30,6 +30,18 @@ export const CHART_COLORS = {
   orange: "#c2410c",
 };
 
+// Paleta CATEGÓRICA — ordem fixa, nunca ciclada. Usada quando as séries são
+// identidades distintas (etapas do funil, tipos de imóvel), não magnitude.
+//
+// Validada pelo script de seis testes contra o cartão branco: banda de
+// luminosidade, piso de croma, separação para daltonismo (pior par adjacente
+// ΔE 9,2 protan / 10,6 tritan), piso de visão normal (ΔE 25,6) e contraste
+// (todas ≥ 3:1). Trocar qualquer passo exige rodar o validador de novo — o
+// teal #0f766e, por exemplo, reprova no piso de croma (lê como cinza).
+//
+// A 6ª série não vira uma cor gerada: agrupa em "Outros" ou vira facetas.
+export const CATEGORICAL = ["#1c60ab", "#c2410c", "#047857", "#6d28d9", "#a16207"];
+
 // Paleta de status fixa (nunca reaproveitada para série categórica).
 // Passos -600 do Tailwind: sobre o cartão branco os -300 antigos ficavam em
 // ~1,4:1 e desapareciam. Estes ficam entre 3,4:1 e 4,8:1, e todo indicador

@@ -9,9 +9,9 @@ export const metadata = { title: "Modelos de contrato" };
 
 const TONE = {
   orange: {
-    badge: "bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-white shadow-lg shadow-caixa-orange/25",
-    glow: "hover:shadow-caixa-orange/10 hover:border-caixa-orange/40",
-    bar: "from-caixa-orange to-caixa-orange-dark",
+    badge: "bg-gradient-to-br from-cx-orange to-cx-orange-dark text-white shadow-lg shadow-cx-orange/25",
+    glow: "hover:shadow-cx-orange/25 hover:border-caixa-orange/40",
+    bar: "from-cx-orange to-cx-orange-dark",
     text: "text-cx-orange-text",
   },
   blue: {
@@ -40,7 +40,7 @@ export default async function ContratosGaleria({ searchParams }) {
 
   return (
     <div className={`${fraunces.variable} cx-page relative min-h-full`}>
-      <div className="aurora aurora-drift left-[-6%] top-[-10%] h-72 w-72 bg-caixa-orange/10" />
+      <div className="aurora aurora-drift left-[-6%] top-[-10%] h-72 w-72 bg-cx-orange/10" />
       <div className="aurora left-[70%] top-[5%] h-64 w-64 bg-blue-50" />
 
       <div className="relative space-y-10 p-4 sm:p-8">
@@ -52,7 +52,7 @@ export default async function ContratosGaleria({ searchParams }) {
 
           <div className="mt-4 flex flex-wrap items-start justify-between gap-6">
             <div className="flex items-start gap-4">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-white shadow-xl shadow-caixa-orange/25">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cx-orange to-cx-orange-dark text-white shadow-xl shadow-cx-orange/25">
                 <Scale className="h-6 w-6" strokeWidth={1.6} />
               </span>
               <div>
@@ -72,8 +72,8 @@ export default async function ContratosGaleria({ searchParams }) {
         </div>
 
         {p && (
-          <div className="flex items-center gap-3 rounded-2xl border border-caixa-orange/25 bg-caixa-orange/[0.08] px-5 py-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-caixa-orange/20 text-caixa-orange-light">
+          <div className="flex items-center gap-3 rounded-2xl border border-caixa-orange/25 bg-cx-orange/[0.08] px-5 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cx-orange/20 text-caixa-orange-light">
               <Scale className="h-4 w-4" />
             </span>
             <div>

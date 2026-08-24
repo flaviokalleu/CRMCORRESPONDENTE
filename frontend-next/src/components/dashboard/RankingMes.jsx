@@ -27,7 +27,7 @@ export function RankingMes({ usuarios }) {
                 key={item.user?.id ?? i}
                 className="flex items-center gap-3 rounded-xl border border-cx-border bg-cx-surface px-3 py-2.5"
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-caixa-orange-light to-caixa-orange-dark text-sm font-bold text-white">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-caixa-orange-light to-cx-orange-dark text-sm font-bold text-white">
                   {inicial}
                 </span>
 
@@ -39,7 +39,7 @@ export function RankingMes({ usuarios }) {
                     </span>
                     <span className="h-1 flex-1 overflow-hidden rounded-full bg-cx-border">
                       <span
-                        className="block h-full rounded-full bg-caixa-orange-light"
+                        className="block h-full rounded-full bg-cx-orange"
                         style={{ width: `${pct}%` }}
                       />
                     </span>

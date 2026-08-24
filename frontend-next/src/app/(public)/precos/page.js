@@ -153,7 +153,7 @@ function PlanCard({ plan }) {
       }`}
     >
       {plan.badge && (
-        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold rounded-full bg-caixa-orange text-white">
+        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold rounded-full bg-cx-orange text-white">
           {plan.badge}
         </span>
       )}
@@ -196,7 +196,7 @@ function PlanCard({ plan }) {
         href={plan.ctaLink}
         className={`block w-full text-center py-3 px-6 rounded-xl font-semibold text-sm transition-colors ${
           plan.highlighted
-            ? "bg-caixa-orange text-white hover:bg-caixa-orange-dark"
+            ? "bg-cx-orange text-white hover:bg-cx-orange-dark"
             : "bg-white/10 text-white hover:bg-white/20 border border-gray-600"
         }`}
       >
@@ -313,7 +313,7 @@ export default function PrecosPage() {
           </p>
           <Link
             href="/registro"
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-caixa-orange text-white font-semibold hover:bg-caixa-orange-dark transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-cx-orange text-white font-semibold hover:bg-cx-orange-dark transition-colors"
           >
             Começar Agora
           </Link>

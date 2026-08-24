@@ -17,7 +17,7 @@ export function PageHeader({ title, subtitle, actionHref, actionLabel, actionIco
       {actionHref && (
         <Link
           href={actionHref}
-          className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-900/25 transition-colors hover:bg-orange-500"
+          className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-900/25 transition-colors hover:bg-cx-orange-dark"
         >
           <Icon className="h-4 w-4" /> {actionLabel}
         </Link>

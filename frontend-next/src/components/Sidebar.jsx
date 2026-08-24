@@ -25,11 +25,11 @@ function NavItem({ href, icon: Icon, label, isActive, nested = false }) {
       className={cn(
         "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
         nested && "py-1.5",
-        isActive ? "bg-white/[0.09] text-white" : "text-white/55 hover:bg-white/[0.05] hover:text-white/90"
+        isActive ? "bg-white/[0.09] text-white" : "text-white/80 hover:bg-white/[0.05] hover:text-white/90"
       )}
     >
-      {isActive && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-caixa-orange" />}
-      <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-caixa-orange" : "text-white/35 group-hover:text-white/60")} strokeWidth={1.75} />
+      {isActive && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-cx-orange" />}
+      <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-caixa-orange" : "text-white/80 group-hover:text-white/80")} strokeWidth={1.75} />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -43,14 +43,14 @@ function NavGroup({ groupKey, icon: Icon, label, isOpen, onToggle, items, pathna
         onClick={onToggle}
         className={cn(
           "group flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-          isOpen || hasActiveChild ? "bg-white/[0.04] text-white/90" : "text-white/55 hover:bg-white/[0.05] hover:text-white/90"
+          isOpen || hasActiveChild ? "bg-white/[0.04] text-white/90" : "text-white/80 hover:bg-white/[0.05] hover:text-white/90"
         )}
       >
         <span className="flex items-center gap-3">
-          <Icon className={cn("h-4 w-4", hasActiveChild ? "text-caixa-orange" : "text-white/35 group-hover:text-white/60")} strokeWidth={1.75} />
+          <Icon className={cn("h-4 w-4", hasActiveChild ? "text-caixa-orange" : "text-white/80 group-hover:text-white/80")} strokeWidth={1.75} />
           {label}
         </span>
-        <ChevronRight className={cn("h-3.5 w-3.5 text-white/25 transition-transform duration-200", isOpen && "rotate-90")} />
+        <ChevronRight className={cn("h-3.5 w-3.5 text-white/70 transition-transform duration-200", isOpen && "rotate-90")} />
       </button>
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -173,18 +173,18 @@ export function Sidebar({ onClose, onToggleVisibility }) {
     <div className="flex h-full flex-col bg-aqua-frame text-white">
       <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-xs font-bold text-white shadow-md shadow-caixa-orange/20">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cx-orange to-cx-orange-dark text-xs font-bold text-white shadow-md shadow-cx-orange/25">
             {nomeSistema.slice(0, 1)}
           </span>
           <span className="text-sm font-semibold tracking-tight text-white">{nomeSistema}</span>
         </Link>
         <div className="flex items-center gap-0.5">
           {onToggleVisibility && (
-            <button onClick={onToggleVisibility} className="hidden h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white md:flex" title="Recolher menu">
+            <button onClick={onToggleVisibility} className="hidden h-7 w-7 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex" title="Recolher menu">
               <PanelLeftClose className="h-4 w-4" strokeWidth={1.75} />
             </button>
           )}
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white md:hidden">
+          <button onClick={onClose} aria-label="Fechar menu" title="Fechar menu" className="flex h-7 w-7 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:hidden">
             <X className="h-4 w-4" strokeWidth={1.75} />
           </button>
         </div>
@@ -193,11 +193,13 @@ export function Sidebar({ onClose, onToggleVisibility }) {
 
       <div className="mx-3 mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3">
         <Avatar className="h-9 w-9 border border-white/10">
-          <AvatarFallback>{initialsOf(fullName)}</AvatarFallback>
+          {/* Cor explícita: o padrão do shadcn (bg-muted + text-muted-foreground)
+              reprova em contraste sobre o azul da moldura. */}
+          <AvatarFallback className="bg-white text-cx-blue font-semibold">{initialsOf(fullName)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-white">{fullName}</p>
-          <p className="text-[11px] text-white/45">{displayRole}</p>
+          <p className="text-[11px] text-white/75">{displayRole}</p>
         </div>
       </div>
 
@@ -208,7 +210,7 @@ export function Sidebar({ onClose, onToggleVisibility }) {
           ))}
         </div>
 
-        <p className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/25">Menu</p>
+        <p className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/70">Menu</p>
         <div className="space-y-0.5">
           {groups.map((g) => (
             <NavGroup key={g.key} groupKey={g.key} icon={g.icon} label={g.label} isOpen={!!openGroups[g.key]} onToggle={() => toggleGroup(g.key)} items={g.items} pathname={pathname} />
@@ -227,15 +229,15 @@ export function Sidebar({ onClose, onToggleVisibility }) {
 
         <div className="space-y-0.5">
           <NavItem href="/configuracoes" icon={Settings} label="Configurações" isActive={pathname === "/configuracoes"} />
-          <button onClick={handleLogout} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/55 transition-colors hover:bg-red-500/10 hover:text-red-300">
-            <LogOut className="h-4 w-4 text-white/35 group-hover:text-red-300" strokeWidth={1.75} />
+          <button onClick={handleLogout} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-red-500/10 hover:text-red-300">
+            <LogOut className="h-4 w-4 text-white/80 group-hover:text-red-300" strokeWidth={1.75} />
             Sair
           </button>
         </div>
       </nav>
 
       <div className="flex-shrink-0 border-t border-white/10 px-4 py-3">
-        <p className="text-center text-[10px] text-white/25">&copy; {new Date().getFullYear()} {nomeSistema}</p>
+        <p className="text-center text-[10px] text-white/70">&copy; {new Date().getFullYear()} {nomeSistema}</p>
       </div>
     </div>
   );

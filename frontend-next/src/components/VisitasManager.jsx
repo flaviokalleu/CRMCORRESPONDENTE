@@ -97,7 +97,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-caixa-orange px-4 py-2 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50"
+          className="rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50"
         >
           {saving ? "Salvando..." : "Agendar visita"}
         </button>

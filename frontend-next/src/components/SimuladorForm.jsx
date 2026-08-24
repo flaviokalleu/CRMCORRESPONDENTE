@@ -382,7 +382,7 @@ export function SimuladorForm() {
                 type="button"
                 onClick={avancar}
                 disabled={loading || (etapa === 1 ? !!erroEtapa1 : !!erroEtapa2)}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-cx-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-blue-dark disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
               >
                 {loading ? "Calculando..." : etapa === 2 ? "Simular" : "Continuar"}
                 {!loading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
@@ -402,7 +402,7 @@ export function SimuladorForm() {
                 <button
                   type="button"
                   onClick={recomecar}
-                  className="inline-flex items-center gap-2 rounded-lg bg-cx-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-blue-dark"
+                  className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Nova simulação

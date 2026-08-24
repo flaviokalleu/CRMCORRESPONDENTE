@@ -83,7 +83,7 @@ export function ReceitaForm() {
       <button
         type="submit"
         disabled={loading}
-        className="rounded-md bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2"
+        className="rounded-md bg-cx-orange hover:bg-cx-orange-dark disabled:opacity-50 text-white text-sm font-semibold px-4 py-2"
       >
         {loading ? "Salvando..." : "Adicionar receita"}
       </button>

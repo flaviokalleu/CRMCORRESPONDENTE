@@ -349,7 +349,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
           Cancelar
         </button>
         <button type="submit" disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60">
+          className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark disabled:cursor-not-allowed disabled:opacity-60">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {mode === "edit" ? "Salvar alterações" : "Cadastrar imóvel"}
         </button>

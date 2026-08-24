@@ -14,9 +14,9 @@ export function FeatureCard({ icon: Icon, title, description, index = 0 }) {
       className="group relative overflow-hidden rounded-3xl bg-cx-bg p-7 ring-gold transition-all duration-500 hover:-translate-y-1 hover:bg-cx-surface"
     >
       {/* halo dourado que acende no hover */}
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-caixa-orange/20 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-cx-orange/20 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
 
-      <div className="relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-white shadow-lg shadow-caixa-orange/25">
+      <div className="relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cx-orange to-cx-orange-dark text-white shadow-lg shadow-cx-orange/25">
         <Icon className="h-6 w-6" strokeWidth={1.75} />
       </div>
       <h3 className="relative font-display text-xl font-medium text-cx-text">{title}</h3>

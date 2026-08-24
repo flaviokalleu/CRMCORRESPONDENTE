@@ -208,7 +208,7 @@ export function ClientesLista({ initialData }) {
             {loading ? "Carregando…" : `${total} cliente${total === 1 ? "" : "s"}${status || q ? " no filtro" : ""}`}
           </p>
         </div>
-        <Link href="/clientes/adicionar" className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500">
+        <Link href="/clientes/adicionar" className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark">
           <Plus className="h-4 w-4" /> Adicionar cliente
         </Link>
       </div>
@@ -273,7 +273,7 @@ export function ClientesLista({ initialData }) {
               <p className="text-xs text-cx-muted">{q || status ? "Ajuste a busca ou o filtro." : "Cadastre o primeiro cliente para começar."}</p>
             </div>
             {!q && !status && (
-              <Link href="/clientes/adicionar" className="mt-1 inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+              <Link href="/clientes/adicionar" className="mt-1 inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white hover:bg-cx-orange-dark">
                 <Plus className="h-4 w-4" /> Adicionar cliente
               </Link>
             )}

@@ -75,7 +75,7 @@ export function ProprietarioAddForm() {
       <button
         type="submit"
         disabled={saving}
-        className="mt-4 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+        className="mt-4 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark disabled:opacity-50"
       >
         {saving ? "Salvando..." : "Salvar proprietário"}
       </button>

@@ -427,12 +427,16 @@ select optgroup {
   font-weight: 600;
   transition: background-color 0.15s, border-color 0.15s;
 }
+/* AÇÃO PRIMÁRIA = laranja da marca. Regra única do sistema: o laranja é a
+   ação, o azul é o cromo (tarja, selo, cabeçalho, estado ativo). Antes havia
+   quatro tokens disputando este papel e o mesmo tipo de botão saía laranja
+   numa tela e azul na outra. */
 .cx-btn-primary {
-  background: var(--color-cx-blue);
+  background: var(--color-cx-orange);
   color: #ffffff;
 }
 .cx-btn-primary:hover:not(:disabled) {
-  background: var(--color-cx-blue-dark);
+  background: var(--color-cx-orange-dark);
 }
 .cx-btn-primary:disabled {
   opacity: 0.45;

@@ -77,7 +77,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
       <div className="flex justify-end">
         <Link
           href="/propostas/contratos"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-caixa-orange/30 bg-caixa-orange/10 px-3 py-2 text-xs font-semibold text-caixa-orange-light hover:bg-caixa-orange/15"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-caixa-orange/30 bg-cx-orange/10 px-3 py-2 text-xs font-semibold text-caixa-orange-light hover:bg-cx-orange/15"
         >
           <FileText className="h-3.5 w-3.5" />
           Modelos de contrato
@@ -133,7 +133,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-caixa-orange px-4 py-2 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50"
+          className="rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50"
         >
           {saving ? "Salvando..." : "Criar proposta"}
         </button>

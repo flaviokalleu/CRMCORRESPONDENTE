@@ -120,7 +120,7 @@ export function ClienteNotas({ clienteId, onCountChange, embedded = false }) {
           <button
             type="submit"
             disabled={submitting || !texto.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Adicionar nota

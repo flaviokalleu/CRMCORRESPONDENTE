@@ -98,7 +98,7 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
       <button
         type="submit"
         disabled={saving}
-        className="rounded-lg bg-caixa-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50"
+        className="rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50"
       >
         {saving ? "Salvando..." : "Salvar alterações"}
       </button>

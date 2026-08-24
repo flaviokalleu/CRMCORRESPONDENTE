@@ -96,7 +96,7 @@ export function LoginForm() {
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</div>
       )}
 
-      <Button type="submit" disabled={isLoading} className="w-full bg-caixa-orange hover:bg-caixa-orange-dark" size="lg">
+      <Button type="submit" disabled={isLoading} className="w-full bg-cx-orange hover:bg-cx-orange-dark" size="lg">
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />

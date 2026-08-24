@@ -133,7 +133,7 @@ export default async function ImovelDetailPage({ params }) {
 
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-8">
-            <span className="inline-block bg-caixa-orange/10 text-caixa-orange text-xs font-bold px-3 py-1 rounded-full mb-3">
+            <span className="inline-block bg-cx-orange/10 text-caixa-orange text-xs font-bold px-3 py-1 rounded-full mb-3">
               {tipo}
             </span>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">{nome}</h1>

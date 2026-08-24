@@ -57,12 +57,12 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-3">
           {isMobile && sidebarVisible && (
-            <button onClick={onToggleSidebarOpen} className="flex h-9 w-9 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+            <button onClick={onToggleSidebarOpen} aria-label="Abrir menu" title="Abrir menu" className="flex h-9 w-9 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white">
               <Menu className="h-5 w-5" strokeWidth={1.8} />
             </button>
           )}
           {!sidebarVisible && (
-            <button onClick={onShowSidebar} className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" title="Mostrar menu">
+            <button onClick={onShowSidebar} className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white" title="Mostrar menu">
               <PanelLeft className="h-4 w-4" strokeWidth={1.8} />
               <span className="text-sm">Menu</span>
             </button>
@@ -71,20 +71,20 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button className="flex h-9 w-9 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+          <button aria-label="Notificações" title="Notificações" className="flex h-9 w-9 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white">
             <Bell className="h-4 w-4" strokeWidth={1.8} />
           </button>
 
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 rounded-xl px-2 py-1.5 outline-none transition-colors hover:bg-white/10 data-[state=open]:bg-white/10">
               <Avatar className="h-7 w-7 border border-white/10">
-                <AvatarFallback className="bg-caixa-orange text-[11px]">{initialsOf(fullName)}</AvatarFallback>
+                <AvatarFallback className="bg-white text-[11px] font-semibold text-cx-blue">{initialsOf(fullName)}</AvatarFallback>
               </Avatar>
               <div className="hidden text-left lg:block">
                 <p className="text-xs font-medium leading-none text-white">{fullName}</p>
-                <p className="mt-0.5 text-[10px] leading-none text-white/40">{displayRole}</p>
+                <p className="mt-0.5 text-[10px] leading-none text-white/70">{displayRole}</p>
               </div>
-              <ChevronDown className="hidden h-3.5 w-3.5 text-white/40 lg:block" />
+              <ChevronDown className="hidden h-3.5 w-3.5 text-white/70 lg:block" />
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuLabel>

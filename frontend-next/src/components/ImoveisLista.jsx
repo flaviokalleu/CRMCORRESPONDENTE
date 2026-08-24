@@ -68,7 +68,7 @@ export function ImoveisLista({ initialData }) {
             {filtrados.length} de {imoveis.length} {imoveis.length === 1 ? "imóvel" : "imóveis"}
           </p>
         </div>
-        <Link href="/imoveis/adicionar" className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500">
+        <Link href="/imoveis/adicionar" className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark">
           <Plus className="h-4 w-4" /> Adicionar imóvel
         </Link>
       </div>
@@ -105,7 +105,7 @@ export function ImoveisLista({ initialData }) {
             <p className="text-xs text-cx-muted">{q || tipo || situacao ? "Ajuste a busca ou os filtros." : "Cadastre o primeiro imóvel."}</p>
           </div>
           {!q && !tipo && !situacao && (
-            <Link href="/imoveis/adicionar" className="mt-1 inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700">
+            <Link href="/imoveis/adicionar" className="mt-1 inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white hover:bg-cx-orange-dark">
               <Plus className="h-4 w-4" /> Adicionar imóvel
             </Link>
           )}

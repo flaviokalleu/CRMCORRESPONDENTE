@@ -33,7 +33,11 @@ function ToggleButton({ active, children, onClick }) {
       aria-pressed={active}
       className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
         active
-          ? "bg-caixa-orange text-white shadow-md shadow-orange-900/30"
+          // Estado ATIVO é cromo, não ação — então azul institucional (6,4:1
+          // com texto branco). O laranja da marca dá só 2,1:1 aqui e reprovava
+          // no Lighthouse: em forma cheia ele só aguenta texto branco quando é
+          // botão grande de ação, não uma pílula de 12px.
+          ? "bg-cx-blue text-white"
           : "bg-cx-surface text-cx-muted hover:bg-cx-bg"
       }`}
     >

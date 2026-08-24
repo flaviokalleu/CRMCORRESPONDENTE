@@ -109,7 +109,7 @@ export function AddCorrespondenteForm() {
       )}
 
       <button type="submit" disabled={loading}
-        className="rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
+        className="rounded-lg bg-cx-orange hover:bg-cx-orange-dark disabled:opacity-60 px-5 py-2.5 text-sm font-semibold text-white transition-colors">
         {loading ? "Criando..." : "Criar correspondente"}
       </button>
 

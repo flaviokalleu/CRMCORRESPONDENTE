@@ -54,7 +54,7 @@ export default async function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="rounded-full bg-gradient-to-br from-caixa-orange to-caixa-orange-dark px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-caixa-orange/25 transition-all hover:shadow-xl hover:shadow-caixa-orange/30 sm:text-sm"
+              className="rounded-full bg-gradient-to-br from-cx-orange to-cx-orange-dark px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cx-orange/25 transition-all hover:shadow-xl hover:shadow-cx-orange/25 sm:text-sm"
             >
               Entrar
             </Link>
@@ -66,13 +66,13 @@ export default async function LandingPage() {
       <section className="grain relative isolate overflow-hidden">
         <Spotlight />
         {/* auroras de fundo */}
-        <div className="aurora aurora-drift left-[-10%] top-[-5%] h-[32rem] w-[32rem] bg-caixa-orange/25" />
+        <div className="aurora aurora-drift left-[-10%] top-[-5%] h-[32rem] w-[32rem] bg-cx-orange/25" />
         <div className="aurora aurora-drift right-[-8%] top-[10%] h-[28rem] w-[28rem] bg-[#1e6fb8]/25" style={{ animationDelay: "-6s" }} />
 
         <div className="relative mx-auto grid min-h-[92vh] max-w-6xl grid-cols-1 items-center gap-8 px-4 pb-16 pt-32 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-28">
           <Reveal>
             <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.25em] text-caixa-orange-light">
-              <span className="h-1.5 w-1.5 rounded-full bg-caixa-orange" />
+              <span className="h-1.5 w-1.5 rounded-full bg-cx-orange" />
               Valparaíso de Goiás
             </p>
             <h1 className="font-display text-5xl font-medium leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
@@ -91,7 +91,7 @@ export default async function LandingPage() {
             <div className="mt-9 flex flex-wrap items-center gap-4">
               <Link
                 href="/imoveis"
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-caixa-orange to-caixa-orange-dark px-7 py-4 text-sm font-semibold shadow-xl shadow-caixa-orange/30 transition-all hover:shadow-2xl hover:shadow-caixa-orange/40"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-cx-orange to-cx-orange-dark px-7 py-4 text-sm font-semibold shadow-xl shadow-cx-orange/25 transition-all hover:shadow-2xl hover:shadow-cx-orange/25"
               >
                 Explorar imóveis
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -133,7 +133,7 @@ export default async function LandingPage() {
 
       {/* ─── Módulos ─── */}
       <section className="grain relative overflow-hidden py-24 sm:py-32">
-        <div className="aurora left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/2 bg-caixa-orange/10" />
+        <div className="aurora left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/2 bg-cx-orange/10" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <Reveal className="max-w-2xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-caixa-orange">Plataforma completa</p>
@@ -165,7 +165,7 @@ export default async function LandingPage() {
           <Reveal delay={0.15}>
             <div className="group relative mx-auto w-full max-w-lg">
               {/* moldura com brilho */}
-              <div className="absolute -inset-4 rounded-[2rem] bg-caixa-orange/20 opacity-40 blur-2xl transition-opacity duration-500 group-hover:opacity-70" />
+              <div className="absolute -inset-4 rounded-[2rem] bg-cx-orange/20 opacity-40 blur-2xl transition-opacity duration-500 group-hover:opacity-70" />
               <div className="relative aspect-video overflow-hidden rounded-3xl ring-gold shadow-2xl shadow-black/50">
                 <FeatureReelPlayer />
               </div>
@@ -210,7 +210,7 @@ export default async function LandingPage() {
 
       {/* ─── CTA band ─── */}
       <section className="relative px-4 pb-24 sm:px-6">
-        <div className="grain relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-caixa-orange via-caixa-orange-dark to-[#b8430e] px-8 py-16 text-center sm:py-20">
+        <div className="grain relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-cx-orange via-caixa-orange-dark to-[#b8430e] px-8 py-16 text-center sm:py-20">
           <div className="aurora aurora-drift left-[10%] top-[-20%] h-64 w-64 bg-white/20" />
           <Reveal>
             <h2 className="relative font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
