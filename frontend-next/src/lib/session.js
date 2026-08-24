@@ -46,3 +46,10 @@ export async function hasSession() {
 }
 
 export const COOKIE_NAMES = { ACCESS_COOKIE, REFRESH_COOKIE };
+
+// Expostos para quem precisa gravar os cookies na RESPOSTA em vez do store
+// (route handler que devolve redirect — ver /api/auth/renew). As janelas
+// espelham o backend Go: AccessTTL 1h, RefreshTTL 7d.
+export const COOKIE_OPTS = baseCookieOpts;
+export const ACCESS_MAX_AGE = 60 * 60;
+export const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;

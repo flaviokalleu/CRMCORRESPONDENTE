@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 // de "carregando..." que a SPA atual tem. Ver MIGRATION.md §1.0.
 
 const ACCESS_COOKIE = "cri_token";
+const REFRESH_COOKIE = "cri_refresh";
 
 // Prefixos de rota protegida — espelha o `ProtectedRoute`/`AdminOnlyRoute`/
 // `SuperAdminRoute` da SPA atual (ver MIGRATION.md §0). A checagem de ROLE
@@ -51,6 +52,14 @@ export function proxy(request) {
   const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
 
   if (isProtected && !hasSession) {
+    // O access dura 1h; o refresh, 7 dias. Se só o access venceu, o usuário
+    // NÃO perdeu a sessão — desviamos pelo route handler que troca o refresh
+    // por um access novo e devolve o usuário à página que ele pediu.
+    if (request.cookies.has(REFRESH_COOKIE)) {
+      const renovar = new URL("/api/auth/renew", request.url);
+      renovar.searchParams.set("next", pathname + (request.nextUrl.search || ""));
+      return NextResponse.redirect(renovar);
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

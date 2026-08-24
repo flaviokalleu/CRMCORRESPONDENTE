@@ -14,10 +14,12 @@ export default async function AppLayout({ children }) {
 
   const me = await apiGet("/auth/me");
   if (!me) {
-    // Cookie existe mas o token não vale mais. Mandar direto pro /login criaria
-    // um loop (o /login vê o cookie e devolve pra cá) — então passamos pelo
-    // route handler que apaga a sessão antes de chegar no formulário.
-    redirect("/api/auth/expired");
+    // Cookie existe mas o token foi recusado. Antes de encerrar, tenta trocar
+    // o refresh por um access novo — é o caso comum (access venceu, refresh
+    // ainda vale dias). O /renew tem trava anti-loop e cai no /login sozinho
+    // se o refresh também não servir; mandar direto para o /login aqui criaria
+    // o ping-pong (o /login vê o cookie e devolve para cá).
+    redirect("/api/auth/renew?next=/dashboard");
   }
 
   return (

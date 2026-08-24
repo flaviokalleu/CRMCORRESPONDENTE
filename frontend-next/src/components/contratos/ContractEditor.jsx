@@ -23,10 +23,13 @@ const DOC_STYLES = `
 // fundo preservadas (o navegador não as imprime por padrão) e cláusulas que
 // não podem ser partidas no meio por uma quebra de página.
 const PRINT_CSS = `
-  /* As margens do papel são do @page. O documento então usa 100% da área
-     útil — nada de padding do card competindo com a margem e encolhendo o
-     texto para o meio da folha. */
-  @page { size: A4; margin: 14mm; }
+  /* Margem lateral ZERO no papel: a tarja azul e o rodapé sangram de ponta a
+     ponta da folha, e o documento ocupa a largura inteira. O recuo do texto
+     vem por dentro (padding), não da margem do @page — assim a cor vai até a
+     borda mas a leitura continua com respiro.
+     A margem VERTICAL fica: ela vale para TODA página, então o texto que
+     transborda para a 2ª, 3ª… não encosta no topo nem no pé da folha. */
+  @page { size: A4; margin: 12mm 0; }
   html, body { background:#fff !important; margin:0; padding:0; width:auto; }
 
   /* Sem print-color-adjust: exact o Chrome descarta a tarja azul e os selos,
@@ -41,15 +44,18 @@ const PRINT_CSS = `
     border:0 !important; border-radius:0 !important; box-shadow:none !important;
     width:100% !important;
   }
-  /* O miolo perde o padding lateral (a margem já é do papel); a tarja e o
-     rodapé mantêm um respiro interno para o texto não encostar na cor. */
-  #contract-print-area article > div {
-    padding-left:0 !important; padding-right:0 !important;
-    padding-top:7mm !important;
+
+  /* Tarja: largura cheia, com folga generosa em cima (o "espaçamento
+     superior") e o texto recuado das bordas. */
+  #contract-print-area article > header {
+    padding:11mm 14mm 9mm !important;
   }
-  #contract-print-area article > header,
+  /* Miolo: recuo lateral próprio + respiro depois da tarja. */
+  #contract-print-area article > div {
+    padding:10mm 14mm 0 !important;
+  }
   #contract-print-area article > footer {
-    padding-left:6mm !important; padding-right:6mm !important;
+    padding:5mm 14mm !important;
   }
 
   /* Cada parte, cláusula e bloco de assinatura é indivisível. */
@@ -114,15 +120,13 @@ export function ContractEditor({ tipo, label, description, iconName, doc, propos
 
     const iframe = document.createElement("iframe");
     iframe.setAttribute("aria-hidden", "true");
-    // A largura do iframe precisa ser a ÁREA ÚTIL do papel, não a folha
-    // inteira: o Chrome diagrama no tamanho do iframe e depois encaixa no
-    // espaço imprimível. Com 794px (A4 cheia) contra 182mm de área útil ele
-    // reduz tudo ~13%, e o contrato sai pequeno, sobrando borda — foi o
-    // "não ocupa a folha".
-    //   A4 210mm - margens 2x14mm = 182mm ≈ 688px a 96dpi.
-    // Com width:0 seria pior ainda: o texto quebraria letra a letra.
+    // A largura do iframe tem que bater com a área imprimível: o Chrome
+    // diagrama no tamanho do iframe e depois encaixa no papel — se não bater,
+    // ele reduz tudo para caber e o documento sai pequeno, sobrando borda.
+    // Como a margem lateral do @page agora é 0, a área imprimível é a folha
+    // A4 inteira: 210mm ≈ 794px a 96dpi.
     iframe.style.cssText =
-      "position:fixed;left:-10000px;top:0;width:688px;height:1000px;border:0;opacity:0;";
+      "position:fixed;left:-10000px;top:0;width:794px;height:1000px;border:0;opacity:0;";
     document.body.appendChild(iframe);
 
     const limpar = () => iframe.remove();
