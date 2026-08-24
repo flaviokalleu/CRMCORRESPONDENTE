@@ -52,11 +52,23 @@
   --color-cx-blue: #005ca9;
   --color-cx-blue-dark: #003b71;
   --color-cx-blue-soft: #e8f1fa;
-  /* Laranja para TEXTO sobre branco: o #f7941e da marca dá só 2,1:1, reprova
-     AA. Este tom escuro dá 5,9:1 e mantém a leitura de "laranja Caixa". */
+  /* ─── Laranja, em três papéis ───────────────────────────────────────
+     O #f7941e da marca é lindo mas CLARO: branco em cima dá 2,28:1, longe
+     dos 4,5:1 da AA. Como ele virou a cor da AÇÃO PRIMÁRIA (todo botão do
+     app), usá-lo cru reprovaria o sistema inteiro em acessibilidade.
+     Então separamos por função, com o contraste medido de cada um:
+
+       --color-cx-orange        #c2410c  branco em cima = 5,18:1  → BOTÃO
+       --color-cx-orange-dark   #9a3412  branco em cima = 7,31:1  → hover
+       --color-cx-orange-text   #b45309  sobre branco   = 5,02:1  → texto
+       --color-cx-orange-bright #f7941e  o tom da marca → só ORNAMENTO
+                                (friso, barra, borda) — nunca com texto
+                                ou ícone branco em cima.
+     Trocar qualquer um exige recalcular o contraste. */
   --color-cx-orange-text: #b45309;
-  --color-cx-orange: #f7941e;
-  --color-cx-orange-dark: #d97b06;
+  --color-cx-orange-bright: #f7941e;
+  --color-cx-orange: #c2410c;
+  --color-cx-orange-dark: #9a3412;
 
   /* Caixa — Laranja (accent) */
   --color-caixa-orange: #f97316;

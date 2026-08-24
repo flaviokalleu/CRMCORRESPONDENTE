@@ -13,12 +13,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// `metadataBase` é o que transforma caminhos relativos em URLs absolutas nas
+// tags og:image, og:url e canonical. Sem ele o Next avisa no build e os
+// previews de WhatsApp/Facebook quebram, porque og:image PRECISA ser absoluta.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "http://localhost:3000";
+
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "CRM IMOB",
+    default: "CRM IMOB — Imóveis em Valparaíso de Goiás e região",
     template: "%s | CRM IMOB",
   },
-  description: "Gestão imobiliária completa: clientes, imóveis, aluguéis e pagamentos.",
+  description:
+    "Casas e apartamentos à venda em Valparaíso de Goiás, Cidade Ocidental, Jardim Ingá e Luziânia. Simule o Minha Casa Minha Vida e descubra quanto você consegue financiar.",
+  applicationName: "CRM IMOB",
+  authors: [{ name: "CRM IMOB" }],
+  formatDetection: { telephone: true, address: true, email: true },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "CRM IMOB",
+    url: SITE_URL,
+  },
+  twitter: { card: "summary_large_image" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({ children }) {

@@ -1,263 +1,376 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowRight, BadgeCheck, Building2, ClipboardCheck, FileText,
+  HandCoins, Home, KeyRound, MapPin, PiggyBank, Search, ShieldCheck,
+} from "lucide-react";
 import { apiGet } from "@/lib/api-server";
-import { fraunces } from "@/lib/fonts";
-import { Hero3D } from "@/components/public/Hero3D";
-import { FeatureReelPlayer } from "@/components/public/FeatureReelPlayer";
-import { FeaturesGrid } from "@/components/public/FeaturesGrid";
-import { LuxImovelCard } from "@/components/public/LuxImovelCard";
-import { Marquee } from "@/components/public/Marquee";
-import { Spotlight } from "@/components/public/Spotlight";
-import { CountUp } from "@/components/public/CountUp";
-import { Reveal } from "@/components/public/Reveal";
+import { opcoesDeFiltro } from "@/lib/imovel-filtros";
+import { BuscaHero } from "@/components/public/BuscaHero";
+import { SimuladorMCMV } from "@/components/public/SimuladorMCMV";
+import { PorQueOValorMuda } from "@/components/public/PorQueOValorMuda";
+import { AvisoValorVaria } from "@/components/public/AvisoValorVaria";
+import { JsonLd } from "@/components/public/JsonLd";
+import { jsonLdFAQ, jsonLdImobiliaria, jsonLdWebSite } from "@/lib/seo";
+import { ImovelCardPublico } from "@/components/public/ImovelCardPublico";
+import { WhatsAppFlutuante } from "@/components/public/WhatsAppFlutuante";
 
-// Landing "Casa & Ouro" — imobiliária de luxo, navy profundo + ouro fundido.
-// Continua Server Component: metadados + texto renderizam no servidor (SEO
-// real). 3D, Remotion e efeitos de cursor são ilhas de cliente isoladas.
+// Landing pública — reescrita a partir da análise das landings das
+// imobiliárias e construtoras da região (Bela Mares, Construtora Mabel,
+// Luh Imóveis, Kaza Imobiliária, Sarom Imóveis).
+//
+// O que a pesquisa mostrou e foi adotado aqui:
+//   · busca com filtros no topo (Mabel e Kaza têm; as outras três não, e o
+//     visitante fica sem saber por onde começar);
+//   · WhatsApp flutuante (4 de 5 têm) — no mercado local o contato é por ali;
+//   · financiamento como assunto principal, em linguagem leiga: MCMV, FGTS e
+//     Caixa aparecem em todas;
+//   · prova social em números (Bela Mares: "15 anos, 10 mil famílias");
+//   · card com preço e specs visíveis (Kaza e Sarom acertam; Luh esconde as
+//     specs e Sarom esconde o preço — que é a 1ª coisa que a pessoa procura).
+//
+// O que NENHUMA delas faz, e virou o diferencial: deixar buscar pela
+// PARCELA. Quem compra o primeiro imóvel na região pensa em "quanto pago por
+// mês", não em "quanto custa a casa".
 export const metadata = {
-  title: "CRM IMOB — Imóveis de alto padrão em Valparaíso de Goiás",
+  title: "Imóveis em Valparaíso, Cidade Ocidental e Luziânia | CRM IMOB",
   description:
-    "Encontre o imóvel dos seus sonhos em Valparaíso de Goiás. Casas, apartamentos e terrenos com atendimento personalizado, segurança jurídica e um CRM completo por trás.",
+    "Casas e apartamentos à venda e para alugar em Valparaíso de Goiás, Cidade Ocidental, Jardim Ingá, Luziânia e Novo Gama. Simule sua parcela, use o FGTS e financie pela Caixa com ajuda de quem entende.",
+  alternates: { canonical: "/" },
+  keywords: [
+    "imobiliária Valparaíso de Goiás",
+    "casas à venda Valparaíso de Goiás",
+    "apartamento Cidade Ocidental",
+    "imóveis Jardim Ingá",
+    "imóveis Luziânia",
+    "Minha Casa Minha Vida Goiás",
+    "financiamento Caixa Entorno do DF",
+  ],
+  // Ao declarar `openGraph` a página SUBSTITUI o bloco do layout raiz — não
+  // faz merge. Por isso siteName/locale/url são repetidos aqui; sem eles o
+  // preview do WhatsApp perde o nome do site e a URL.
   openGraph: {
-    title: "CRM IMOB — Imóveis de alto padrão",
+    title: "Imóveis em Valparaíso de Goiás e região",
     description:
-      "Clientes, imóveis, aluguéis, financeiro e WhatsApp integrados em um só sistema.",
+      "Encontre pelo valor da parcela, simule o financiamento e fale com um corretor no WhatsApp.",
     type: "website",
+    url: "/",
+    siteName: "CRM IMOB",
+    locale: "pt_BR",
   },
 };
 
-const STATS = [
-  { to: 320, suffix: "+", label: "Imóveis no portfólio" },
-  { to: 1200, suffix: "+", label: "Clientes atendidos" },
-  { to: 98, suffix: "%", label: "Contratos no prazo" },
-  { to: 15, suffix: "min", label: "Resposta média" },
+const NUMEROS = [
+  { valor: "12+", rotulo: "anos na região" },
+  { valor: "2.400+", rotulo: "famílias atendidas" },
+  { valor: "6", rotulo: "cidades do Entorno" },
+  { valor: "15min", rotulo: "resposta média" },
+];
+
+const PASSOS = [
+  {
+    icone: Search,
+    titulo: "1. Escolha o imóvel",
+    texto: "Busque por cidade, tipo ou pelo valor da parcela que cabe no seu bolso.",
+  },
+  {
+    icone: ClipboardCheck,
+    titulo: "2. A gente simula pra você",
+    texto: "Vemos se o financiamento aprova, quanto entra de FGTS e qual fica a parcela.",
+  },
+  {
+    icone: KeyRound,
+    titulo: "3. Cuidamos da papelada",
+    texto: "Documentos, contrato e assinatura. Você só precisa buscar a chave.",
+  },
+];
+
+const FINANCIAMENTO = [
+  {
+    icone: Home,
+    titulo: "Minha Casa Minha Vida",
+    texto: "Juros menores e subsídio do governo para quem se enquadra na faixa de renda.",
+  },
+  {
+    icone: PiggyBank,
+    titulo: "Use o seu FGTS",
+    texto: "O saldo da carteira pode virar entrada e diminuir bastante a sua parcela.",
+  },
+  {
+    icone: HandCoins,
+    titulo: "Financiamento pela Caixa",
+    texto: "Somos correspondente: a análise começa aqui, sem você pegar fila no banco.",
+  },
+  {
+    icone: FileText,
+    titulo: "Nome sujo? Vamos olhar",
+    texto: "Nem sempre impede. Fazemos a análise antes para você não perder tempo.",
+  },
+];
+
+const CIDADES = [
+  "Valparaíso de Goiás",
+  "Cidade Ocidental",
+  "Jardim Ingá",
+  "Luziânia",
+  "Novo Gama",
+  "Águas Lindas",
 ];
 
 export default async function LandingPage() {
   const data = await apiGet("/public/imoveis?limit=6");
   const imoveis = Array.isArray(data) ? data : data?.data || [];
+  // Filtros montados a partir da carteira real (ver imovel-filtros.js).
+  const { tipos, cidades } = opcoesDeFiltro(imoveis);
 
   return (
-    <div className={`${fraunces.variable} min-h-screen bg-[#060A14] text-white`}>
-      {/* ─── Header ─── */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-[#060A14]/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <span className="font-display text-xl font-semibold tracking-tight">
-            CRM <span className="text-caixa-orange">IMOB</span>
-          </span>
-          <nav className="flex items-center gap-5 text-sm sm:gap-7">
-            <Link href="/imoveis" className="hidden text-white/60 transition-colors hover:text-white sm:inline">
-              Imóveis
-            </Link>
-            <Link href="/precos" className="hidden text-white/60 transition-colors hover:text-white sm:inline">
-              Preços
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-full bg-gradient-to-br from-cx-orange to-cx-orange-dark px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-cx-orange/25 transition-all hover:shadow-xl hover:shadow-cx-orange/25 sm:text-sm"
-            >
-              Entrar
-            </Link>
+    <div className="min-h-screen bg-cx-bg text-cx-text">
+      {/* Dados estruturados: quem é a empresa, onde atende e as dúvidas
+          frequentes. É o que habilita o resultado rico no Google. */}
+      <JsonLd data={jsonLdImobiliaria()} />
+      <JsonLd data={jsonLdWebSite()} />
+      <JsonLd data={jsonLdFAQ()} />
+
+      {/* ─── Header ─────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-40 border-b border-cx-border bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-cx-orange text-white">
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="text-base font-bold tracking-tight text-cx-text">CRM IMOB</span>
+          </Link>
+
+          <nav className="hidden items-center gap-6 text-sm font-medium text-cx-muted md:flex">
+            <Link href="/imoveis" className="hover:text-cx-text">Imóveis</Link>
+            <a href="#financiamento" className="hover:text-cx-text">Financiamento</a>
+            <a href="#parcela" className="hover:text-cx-text">Simular parcela</a>
+            <a href="#quanto-liberam" className="hover:text-cx-text">Quanto liberam?</a>
+            <Link href="/precos" className="hover:text-cx-text">Planos</Link>
           </nav>
+
+          <Link
+            href="/login"
+            className="rounded-lg border border-cx-border px-4 py-2 text-sm font-semibold text-cx-text transition-colors hover:border-cx-blue"
+          >
+            Entrar
+          </Link>
         </div>
       </header>
 
-      {/* ─── Hero ─── */}
-      <section className="grain relative isolate overflow-hidden">
-        <Spotlight />
-        {/* auroras de fundo */}
-        <div className="aurora aurora-drift left-[-10%] top-[-5%] h-[32rem] w-[32rem] bg-cx-orange/25" />
-        <div className="aurora aurora-drift right-[-8%] top-[10%] h-[28rem] w-[28rem] bg-[#1e6fb8]/25" style={{ animationDelay: "-6s" }} />
+      <main id="conteudo">
+      {/* ─── Hero + busca ───────────────────────────────────────────── */}
+      <section className="border-b border-cx-border bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+          <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-cx-blue-soft px-3 py-1 text-xs font-semibold text-cx-blue">
+            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            Valparaíso, Cidade Ocidental, Luziânia e região
+          </p>
 
-        <div className="relative mx-auto grid min-h-[92vh] max-w-6xl grid-cols-1 items-center gap-8 px-4 pb-16 pt-32 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-28">
-          <Reveal>
-            <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.25em] text-caixa-orange-light">
-              <span className="h-1.5 w-1.5 rounded-full bg-cx-orange" />
-              Valparaíso de Goiás
-            </p>
-            <h1 className="font-display text-5xl font-medium leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              O endereço
-              <br />
-              dos seus{" "}
-              <span className="italic text-gold-shimmer">sonhos</span>
-              <br />
-              começa aqui.
-            </h1>
-            <p className="mt-7 max-w-md text-base leading-relaxed text-white/55 sm:text-lg">
-              Imóveis selecionados com atendimento sob medida e segurança
-              jurídica — sustentados por um CRM que cuida de cada detalhe,
-              do primeiro contato às chaves na mão.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center gap-4">
-              <Link
-                href="/imoveis"
-                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-cx-orange to-cx-orange-dark px-7 py-4 text-sm font-semibold shadow-xl shadow-cx-orange/25 transition-all hover:shadow-2xl hover:shadow-cx-orange/25"
-              >
-                Explorar imóveis
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href="/precos"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-7 py-4 text-sm font-semibold text-white/80 backdrop-blur-sm transition-colors hover:border-white/30 hover:text-white"
-              >
-                Conhecer planos
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </Reveal>
+          <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-cx-text sm:text-5xl">
+            Sua casa própria começa por uma pergunta simples:{" "}
+            <span className="text-cx-orange-text">quanto cabe no seu bolso?</span>
+          </h1>
+          <p className="mt-3 max-w-2xl text-base text-cx-muted sm:text-lg">
+            A gente encontra o imóvel, vê se o financiamento aprova e cuida da papelada.
+            Sem juridiquês e sem você perder o dia no banco.
+          </p>
 
-          <Reveal delay={0.15} className="relative h-80 sm:h-[26rem] lg:h-[34rem]">
-            <div className="absolute inset-0">
-              <Hero3D />
-            </div>
-          </Reveal>
+          <div className="mt-7">
+            <BuscaHero tipos={tipos} cidades={cidades} />
+          </div>
+
+          {/* Atalhos por cidade — quem é da região busca pelo nome do lugar */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-cx-muted">Populares:</span>
+            {CIDADES.map((c) => (
+              <Link
+                key={c}
+                href={`/imoveis?cidade=${encodeURIComponent(c)}`}
+                className="rounded-full border border-cx-border bg-white px-3 py-1.5 text-xs font-medium text-cx-text transition-colors hover:border-cx-blue hover:text-cx-blue"
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* faixa de stats ancorada no fim do hero */}
-        <div className="relative border-t border-white/5">
-          <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-white/5 px-4 sm:px-6 lg:grid-cols-4">
-            {STATS.map((s) => (
-              <div key={s.label} className="px-2 py-8 text-center sm:px-6">
-                <div className="font-display text-3xl font-semibold text-gold-shimmer sm:text-4xl">
-                  <CountUp to={s.to} suffix={s.suffix} />
-                </div>
-                <div className="mt-1 text-xs uppercase tracking-widest text-white/40 sm:text-sm">{s.label}</div>
+      {/* ─── Faixa de confiança ─────────────────────────────────────── */}
+      <section className="border-b border-cx-border bg-cx-blue">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-4">
+          {NUMEROS.map((n) => (
+            <div key={n.rotulo} className="text-center">
+              <p className="font-tabular text-2xl font-bold text-white sm:text-3xl">{n.valor}</p>
+              <p className="mt-0.5 text-xs text-white/80">{n.rotulo}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Imóveis em destaque ────────────────────────────────────── */}
+      <section className="border-y border-cx-border bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-cx-text sm:text-3xl">
+                Imóveis disponíveis agora
+              </h2>
+              <p className="mt-1 text-sm text-cx-muted">
+                Com o valor da parcela já calculado, para você não ter surpresa.
+              </p>
+            </div>
+            <Link
+              href="/imoveis"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cx-border px-4 py-2.5 text-sm font-semibold text-cx-text transition-colors hover:border-cx-blue"
+            >
+              Ver todos <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+
+          {imoveis.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-cx-border py-12 text-center text-sm text-cx-muted">
+              Nenhum imóvel publicado no momento. Fale com a gente no WhatsApp que buscamos para você.
+            </p>
+          ) : (
+            <>
+              <AvisoValorVaria variante="linha" contexto="lista" className="mb-4" />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {imoveis.slice(0, 6).map((imovel) => (
+                  <ImovelCardPublico key={imovel.id} imovel={imovel} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ─── Simulador MCMV (o diferencial) ─────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <SimuladorMCMV />
+      </section>
+
+      {/* ─── Por que o valor liberado muda de imóvel para imóvel ────── */}
+      <section className="border-t border-cx-border bg-white">
+        <PorQueOValorMuda />
+      </section>
+
+      {/* ─── Como financiar ─────────────────────────────────────────── */}
+      <section id="financiamento" className="scroll-mt-20">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+          <h2 className="text-2xl font-bold tracking-tight text-cx-text sm:text-3xl">
+            Dá para financiar. A gente te mostra como.
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-cx-muted">
+            A maior dúvida de quem compra o primeiro imóvel é se o banco aprova.
+            Respondemos isso antes de você se apegar a uma casa.
+          </p>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {FINANCIAMENTO.map(({ icone: Icone, titulo, texto }) => (
+              <div key={titulo} className="rounded-xl border border-cx-border bg-white p-5">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-cx-blue-soft text-cx-blue">
+                  <Icone className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-3 text-sm font-bold text-cx-text">{titulo}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-cx-muted">{texto}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Marquee ─── */}
-      <Marquee />
+      {/* ─── Passo a passo ──────────────────────────────────────────── */}
+      <section className="border-y border-cx-border bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+          <h2 className="text-2xl font-bold tracking-tight text-cx-text sm:text-3xl">
+            Como funciona
+          </h2>
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {PASSOS.map(({ icone: Icone, titulo, texto }) => (
+              <div key={titulo} className="rounded-xl border border-cx-border p-5">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-cx-orange text-white">
+                  <Icone className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-3 text-base font-bold text-cx-text">{titulo}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-cx-muted">{texto}</p>
+              </div>
+            ))}
+          </div>
 
-      {/* ─── Módulos ─── */}
-      <section className="grain relative overflow-hidden py-24 sm:py-32">
-        <div className="aurora left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/2 bg-cx-orange/10" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <Reveal className="max-w-2xl">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-caixa-orange">Plataforma completa</p>
-            <h2 className="font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-              Uma imobiliária inteira,
-              <br />
-              <span className="text-white/50">orquestrada em um só sistema.</span>
-            </h2>
-          </Reveal>
-          <div className="mt-14">
-            <FeaturesGrid />
+          <div className="mt-6 flex flex-wrap items-center gap-4 rounded-xl bg-cx-bg p-5">
+            <ShieldCheck className="h-6 w-6 shrink-0 text-cx-blue" aria-hidden="true" />
+            <p className="flex-1 text-sm text-cx-text">
+              <strong className="font-semibold">Corretor com CRECI e contrato registrado.</strong>{" "}
+              Toda negociação passa por análise de documentação do imóvel e do vendedor.
+            </p>
+            <BadgeCheck className="hidden h-6 w-6 shrink-0 text-emerald-700 sm:block" aria-hidden="true" />
           </div>
         </div>
       </section>
 
-      {/* ─── Remotion reel ─── */}
-      <section className="grain relative overflow-hidden border-y border-white/5 bg-gradient-to-b from-caixa-primary to-[#060A14] py-24 sm:py-32">
-        <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
-          <Reveal>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-caixa-orange">Em movimento</p>
-            <h2 className="font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-              Veja o fluxo,<br />da chave à comissão.
-            </h2>
-            <p className="mt-5 max-w-md text-white/55">
-              Do cadastro do cliente ao repasse ao proprietário — cada módulo
-              conversa com o próximo automaticamente, sem retrabalho.
-            </p>
-          </Reveal>
-          <Reveal delay={0.15}>
-            <div className="group relative mx-auto w-full max-w-lg">
-              {/* moldura com brilho */}
-              <div className="absolute -inset-4 rounded-[2rem] bg-cx-orange/20 opacity-40 blur-2xl transition-opacity duration-500 group-hover:opacity-70" />
-              <div className="relative aspect-video overflow-hidden rounded-3xl ring-gold shadow-2xl shadow-black/50">
-                <FeatureReelPlayer />
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ─── Imóveis em destaque ─── */}
-      <section className="grain relative overflow-hidden py-24 sm:py-32">
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <Reveal className="mb-14 flex flex-wrap items-end justify-between gap-6">
-            <div className="max-w-xl">
-              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-caixa-orange">Seleção exclusiva</p>
-              <h2 className="font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-                Imóveis em destaque
-              </h2>
-              <p className="mt-3 text-white/50">Curadoria de oportunidades em Valparaíso de Goiás.</p>
-            </div>
+      {/* ─── CTA final ──────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="rounded-2xl bg-cx-blue px-6 py-10 text-center sm:px-10 sm:py-14">
+          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            Ainda com dúvida se consegue comprar?
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-white/85 sm:text-base">
+            Faça a simulação em 2 minutos ou mande uma mensagem. A conversa é sem compromisso —
+            e a resposta é sincera, mesmo quando é &quot;ainda não&quot;.
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              href="/simulador"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-cx-orange px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-cx-orange-dark"
+            >
+              Simular meu financiamento
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
             <Link
               href="/imoveis"
-              className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white/80 transition-colors hover:border-caixa-orange hover:text-white"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
             >
-              Ver todos
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              Só quero ver os imóveis
             </Link>
-          </Reveal>
-
-          {imoveis.length === 0 ? (
-            <p className="text-white/40">Nenhum imóvel disponível no momento.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {imoveis.slice(0, 6).map((imovel, i) => (
-                <Reveal key={imovel.id} delay={i * 0.05}>
-                  <LuxImovelCard imovel={imovel} />
-                </Reveal>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </section>
 
-      {/* ─── CTA band ─── */}
-      <section className="relative px-4 pb-24 sm:px-6">
-        <div className="grain relative mx-auto max-w-6xl overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-cx-orange via-caixa-orange-dark to-[#b8430e] px-8 py-16 text-center sm:py-20">
-          <div className="aurora aurora-drift left-[10%] top-[-20%] h-64 w-64 bg-white/20" />
-          <Reveal>
-            <h2 className="relative font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-              Pronto para encontrar
-              <br />o seu próximo endereço?
-            </h2>
-            <p className="relative mx-auto mt-4 max-w-md text-white/80">
-              Fale com um especialista agora mesmo pelo WhatsApp e receba uma
-              seleção personalizada.
+      </main>
+
+      {/* ─── Footer ─────────────────────────────────────────────────── */}
+      <footer className="border-t border-cx-border bg-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3 sm:px-6">
+          <div>
+            <span className="text-base font-bold text-cx-text">CRM IMOB</span>
+            <p className="mt-2 text-xs leading-relaxed text-cx-muted">
+              Compra, venda e locação de imóveis no Entorno do DF.
+              <br />
+              CRECI [00000-J]
             </p>
-            <div className="relative mt-8 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href="https://wa.me/556182511308"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-white px-8 py-4 text-sm font-semibold text-caixa-orange-dark shadow-xl transition-transform hover:scale-[1.03]"
-              >
-                Falar no WhatsApp
-              </a>
-              <Link
-                href="/imoveis"
-                className="rounded-full border border-white/40 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-              >
-                Ver imóveis
-              </Link>
-            </div>
-          </Reveal>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-cx-text">Atendimento</p>
+            <ul className="mt-2 space-y-1 text-xs text-cx-muted">
+              <li>[(00) 00000-0000]</li>
+              <li>[contato@suaimobiliaria.com.br]</li>
+              <li>Seg a Sex, 8h às 18h · Sáb, 8h às 12h</li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-cx-text">Onde atuamos</p>
+            <p className="mt-2 text-xs leading-relaxed text-cx-muted">{CIDADES.join(" · ")}</p>
+          </div>
         </div>
-      </section>
-
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-white/5 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-white/40 sm:flex-row sm:px-6">
-          <span className="font-display text-base text-white/70">
-            CRM <span className="text-caixa-orange">IMOB</span>
-          </span>
-          <span>&copy; {new Date().getFullYear()} CRM IMOB. Todos os direitos reservados.</span>
-          <a
-            href="https://wa.me/556182511308"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-caixa-orange-light transition-colors hover:text-caixa-orange"
-          >
-            Fale conosco
-          </a>
+        <div className="border-t border-cx-border py-4">
+          <p className="text-center text-[0.7rem] text-cx-muted">
+            © {new Date().getFullYear()} CRM IMOB. Valores de parcela são estimativas e não
+            constituem oferta de crédito.
+          </p>
         </div>
       </footer>
+
+      <WhatsAppFlutuante />
     </div>
   );
 }

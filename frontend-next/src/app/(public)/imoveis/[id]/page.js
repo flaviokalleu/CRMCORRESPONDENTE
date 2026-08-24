@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiGet } from "@/lib/api-server";
 import ImovelCard, { formatMoeda, imovelImagemUrl } from "@/components/public/ImovelCard";
+import { JsonLd } from "@/components/public/JsonLd";
+import { jsonLdBreadcrumb, jsonLdImovel } from "@/lib/seo";
 
 // Detalhe de um imóvel ("/imoveis/:id"). Server Component.
 // Referência de lógica: frontend/src/pages/MoveisDetailPage.jsx +
@@ -25,18 +27,31 @@ export async function generateMetadata({ params }) {
   }
 
   const nome = imovel.nome_imovel || "Imóvel";
+  const local = imovel.localizacao || "Valparaíso de Goiás";
+  const valor = imovel.valor_venda || imovel.valor_avaliacao;
+
+  // O título é o que aparece na aba e no resultado do Google. Montamos com os
+  // termos que a pessoa realmente digita — tipo, quartos e cidade — em vez de
+  // repetir só o nome do cadastro interno.
+  const partes = [imovel.tipo, imovel.quartos ? `${imovel.quartos} quartos` : null, local].filter(Boolean);
+  const title = `${nome}${partes.length ? ` — ${partes.join(", ")}` : ""}`;
+
   const descricao =
-    imovel.descricao_imovel?.slice(0, 160) ||
-    `${nome} em ${imovel.localizacao || "Valparaíso de Goiás"}. Confira detalhes e valores.`;
+    imovel.descricao_imovel?.slice(0, 155) ||
+    `${imovel.tipo || "Imóvel"} em ${local}${valor ? ` por ${formatMoeda(valor)}` : ""}. Simule o financiamento e fale com um corretor.`;
+
   const imagemUrl = imovelImagemUrl(imovel.imagem_capa);
 
   return {
-    title: nome,
+    title,
     description: descricao,
+    alternates: { canonical: `/imoveis/${id}` },
     openGraph: {
-      title: nome,
+      type: "article",
+      title,
       description: descricao,
-      images: imagemUrl ? [{ url: imagemUrl }] : [],
+      url: `/imoveis/${id}`,
+      images: imagemUrl ? [{ url: imagemUrl, alt: nome }] : [],
     },
   };
 }
@@ -92,6 +107,16 @@ export default async function ImovelDetailPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* O anúncio estruturado é o que faz o Google mostrar preço e foto do
+          imóvel direto no resultado da busca. */}
+      <JsonLd data={jsonLdImovel(imovel)} />
+      <JsonLd
+        data={jsonLdBreadcrumb([
+          { nome: "Início", url: "/" },
+          { nome: "Imóveis", url: "/imoveis" },
+          { nome: nome, url: `/imoveis/${id}` },
+        ])}
+      />
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <Link href="/imoveis" className="text-sm text-caixa-primary hover:underline">

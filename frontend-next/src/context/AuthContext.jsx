@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const AuthContext = createContext(null);
 
@@ -36,11 +36,25 @@ export function AuthProvider({ children, initialUser = null }) {
     }
   }, []);
 
+  // Rotas que NUNCA têm sessão: consultar /auth/me nelas só produz um 401 no
+  // console do visitante anônimo e um round-trip jogado fora.
+  const pathname = usePathname();
+  const rotaPublica =
+    pathname === "/" ||
+    pathname.startsWith("/imoveis") ||
+    pathname.startsWith("/busca") ||
+    pathname.startsWith("/precos");
+
   useEffect(() => {
     // Se o Server Component pai já injetou o usuário (initialUser), não
     // precisa refazer a chamada no mount — carregamento instantâneo.
-    if (initialUser === null) refresh();
-  }, [initialUser, refresh]);
+    if (initialUser !== null) return;
+    if (rotaPublica) {
+      setLoading(false);
+      return;
+    }
+    refresh();
+  }, [initialUser, rotaPublica, refresh]);
 
   const login = useCallback(async ({ email, password }) => {
     try {
