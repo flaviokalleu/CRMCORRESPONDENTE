@@ -30,7 +30,7 @@ export function RadialGauge({ value, color, size = 96 }) {
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="font-tabular text-sm font-bold text-white">{value.toFixed(0)}%</span>
+        <span className="font-tabular text-sm font-bold text-cx-text">{value.toFixed(0)}%</span>
       </div>
     </div>
   );

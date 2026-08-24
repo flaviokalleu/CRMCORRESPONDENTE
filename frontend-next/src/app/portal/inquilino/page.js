@@ -214,7 +214,7 @@ export default function PortalInquilinoPage() {
             <p className="text-sm text-gray-500">Portal do Inquilino</p>
             <p className="font-bold text-gray-900">{nomeInquilino}</p>
           </div>
-          <button onClick={logout} className="text-sm text-gray-500 hover:text-red-500">
+          <button onClick={logout} className="text-sm text-gray-500 hover:text-red-300">
             Sair
           </button>
         </div>
@@ -368,7 +368,7 @@ export default function PortalInquilinoPage() {
                   </div>
                   {ch.resposta_admin && (
                     <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-blue-500 font-medium mb-1">Resposta do administrador:</p>
+                      <p className="text-xs text-sky-300 font-medium mb-1">Resposta do administrador:</p>
                       <p className="text-sm text-blue-800">{ch.resposta_admin}</p>
                     </div>
                   )}

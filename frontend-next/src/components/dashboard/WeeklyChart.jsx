@@ -9,13 +9,13 @@ import { CHART_CHROME, CHART_COLORS } from "@/lib/chart-colors";
 function TooltipContent({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0a1122] px-3 py-2 text-xs shadow-xl">
-      <p className="mb-1.5 font-medium text-white/70">{label}</p>
+    <div className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-xs shadow-xl">
+      <p className="mb-1.5 font-medium text-cx-muted">{label}</p>
       {payload.map((p) => (
-        <p key={p.dataKey} className="flex items-center gap-1.5 text-white">
+        <p key={p.dataKey} className="flex items-center gap-1.5 text-cx-text">
           <span className="h-2 w-2 rounded-full" style={{ background: p.fill }} />
           {p.value.toLocaleString("pt-BR")}
-          <span className="font-normal text-white/40">{p.name}</span>
+          <span className="font-normal text-cx-muted">{p.name}</span>
         </p>
       ))}
     </div>
@@ -24,7 +24,7 @@ function TooltipContent({ active, payload, label }) {
 
 function LegendContent({ payload }) {
   return (
-    <div className="mt-2 flex items-center justify-center gap-5 text-xs text-white/60">
+    <div className="mt-2 flex items-center justify-center gap-5 text-xs text-cx-muted">
       {payload.map((p) => (
         <span key={p.value} className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
@@ -55,8 +55,8 @@ export function WeeklyChart({ labels, atual, anterior }) {
         <YAxis axisLine={false} tickLine={false} width={36} tick={{ fill: CHART_CHROME.textMuted, fontSize: 11 }} />
         <Tooltip content={<TooltipContent />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
         <Legend content={<LegendContent />} />
-        <Bar dataKey="Esta semana" fill={CHART_COLORS.orange} radius={[4, 4, 0, 0]} maxBarSize={28} />
-        <Bar dataKey="Semana anterior" fill={CHART_COLORS.blue} radius={[4, 4, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="Esta semana" fill={CHART_COLORS.white} radius={[4, 4, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="Semana anterior" fill={CHART_COLORS.navy} radius={[4, 4, 0, 0]} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   );

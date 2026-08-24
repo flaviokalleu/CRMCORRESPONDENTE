@@ -5,9 +5,9 @@ export const metadata = { title: "Acessos" };
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-      <p className="text-2xl font-semibold tabular-nums text-white">{value}</p>
-      <p className="mt-1 text-xs text-white/45">{label}</p>
+    <div className="rounded-2xl border border-cx-border bg-cx-surface p-4">
+      <p className="text-2xl font-semibold tabular-nums text-cx-text">{value}</p>
+      <p className="mt-1 text-xs text-cx-muted">{label}</p>
     </div>
   );
 }
@@ -41,12 +41,12 @@ export default async function AcessosPage() {
         <tbody>
           {acessos.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-sm text-white/30">Nenhum acesso encontrado.</td>
+              <td colSpan={5} className="px-4 py-10 text-center text-sm text-cx-muted">Nenhum acesso encontrado.</td>
             </tr>
           ) : (
             acessos.map((a) => (
               <Row key={a.id}>
-                <Td className="text-white">
+                <Td className="text-cx-text">
                   {a.user ? `${a.user.first_name || ""} ${a.user.last_name || ""}`.trim() : a.user_id ? `Usuário #${a.user_id}` : "Anônimo"}
                 </Td>
                 <Td muted className="tabular-nums">{a.ip}</Td>

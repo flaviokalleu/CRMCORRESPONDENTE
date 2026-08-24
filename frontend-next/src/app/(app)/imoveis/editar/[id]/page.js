@@ -16,8 +16,8 @@ export default async function EditarImovelPage({ params }) {
 
   return (
     <div className="p-6">
-      <h1 className="mb-1 text-xl font-semibold text-white">Editar Imóvel</h1>
-      <p className="mb-6 text-sm text-white/50">Atualize os dados e adicione novas imagens se necessário.</p>
+      <h1 className="mb-1 text-xl font-semibold text-cx-text">Editar Imóvel</h1>
+      <p className="mb-6 text-sm text-cx-muted">Atualize os dados e adicione novas imagens se necessário.</p>
       <ImovelForm mode="edit" imovelId={id} initial={imovel} />
     </div>
   );

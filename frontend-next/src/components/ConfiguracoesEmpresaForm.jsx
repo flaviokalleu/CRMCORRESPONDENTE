@@ -51,10 +51,10 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {message.text && (
-        <p className={`text-sm ${message.type === "success" ? "text-emerald-400" : "text-red-400"}`}>{message.text}</p>
+        <p className={`text-sm ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>{message.text}</p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <Field label="Nome da empresa" name="nome" value={form.nome} onChange={handleChange} className="md:col-span-2" />
         <Field label="Slug" name="slug" value={form.slug} disabled />
         <Field label="CNPJ" name="cnpj" value={form.cnpj} onChange={handleChange} placeholder="00.000.000/0000-00" />
@@ -63,12 +63,12 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
         <Field label="Endereço" name="endereco" value={form.endereco} onChange={handleChange} className="md:col-span-2" />
         <Field label="Cidade" name="cidade" value={form.cidade} onChange={handleChange} />
         <div>
-          <label className="block text-sm text-white/50 mb-1">Estado</label>
+          <label className="block text-sm text-cx-muted mb-1">Estado</label>
           <select
             name="estado"
             value={form.estado}
             onChange={handleChange}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           >
             <option value="">Selecione</option>
             {ESTADOS.map((uf) => (
@@ -93,7 +93,7 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
 function Field({ label, name, value, onChange, type = "text", placeholder, disabled, className = "" }) {
   return (
     <div className={className}>
-      <label className="block text-sm text-white/50 mb-1">{label}</label>
+      <label className="block text-sm text-cx-muted mb-1">{label}</label>
       <input
         type={type}
         name={name}
@@ -102,7 +102,7 @@ function Field({ label, name, value, onChange, type = "text", placeholder, disab
         placeholder={placeholder}
         disabled={disabled}
         className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-caixa-orange/50 ${
-          disabled ? "border-white/5 bg-white/[0.02] text-white/40 cursor-not-allowed" : "border-white/10 bg-white/5 text-white placeholder-white/30"
+          disabled ? "border-cx-border bg-cx-surface text-cx-muted cursor-not-allowed" : "border-cx-border bg-cx-surface text-cx-text placeholder-[#9aa6b4]"
         }`}
       />
     </div>

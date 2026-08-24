@@ -42,11 +42,11 @@ export function ProprietarioAddForm() {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-colors focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/25";
+    "w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text placeholder-[#9aa6b4] outline-none transition-colors focus:border-cx-blue focus:ring-2 focus:ring-cx-blue/20";
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-      <h2 className="mb-4 text-sm font-semibold text-white">Adicionar proprietário</h2>
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-cx-border bg-cx-surface p-5">
+      <h2 className="mb-4 text-sm font-semibold text-cx-text">Adicionar proprietário</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <input
           className={inputClass}
@@ -68,7 +68,7 @@ export function ProprietarioAddForm() {
         />
       </div>
       {message.text && (
-        <p className={`mt-3 text-xs ${message.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+        <p className={`mt-3 text-xs ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>
           {message.text}
         </p>
       )}

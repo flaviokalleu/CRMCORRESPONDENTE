@@ -70,7 +70,7 @@ export function AddCorretorForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-4 rounded-xl border border-white/10 bg-white/[0.04] p-6">
+    <form onSubmit={handleSubmit} className="max-w-2xl space-y-4 rounded-xl border border-cx-border bg-cx-surface p-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Username *">
           <input name="username" value={formData.username} onChange={handleChange} required className="input" />
@@ -105,10 +105,10 @@ export function AddCorretorForm() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">{error}</div>
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</div>
       )}
       {success && (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
           Corretor criado com sucesso!
         </div>
       )}
@@ -136,7 +136,7 @@ export function AddCorretorForm() {
 function Field({ label, children }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-white/60">{label}</span>
+      <span className="text-xs font-medium text-cx-muted">{label}</span>
       {children}
     </label>
   );

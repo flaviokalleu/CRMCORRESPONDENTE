@@ -39,8 +39,8 @@ export default async function ClientesAluguelPage() {
                     <div className="flex items-center gap-3">
                       <Avatar name={c.nome} />
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-white">{c.nome}</p>
-                        <p className="truncate text-xs text-white/40">{c.email || "sem e-mail"}</p>
+                        <p className="truncate font-medium text-cx-text">{c.nome}</p>
+                        <p className="truncate text-xs text-cx-muted">{c.email || "sem e-mail"}</p>
                       </div>
                     </div>
                   </Td>
@@ -49,7 +49,7 @@ export default async function ClientesAluguelPage() {
                   <Td right className="tabular-nums">{formatBRL(c.valor_aluguel)}</Td>
                   <Td muted className="tabular-nums">{c.dia_vencimento ? `dia ${c.dia_vencimento}` : "—"}</Td>
                   <Td>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-cx-border bg-cx-surface px-2 py-1 text-[11px] font-medium text-cx-muted">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: atraso ? "#f87171" : "#34d399" }} />
                       {atraso ? "Em atraso" : "Em dia"}
                     </span>

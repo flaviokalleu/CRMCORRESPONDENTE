@@ -18,8 +18,8 @@ export function Marquee() {
     <div className="grain relative overflow-hidden border-y border-white/5 bg-caixa-primary py-4">
       <div className="flex w-max marquee-track">
         {row.map((item, i) => (
-          <div key={i} className="flex items-center gap-3 px-8 text-sm font-medium uppercase tracking-[0.2em] text-white/50">
-            <Star className="h-3.5 w-3.5 fill-caixa-orange text-caixa-orange" />
+          <div key={i} className="flex items-center gap-3 px-8 text-sm font-medium uppercase tracking-[0.2em] text-[#9aa6b4]">
+            <Star className="h-3.5 w-3.5 fill-caixa-orange text-cx-orange-text" />
             {item}
           </div>
         ))}

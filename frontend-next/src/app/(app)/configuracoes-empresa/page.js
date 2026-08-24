@@ -13,8 +13,8 @@ export default async function ConfiguracoesEmpresaPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-white">Configurações da Empresa</h1>
-        <p className="text-sm text-white/50 mt-1">Gerencie os dados e preferências da sua empresa.</p>
+        <h1 className="text-xl font-semibold text-cx-text">Configurações da Empresa</h1>
+        <p className="text-sm text-cx-muted mt-1">Gerencie os dados e preferências da sua empresa.</p>
       </div>
       <ConfiguracoesEmpresaForm initialData={data} />
     </div>

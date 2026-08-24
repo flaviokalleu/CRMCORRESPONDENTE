@@ -13,7 +13,7 @@ export function PerformanceGauges({ taxaAprovacao, taxaRejeicao, eficienciaMedia
       {items.map((it) => (
         <div key={it.label} className="flex flex-col items-center gap-1.5">
           <RadialGauge value={it.value} color={it.color} size={76} />
-          <span className="text-[0.65rem] text-white/50">{it.label}</span>
+          <span className="text-[0.65rem] text-cx-muted">{it.label}</span>
         </div>
       ))}
     </div>

@@ -34,22 +34,22 @@ export default async function ListaCorrespondentesPage() {
                   <div className="flex items-center gap-3">
                     <Avatar name={`${c.first_name} ${c.last_name}`} />
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-white">{c.first_name} {c.last_name}</p>
-                      <p className="truncate text-xs text-white/40">{c.email || "sem e-mail"}</p>
+                      <p className="truncate font-medium text-cx-text">{c.first_name} {c.last_name}</p>
+                      <p className="truncate text-xs text-cx-muted">{c.email || "sem e-mail"}</p>
                     </div>
                   </div>
                 </Td>
                 <Td muted>@{c.username}</Td>
                 <Td muted>
                   {c.telefone ? (
-                    <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-white">
+                    <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-cx-text">
                       <Phone className="h-3.5 w-3.5" /> {c.telefone}
                     </a>
                   ) : "—"}
                 </Td>
                 <Td muted>
                   {c.address ? (
-                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-white/35" /> {c.address}</span>
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-cx-muted" /> {c.address}</span>
                   ) : "—"}
                 </Td>
               </Row>

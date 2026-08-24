@@ -19,8 +19,8 @@ function TooltipContent({ active, payload }) {
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0f1c33] px-2.5 py-1.5 text-xs shadow-xl">
-      <p className="font-semibold text-white">
+    <div className="rounded-lg border border-cx-border bg-[#0f1c33] px-2.5 py-1.5 text-xs shadow-xl">
+      <p className="font-semibold text-cx-text">
         {p.payload.subject}: {p.value.toFixed(1)}%
       </p>
     </div>
@@ -43,8 +43,8 @@ export function HealthRadarChart({ taxaAprovacao, eficienciaMedia, taxaRejeicao,
       <RadarChart data={data} outerRadius="72%">
         <defs>
           <radialGradient id="radarFill">
-            <stop offset="0%" stopColor={CHART_COLORS.orange} stopOpacity={0.55} />
-            <stop offset="100%" stopColor={CHART_COLORS.orange} stopOpacity={0.08} />
+            <stop offset="0%" stopColor={CHART_COLORS.white} stopOpacity={0.55} />
+            <stop offset="100%" stopColor={CHART_COLORS.white} stopOpacity={0.08} />
           </radialGradient>
         </defs>
         <PolarGrid stroke={CHART_CHROME.gridline} />
@@ -53,13 +53,13 @@ export function HealthRadarChart({ taxaAprovacao, eficienciaMedia, taxaRejeicao,
         <Tooltip content={<TooltipContent />} />
         <Radar
           dataKey="value"
-          stroke={CHART_COLORS.orange}
+          stroke={CHART_COLORS.white}
           strokeWidth={2}
           fill="url(#radarFill)"
           isAnimationActive
           animationDuration={800}
-          style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS.orange}70)` }}
-          dot={{ r: 3, fill: CHART_COLORS.orange, stroke: CHART_CHROME.surface, strokeWidth: 1.5 }}
+          style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS.white}70)` }}
+          dot={{ r: 3, fill: CHART_COLORS.white, stroke: CHART_CHROME.surface, strokeWidth: 1.5 }}
         />
       </RadarChart>
     </ResponsiveContainer>

@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 const STATUS_MAP = {
-  agendada: { label: "Agendada", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  realizada: { label: "Realizada", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-  cancelada: { label: "Cancelada", color: "bg-red-500/20 text-red-400 border-red-500/30" },
-  reagendada: { label: "Reagendada", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  agendada: { label: "Agendada", color: "bg-blue-50 text-sky-700 border-blue-200" },
+  realizada: { label: "Realizada", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  cancelada: { label: "Cancelada", color: "bg-red-50 text-red-700 border-red-200" },
+  reagendada: { label: "Reagendada", color: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
 // Client Component: lista de visitas (recebida via SSR) + form de criação e
@@ -64,11 +64,11 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 grid gap-3 sm:grid-cols-4">
+      <form onSubmit={handleCreate} className="rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
         <select
           value={form.cliente_id}
           onChange={(e) => setForm((p) => ({ ...p, cliente_id: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         >
           <option value="">Cliente...</option>
@@ -79,7 +79,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
         <select
           value={form.imovel_id}
           onChange={(e) => setForm((p) => ({ ...p, imovel_id: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         >
           <option value="">Imóvel...</option>
@@ -91,7 +91,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
           type="datetime-local"
           value={form.data_visita}
           onChange={(e) => setForm((p) => ({ ...p, data_visita: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         />
         <button
@@ -106,39 +106,39 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
           placeholder="Observações"
           value={form.observacoes}
           onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50 sm:col-span-4"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-4"
         />
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="space-y-3">
         {visitas.length === 0 ? (
-          <p className="text-white/30 text-sm">Nenhuma visita encontrada.</p>
+          <p className="text-cx-muted text-sm">Nenhuma visita encontrada.</p>
         ) : (
           visitas.map((v) => {
             const s = STATUS_MAP[v.status] || STATUS_MAP.agendada;
             return (
-              <div key={v.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div key={v.id} className="rounded-xl border border-cx-border bg-cx-surface p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${s.color}`}>{s.label}</span>
-                      <span className="text-sm font-semibold text-white">{v.cliente?.nome || "Cliente"}</span>
+                      <span className="text-sm font-semibold text-cx-text">{v.cliente?.nome || "Cliente"}</span>
                     </div>
-                    <p className="text-xs text-white/40">
+                    <p className="text-xs text-cx-muted">
                       {v.imovel?.nome_imovel || v.imovel?.endereco || "Imóvel"} — {v.data_visita ? new Date(v.data_visita).toLocaleString("pt-BR") : ""}
                     </p>
-                    {v.observacoes && <p className="text-xs text-white/30">{v.observacoes}</p>}
+                    {v.observacoes && <p className="text-xs text-cx-muted">{v.observacoes}</p>}
                   </div>
                   <div className="flex gap-2 text-xs">
                     {v.status === "agendada" && (
                       <>
-                        <button onClick={() => updateStatus(v.id, "realizada")} className="text-emerald-400 hover:underline">Realizada</button>
-                        <button onClick={() => updateStatus(v.id, "cancelada")} className="text-red-400 hover:underline">Cancelar</button>
+                        <button onClick={() => updateStatus(v.id, "realizada")} className="text-emerald-700 hover:underline">Realizada</button>
+                        <button onClick={() => updateStatus(v.id, "cancelada")} className="text-red-700 hover:underline">Cancelar</button>
                       </>
                     )}
-                    <button onClick={() => handleDelete(v.id)} className="text-white/40 hover:text-red-400 hover:underline">Excluir</button>
+                    <button onClick={() => handleDelete(v.id)} className="text-cx-muted hover:text-red-700 hover:underline">Excluir</button>
                   </div>
                 </div>
               </div>

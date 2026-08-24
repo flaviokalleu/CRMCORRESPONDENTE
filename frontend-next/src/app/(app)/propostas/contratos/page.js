@@ -12,13 +12,13 @@ const TONE = {
     badge: "bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-white shadow-lg shadow-caixa-orange/25",
     glow: "hover:shadow-caixa-orange/10 hover:border-caixa-orange/40",
     bar: "from-caixa-orange to-caixa-orange-dark",
-    text: "text-caixa-orange-light",
+    text: "text-cx-orange-text",
   },
   blue: {
     badge: "bg-gradient-to-br from-[#3987e5] to-[#1c4d85] text-white shadow-lg shadow-blue-500/20",
-    glow: "hover:shadow-blue-400/10 hover:border-blue-400/40",
+    glow: "hover:shadow-blue-400/10 hover:border-blue-200",
     bar: "from-[#3987e5] to-[#1c4d85]",
-    text: "text-blue-300",
+    text: "text-blue-700",
   },
 };
 
@@ -39,13 +39,13 @@ export default async function ContratosGaleria({ searchParams }) {
   const totalModelos = CONTRACT_GROUPS.reduce((sum, g) => sum + g.types.length, 0);
 
   return (
-    <div className={`${fraunces.variable} terminal-surface relative min-h-full`}>
+    <div className={`${fraunces.variable} cx-page relative min-h-full`}>
       <div className="aurora aurora-drift left-[-6%] top-[-10%] h-72 w-72 bg-caixa-orange/10" />
-      <div className="aurora left-[70%] top-[5%] h-64 w-64 bg-blue-500/10" />
+      <div className="aurora left-[70%] top-[5%] h-64 w-64 bg-blue-50" />
 
       <div className="relative space-y-10 p-4 sm:p-8">
         <div>
-          <Link href="/propostas" className="inline-flex items-center gap-1.5 text-xs font-medium text-white/45 hover:text-white">
+          <Link href="/propostas" className="inline-flex items-center gap-1.5 text-xs font-medium text-cx-muted hover:text-cx-text">
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar para propostas
           </Link>
@@ -56,13 +56,13 @@ export default async function ContratosGaleria({ searchParams }) {
                 <Scale className="h-6 w-6" strokeWidth={1.6} />
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-caixa-orange-light">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cx-orange-text">
                   Biblioteca jurídica · {totalModelos} modelos
                 </p>
-                <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-cx-text sm:text-4xl">
                   Modelos de contrato
                 </h1>
-                <p className="mt-2 max-w-lg text-sm leading-relaxed text-white/50">
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-cx-muted">
                   Escolha um modelo para abrir o editor — o texto vem pré-preenchido com os dados
                   da proposta e é totalmente editável antes de imprimir ou exportar.
                 </p>
@@ -77,9 +77,9 @@ export default async function ContratosGaleria({ searchParams }) {
               <Scale className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-caixa-orange-light">Gerando contrato para</p>
-              <p className="mt-0.5 text-sm font-medium text-white">
-                {p.cliente?.nome || "Cliente"} <span className="mx-1 text-white/25">·</span> {p.imovel?.nome_imovel || "Imóvel"}
+              <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-cx-orange-text">Gerando contrato para</p>
+              <p className="mt-0.5 text-sm font-medium text-cx-text">
+                {p.cliente?.nome || "Cliente"} <span className="mx-1 text-cx-muted">·</span> {p.imovel?.nome_imovel || "Imóvel"}
               </p>
             </div>
           </div>
@@ -96,8 +96,8 @@ export default async function ContratosGaleria({ searchParams }) {
                     {GroupIcon && <GroupIcon className="h-5 w-5" strokeWidth={1.7} />}
                   </span>
                   <div>
-                    <h2 className="font-display text-lg font-semibold text-white">{group.label}</h2>
-                    <p className="text-xs text-white/40">{group.description}</p>
+                    <h2 className="font-display text-lg font-semibold text-cx-text">{group.label}</h2>
+                    <p className="text-xs text-cx-muted">{group.description}</p>
                   </div>
                   <div className={`ml-3 h-px flex-1 bg-gradient-to-r ${tone.bar} opacity-20`} />
                 </div>
@@ -110,7 +110,7 @@ export default async function ContratosGaleria({ searchParams }) {
                       <Link
                         key={key}
                         href={`/propostas/contratos/${key}${qs}`}
-                        className={`group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] ${tone.glow}`}
+                        className={`group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-cx-border bg-cx-surface p-5 shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-1 hover:bg-cx-surface ${tone.glow}`}
                       >
                         <div
                           className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${tone.bar} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20`}
@@ -119,8 +119,8 @@ export default async function ContratosGaleria({ searchParams }) {
                           {Icon && <Icon className="h-5 w-5" strokeWidth={1.7} />}
                         </span>
                         <div className="relative min-w-0 flex-1">
-                          <p className="font-display text-base font-semibold text-white">{type.label}</p>
-                          <p className="mt-1 text-xs leading-relaxed text-white/45">{type.description}</p>
+                          <p className="font-display text-base font-semibold text-cx-text">{type.label}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-cx-muted">{type.description}</p>
                         </div>
                         <div className={`relative inline-flex items-center gap-1 text-xs font-semibold ${tone.text}`}>
                           Abrir editor

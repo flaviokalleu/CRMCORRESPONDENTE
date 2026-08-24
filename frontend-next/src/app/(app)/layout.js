@@ -14,7 +14,10 @@ export default async function AppLayout({ children }) {
 
   const me = await apiGet("/auth/me");
   if (!me) {
-    redirect("/login");
+    // Cookie existe mas o token não vale mais. Mandar direto pro /login criaria
+    // um loop (o /login vê o cookie e devolve pra cá) — então passamos pelo
+    // route handler que apaga a sessão antes de chegar no formulário.
+    redirect("/api/auth/expired");
   }
 
   return (

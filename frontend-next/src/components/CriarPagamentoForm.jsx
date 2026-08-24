@@ -114,19 +114,19 @@ export function CriarPagamentoForm() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-white">Criar Pagamento</h1>
-        <Link href="/pagamentos/lista" className="text-sm text-white/60 hover:text-white underline">
+        <h1 className="text-xl font-semibold text-cx-text">Criar Pagamento</h1>
+        <Link href="/pagamentos/lista" className="text-sm text-cx-muted hover:text-cx-text underline">
           Ver lista
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-cx-border bg-cx-surface p-4">
         <div>
-          <label className="block text-xs text-white/50 mb-1">Tipo de pagamento *</label>
+          <label className="block text-xs text-cx-muted mb-1">Tipo de pagamento *</label>
           <select
             value={formData.tipo}
             onChange={(e) => handleChange("tipo", e.target.value)}
-            className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
+            className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm"
           >
             <option value="universal">Universal (PIX, Cartão, Boleto)</option>
             <option value="boleto">Boleto</option>
@@ -135,13 +135,13 @@ export function CriarPagamentoForm() {
         </div>
 
         <div>
-          <label className="block text-xs text-white/50 mb-1">Cliente *</label>
+          <label className="block text-xs text-cx-muted mb-1">Cliente *</label>
           <select
             value={formData.cliente_id}
             onChange={(e) => handleChange("cliente_id", e.target.value)}
             required
             disabled={loadingClientes}
-            className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
+            className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm"
           >
             <option value="">{loadingClientes ? "Carregando..." : "Selecione um cliente"}</option>
             {clientes.map((c) => (
@@ -154,18 +154,18 @@ export function CriarPagamentoForm() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-white/50 mb-1">Título *</label>
+            <label className="block text-xs text-cx-muted mb-1">Título *</label>
             <input
               type="text"
               value={formData.titulo}
               onChange={(e) => handleChange("titulo", e.target.value)}
               required
               placeholder="Ex: Consultoria imobiliária"
-              className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+              className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
             />
           </div>
           <div>
-            <label className="block text-xs text-white/50 mb-1">Valor (R$) *</label>
+            <label className="block text-xs text-cx-muted mb-1">Valor (R$) *</label>
             <input
               type="text"
               inputMode="decimal"
@@ -173,47 +173,47 @@ export function CriarPagamentoForm() {
               onChange={(e) => handleChange("valor", e.target.value)}
               required
               placeholder="0,00"
-              className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+              className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
             />
           </div>
         </div>
 
         {formData.tipo !== "pix" && (
           <div>
-            <label className="block text-xs text-white/50 mb-1">Data de vencimento</label>
+            <label className="block text-xs text-cx-muted mb-1">Data de vencimento</label>
             <input
               type="date"
               value={formData.data_vencimento}
               onChange={(e) => handleChange("data_vencimento", e.target.value)}
-              className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
+              className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-xs text-white/50 mb-1">Descrição</label>
+          <label className="block text-xs text-cx-muted mb-1">Descrição</label>
           <textarea
             value={formData.descricao}
             onChange={(e) => handleChange("descricao", e.target.value)}
             rows={2}
-            className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+            className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
             placeholder="Descrição do serviço ou produto"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-white/50 mb-1">Observações</label>
+          <label className="block text-xs text-cx-muted mb-1">Observações</label>
           <textarea
             value={formData.observacoes}
             onChange={(e) => handleChange("observacoes", e.target.value)}
             rows={2}
-            className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+            className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
             placeholder="Observações adicionais"
           />
         </div>
 
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 text-sm text-white/70">
+          <label className="flex items-center gap-2 text-sm text-cx-muted">
             <input
               type="checkbox"
               checked={formData.enviar_whatsapp}
@@ -221,7 +221,7 @@ export function CriarPagamentoForm() {
             />
             Enviar por WhatsApp
           </label>
-          <label className="flex items-center gap-2 text-sm text-white/70">
+          <label className="flex items-center gap-2 text-sm text-cx-muted">
             <input
               type="checkbox"
               checked={formData.enviar_email}
@@ -232,7 +232,7 @@ export function CriarPagamentoForm() {
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -247,7 +247,7 @@ export function CriarPagamentoForm() {
       </form>
 
       {success && resultado && (
-        <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200 space-y-2">
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 space-y-2">
           <p className="font-semibold">{success}</p>
           <p>ID: #{resultado.pagamento?.id}</p>
           {resultado.asaas?.invoice_url && (
@@ -265,7 +265,7 @@ export function CriarPagamentoForm() {
           )}
           <button
             onClick={() => router.push("/pagamentos/lista")}
-            className="mt-2 rounded-md bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-xs"
+            className="mt-2 rounded-md bg-cx-surface hover:bg-cx-bg text-cx-text px-3 py-1.5 text-xs"
           >
             Ver lista de pagamentos
           </button>

@@ -67,11 +67,11 @@ export function ContratoVincularForm({ opcoes }) {
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm text-white/70 mb-1">Inquilino</label>
+        <label className="block text-sm text-cx-muted mb-1">Inquilino</label>
         <select
           value={selectedInquilino}
           onChange={(e) => setSelectedInquilino(e.target.value)}
-          className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white [&>option]:bg-gray-900"
+          className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
         >
           <option value="">Selecione um inquilino</option>
           {(opcoes?.inquilinos || []).map((i) => (
@@ -83,11 +83,11 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-white/70 mb-1">Imóvel</label>
+        <label className="block text-sm text-cx-muted mb-1">Imóvel</label>
         <select
           value={selectedImovel}
           onChange={(e) => setSelectedImovel(e.target.value)}
-          className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white [&>option]:bg-gray-900"
+          className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
         >
           <option value="">Selecione um imóvel</option>
           {(opcoes?.imoveis || []).map((im) => (
@@ -99,11 +99,11 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-white/70 mb-1">Proprietário</label>
+        <label className="block text-sm text-cx-muted mb-1">Proprietário</label>
         <select
           value={selectedProprietario}
           onChange={(e) => setSelectedProprietario(e.target.value)}
-          className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white [&>option]:bg-gray-900"
+          className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
         >
           <option value="">Selecione um proprietário</option>
           {(opcoes?.proprietarios || []).map((p) => (
@@ -115,13 +115,13 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-white/70 mb-1">Documentação</label>
+        <label className="block text-sm text-cx-muted mb-1">Documentação</label>
         <input
           type="file"
           multiple
           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
           onChange={(e) => setArquivos(Array.from(e.target.files || []))}
-          className="w-full text-sm text-white/70 file:mr-3 file:rounded-md file:border-0 file:bg-orange-500 file:px-3 file:py-1.5 file:text-white file:text-sm"
+          className="w-full text-sm text-cx-muted file:mr-3 file:rounded-md file:border-0 file:bg-orange-500 file:px-3 file:py-1.5 file:text-white file:text-sm"
         />
       </div>
 
@@ -133,11 +133,11 @@ export function ContratoVincularForm({ opcoes }) {
         >
           {saving ? "Salvando..." : "Vincular contrato"}
         </button>
-        {arquivos.length > 0 && <span className="text-sm text-white/60">{arquivos.length} arquivo(s)</span>}
+        {arquivos.length > 0 && <span className="text-sm text-cx-muted">{arquivos.length} arquivo(s)</span>}
       </div>
 
-      {msg && <p className="md:col-span-2 text-sm text-green-300">{msg}</p>}
-      {err && <p className="md:col-span-2 text-sm text-red-300">{err}</p>}
+      {msg && <p className="md:col-span-2 text-sm text-green-700">{msg}</p>}
+      {err && <p className="md:col-span-2 text-sm text-red-700">{err}</p>}
     </form>
   );
 }

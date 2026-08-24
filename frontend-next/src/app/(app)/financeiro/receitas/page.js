@@ -31,7 +31,7 @@ export default async function ReceitasPage() {
                 <Td muted className="tabular-nums">#{r.id}</Td>
                 <Td>{r.tipo}</Td>
                 <Td muted>{r.descricao || "—"}</Td>
-                <Td right className="tabular-nums text-emerald-300">{formatBRL(r.valor)}</Td>
+                <Td right className="tabular-nums text-emerald-700">{formatBRL(r.valor)}</Td>
                 <Td muted className="tabular-nums">{r.data ? new Date(r.data).toLocaleDateString("pt-BR") : "—"}</Td>
               </Row>
             ))}

@@ -31,13 +31,12 @@ export function AppShell({ children }) {
 
   return (
     <div
-      className="app-shell-root flex h-screen overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #0B1426 0%, #122240 50%, #162a4a 100%)" }}
+      className="app-shell-root bg-aqua-frame flex h-screen overflow-hidden"
     >
 
       {sidebarVisible && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/20 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -69,7 +68,11 @@ export function AppShell({ children }) {
             onShowSidebar={() => setSidebarVisible(true)}
           />
         </div>
-        <div className="app-shell-scroll flex-1 w-full overflow-y-auto">
+        {/* Superfície clara "cx": vale para toda página renderizada no shell.
+            A moldura (sidebar/header) fica no azul institucional escuro e o
+            conteúdo em cinza levíssimo, com os cartões em branco — o mesmo
+            arranjo dos portais da Caixa. */}
+        <div className="app-shell-scroll cx-page flex-1 w-full overflow-y-auto">
           <div className="h-full w-full">{children}</div>
         </div>
       </div>

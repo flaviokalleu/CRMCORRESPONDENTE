@@ -44,14 +44,14 @@ export default async function LaudosPage() {
               const st = STATUS[l.status] || { label: l.status || "—", dot: "#94a3b8" };
               return (
                 <Row key={l.id}>
-                  <Td className="font-medium text-white">{l.parceiro}</Td>
+                  <Td className="font-medium text-cx-text">{l.parceiro}</Td>
                   <Td muted className="capitalize">{l.tipo_imovel}</Td>
                   <Td muted>{l.endereco}</Td>
                   <Td right className="tabular-nums">{formatBRL(l.valor_solicitado)}</Td>
                   <Td right className="tabular-nums">{formatBRL(l.valor_liberado)}</Td>
                   <Td muted className="tabular-nums">{formatDate(l.vencimento)}</Td>
                   <Td>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70">
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-cx-border bg-cx-surface px-2 py-1 text-[11px] font-medium text-cx-muted">
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
                       {st.label}
                     </span>

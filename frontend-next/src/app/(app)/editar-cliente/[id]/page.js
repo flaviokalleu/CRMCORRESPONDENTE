@@ -19,8 +19,8 @@ export default async function EditarClientePage({ params }) {
 
   return (
     <div className="p-6">
-      <h1 className="mb-1 text-xl font-semibold text-white">Editar Cliente</h1>
-      <p className="mb-6 text-sm text-white/50">Atualize os dados do cliente e anexe novos documentos se necessário.</p>
+      <h1 className="mb-1 text-xl font-semibold text-cx-text">Editar Cliente</h1>
+      <p className="mb-6 text-sm text-cx-muted">Atualize os dados do cliente e anexe novos documentos se necessário.</p>
       <ClienteNotas clienteId={id} />
       <EditarClienteForm clienteId={id} cliente={cliente} />
     </div>

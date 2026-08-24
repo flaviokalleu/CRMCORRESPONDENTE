@@ -66,20 +66,20 @@ export function LembretesManager({ initialLembretes }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 grid gap-3 sm:grid-cols-4">
+      <form onSubmit={handleCreate} className="rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
         <input
           type="text"
           placeholder="Título"
           value={form.titulo}
           onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50 sm:col-span-2"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-2"
           required
         />
         <input
           type="date"
           value={form.data}
           onChange={(e) => setForm((p) => ({ ...p, data: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-caixa-orange/50"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         />
         <button
@@ -94,31 +94,31 @@ export function LembretesManager({ initialLembretes }) {
           placeholder="Descrição"
           value={form.descricao}
           onChange={(e) => setForm((p) => ({ ...p, descricao: e.target.value }))}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50 sm:col-span-4"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-4"
         />
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="flex gap-2">
         <button
           onClick={() => setShowConcluidos(false)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium ${!showConcluidos ? "bg-caixa-orange/20 text-caixa-orange" : "bg-white/5 text-white/40"}`}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium ${!showConcluidos ? "bg-cx-blue-soft text-cx-blue" : "bg-cx-bg text-cx-muted"}`}
         >
           Ativos ({ativos.length})
         </button>
         <button
           onClick={() => setShowConcluidos(true)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium ${showConcluidos ? "bg-caixa-orange/20 text-caixa-orange" : "bg-white/5 text-white/40"}`}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium ${showConcluidos ? "bg-cx-blue-soft text-cx-blue" : "bg-cx-bg text-cx-muted"}`}
         >
           Concluídos ({concluidos.length})
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-cx-border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-white/[0.04] text-left text-white/50">
+            <tr className="bg-cx-surface text-left text-cx-muted">
               <th className="px-4 py-2">Título</th>
               <th className="px-4 py-2">Descrição</th>
               <th className="px-4 py-2">Data</th>
@@ -128,23 +128,23 @@ export function LembretesManager({ initialLembretes }) {
           <tbody>
             {lista.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-white/30">
+                <td colSpan={4} className="px-4 py-6 text-center text-cx-muted">
                   Nenhum lembrete.
                 </td>
               </tr>
             ) : (
               lista.map((l) => (
-                <tr key={l.id} className="border-t border-white/5">
-                  <td className="px-4 py-2 text-white">{l.titulo}</td>
-                  <td className="px-4 py-2 text-white/60">{l.descricao}</td>
-                  <td className="px-4 py-2 text-white/60">{l.data ? new Date(l.data).toLocaleDateString("pt-BR") : ""}</td>
+                <tr key={l.id} className="border-t border-cx-border">
+                  <td className="px-4 py-2 text-cx-text">{l.titulo}</td>
+                  <td className="px-4 py-2 text-cx-muted">{l.descricao}</td>
+                  <td className="px-4 py-2 text-cx-muted">{l.data ? new Date(l.data).toLocaleDateString("pt-BR") : ""}</td>
                   <td className="px-4 py-2 text-right space-x-2">
                     {!l.concluido && (
-                      <button onClick={() => handleConcluir(l.id)} className="text-emerald-400 hover:underline text-xs">
+                      <button onClick={() => handleConcluir(l.id)} className="text-emerald-700 hover:underline text-xs">
                         Concluir
                       </button>
                     )}
-                    <button onClick={() => handleDelete(l.id)} className="text-red-400 hover:underline text-xs">
+                    <button onClick={() => handleDelete(l.id)} className="text-red-700 hover:underline text-xs">
                       Excluir
                     </button>
                   </td>

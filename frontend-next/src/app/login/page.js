@@ -26,7 +26,7 @@ export default async function LoginPage() {
           <h1 className="text-3xl font-semibold leading-tight tracking-tight">
             Gestão imobiliária completa, em um só lugar.
           </h1>
-          <p className="text-white/60 text-sm leading-relaxed">
+          <p className="text-white/80 text-sm leading-relaxed">
             Clientes, imóveis, aluguéis e pagamentos organizados com o padrão de
             confiabilidade que sua operação exige.
           </p>
@@ -38,7 +38,7 @@ export default async function LoginPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Cadastro unificado</p>
-                <p className="text-xs text-white/50">Clientes, imóveis e aluguéis num só fluxo.</p>
+                <p className="text-xs text-white/75">Clientes, imóveis e aluguéis num só fluxo.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -47,7 +47,7 @@ export default async function LoginPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Indicadores em tempo real</p>
-                <p className="text-xs text-white/50">Acompanhe o funil de vendas e a carteira de locação.</p>
+                <p className="text-xs text-white/75">Acompanhe o funil de vendas e a carteira de locação.</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -56,13 +56,13 @@ export default async function LoginPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">Acesso seguro</p>
-                <p className="text-xs text-white/50">Sessão em cookie httpOnly — nunca exposta ao JavaScript.</p>
+                <p className="text-xs text-white/75">Sessão em cookie httpOnly — nunca exposta ao JavaScript.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-white/30">&copy; {new Date().getFullYear()} CRM IMOB. Todos os direitos reservados.</p>
+        <p className="text-xs text-white/80">&copy; {new Date().getFullYear()} CRM IMOB. Todos os direitos reservados.</p>
       </div>
 
       <div className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">

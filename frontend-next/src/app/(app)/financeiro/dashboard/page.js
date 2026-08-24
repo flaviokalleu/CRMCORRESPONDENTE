@@ -6,12 +6,12 @@ export const metadata = { title: "Dashboard Financeiro" };
 
 function Stat({ label, value, icon: Icon, tone }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-      <div className="mb-2 flex items-center gap-2 text-white/45">
+    <div className="rounded-2xl border border-cx-border bg-cx-surface p-4">
+      <div className="mb-2 flex items-center gap-2 text-cx-muted">
         {Icon && <Icon className="h-4 w-4" style={tone ? { color: tone } : undefined} />}
         <span className="text-[11px] font-semibold uppercase tracking-[0.1em]">{label}</span>
       </div>
-      <p className="text-2xl font-semibold tabular-nums text-white" style={tone ? { color: tone } : undefined}>{value}</p>
+      <p className="text-2xl font-semibold tabular-nums text-cx-text" style={tone ? { color: tone } : undefined}>{value}</p>
     </div>
   );
 }

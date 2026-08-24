@@ -11,12 +11,12 @@ export default async function SuperAdminPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-white">Painel Super Admin</h1>
-        <p className="text-sm text-white/50 mt-1">Métricas gerais da plataforma.</p>
+        <h1 className="text-xl font-semibold text-cx-text">Painel Super Admin</h1>
+        <p className="text-sm text-cx-muted mt-1">Métricas gerais da plataforma.</p>
       </div>
 
       {!metrics ? (
-        <p className="text-white/50 text-sm">Não foi possível carregar as métricas.</p>
+        <p className="text-cx-muted text-sm">Não foi possível carregar as métricas.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Stat label="Total de empresas" value={metrics.totalTenants ?? metrics.total_tenants ?? 0} />
@@ -36,9 +36,9 @@ function formatCurrency(v) {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-white/50 mt-1">{label}</p>
+    <div className="rounded-xl border border-cx-border bg-cx-surface p-4">
+      <p className="text-2xl font-bold text-cx-text">{value}</p>
+      <p className="text-xs text-cx-muted mt-1">{label}</p>
     </div>
   );
 }

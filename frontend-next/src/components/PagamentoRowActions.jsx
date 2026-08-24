@@ -38,14 +38,14 @@ export function PagamentoRowActions({ pagamento }) {
     <div className="flex items-center gap-2 justify-end">
       {pagamento.invoice_url && (
         <>
-          <button onClick={copiarLink} className="text-xs text-white/60 hover:text-white underline">
+          <button onClick={copiarLink} className="text-xs text-cx-muted hover:text-cx-text underline">
             Copiar link
           </button>
           <a
             href={pagamento.invoice_url}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-orange-400 hover:text-orange-300 underline"
+            className="text-xs text-orange-700 hover:text-orange-700 underline"
           >
             Abrir
           </a>
@@ -54,7 +54,7 @@ export function PagamentoRowActions({ pagamento }) {
       <button
         onClick={excluir}
         disabled={deleting}
-        className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-50"
+        className="text-xs text-red-700 hover:text-red-700 underline disabled:opacity-50"
       >
         {deleting ? "Excluindo..." : "Excluir"}
       </button>

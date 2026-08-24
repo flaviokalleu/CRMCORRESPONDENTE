@@ -170,7 +170,7 @@ export function Sidebar({ onClose, onToggleVisibility }) {
   }, [hasRole, isSuperAdmin]);
 
   return (
-    <div className="flex h-full flex-col bg-caixa-primary text-white">
+    <div className="flex h-full flex-col bg-aqua-frame text-white">
       <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-caixa-orange to-caixa-orange-dark text-xs font-bold text-white shadow-md shadow-caixa-orange/20">
@@ -227,8 +227,8 @@ export function Sidebar({ onClose, onToggleVisibility }) {
 
         <div className="space-y-0.5">
           <NavItem href="/configuracoes" icon={Settings} label="Configurações" isActive={pathname === "/configuracoes"} />
-          <button onClick={handleLogout} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/55 transition-colors hover:bg-red-500/10 hover:text-red-400">
-            <LogOut className="h-4 w-4 text-white/35 group-hover:text-red-400" strokeWidth={1.75} />
+          <button onClick={handleLogout} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/55 transition-colors hover:bg-red-500/10 hover:text-red-300">
+            <LogOut className="h-4 w-4 text-white/35 group-hover:text-red-300" strokeWidth={1.75} />
             Sair
           </button>
         </div>

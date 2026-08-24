@@ -44,8 +44,8 @@ export function DespesaForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-white/10 bg-white/[0.04] p-4 space-y-3 mb-6">
-      <h2 className="text-sm font-semibold text-white">Nova despesa</h2>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-cx-border bg-cx-surface p-4 space-y-3 mb-6">
+      <h2 className="text-sm font-semibold text-cx-text">Nova despesa</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <input
           type="text"
@@ -53,7 +53,7 @@ export function DespesaForm() {
           value={form.tipo}
           onChange={(e) => handleChange("tipo", e.target.value)}
           required
-          className="rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+          className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
         />
         <input
           type="text"
@@ -62,14 +62,14 @@ export function DespesaForm() {
           value={form.valor}
           onChange={(e) => handleChange("valor", e.target.value)}
           required
-          className="rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+          className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
         />
         <input
           type="date"
           value={form.data}
           onChange={(e) => handleChange("data", e.target.value)}
           required
-          className="rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm"
+          className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm"
         />
       </div>
       <input
@@ -77,9 +77,9 @@ export function DespesaForm() {
         placeholder="Descrição"
         value={form.descricao}
         onChange={(e) => handleChange("descricao", e.target.value)}
-        className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm placeholder-white/30"
+        className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
       />
-      {error && <p className="text-xs text-red-300">{error}</p>}
+      {error && <p className="text-xs text-red-700">{error}</p>}
       <button
         type="submit"
         disabled={loading}

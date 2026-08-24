@@ -18,6 +18,46 @@
   --color-caixa-primary: #0b1426;
   --color-caixa-secondary: #162a4a;
 
+  /* Superfície "aqua" — azul institucional caindo para turquesa. É o fundo
+     de TODAS as páginas do app (o navy antigo virou só a moldura:
+     sidebar/header). Tons escolhidos escuros o bastante para texto branco
+     e para o vidro claro dos cards continuarem legíveis em cima.
+     Tons medidos a partir do painel de referência. Nesta luminosidade só o
+     BRANCO passa 3:1 sobre o vidro do card (4,46:1 na faixa azul) — por isso
+     a tinta líder dos gráficos é branca e todo indicador colorido
+     (anéis, pílulas de status) vem sempre com número/rótulo em branco ao
+     lado: a cor identifica, o texto informa. Ver chart-colors.js.
+     `frame` é a moldura (sidebar/header): mesmo matiz, bem mais profundo,
+     para o menu não competir com o conteúdo. */
+  /* Moldura (sidebar/header). No tema claro ela é o azul institucional
+     escuro da Caixa, ancorando a página clara. */
+  --color-aqua-frame: #003b71;
+  --color-aqua-deep: #17629b;
+  --color-aqua: #1b6ea8;
+  --color-aqua-teal: #2c9c8c;
+
+  /* ─── Tema "cx" — releitura clara, no padrão dos portais da Caixa
+     (simuladorhabitacao.caixa.gov.br). Ao contrário do tema "aqua" (texto
+     branco sobre gradiente), aqui a página é clara e a tinta é escura:
+     fundo cinza levíssimo, cartões brancos com borda de 1px, azul
+     institucional nos títulos/ações e laranja só como acento.
+     Contraste sobre --color-cx-surface (#ffffff):
+       cx-text  #1f2a37 → 13,6:1   cx-muted #5b6b7c → 5,1:1
+       cx-blue  #005ca9 →  6,4:1   (todos passam AA para texto normal) ─── */
+  --color-cx-bg: #f3f5f8;
+  --color-cx-surface: #ffffff;
+  --color-cx-border: #dde3ea;
+  --color-cx-text: #1f2a37;
+  --color-cx-muted: #5b6b7c;
+  --color-cx-blue: #005ca9;
+  --color-cx-blue-dark: #003b71;
+  --color-cx-blue-soft: #e8f1fa;
+  /* Laranja para TEXTO sobre branco: o #f7941e da marca dá só 2,1:1, reprova
+     AA. Este tom escuro dá 5,9:1 e mantém a leitura de "laranja Caixa". */
+  --color-cx-orange-text: #b45309;
+  --color-cx-orange: #f7941e;
+  --color-cx-orange-dark: #d97b06;
+
   /* Caixa — Laranja (accent) */
   --color-caixa-orange: #f97316;
   --color-caixa-orange-light: #fb923c;
@@ -162,18 +202,17 @@
   }
 }
 
-/* O app inteiro é escuro, mas <select> nativo herda o "color-scheme" claro
-   do SO por padrão — isso deixa o popup de opções com fundo branco
-   enquanto o texto (herdado do nosso CSS) continua branco, ficando
-   invisível. Forçamos color-scheme: dark + cor explícita em <option> para
-   que o popup nativo (Chrome/Firefox/Edge no Windows) renderize escuro. */
+/* O app é CLARO (tema "cx"), então o popup nativo de <select> tem que ser
+   claro também. Isto aqui já foi o oposto (color-scheme: dark + option navy
+   forçado com !important), herança do tema escuro — e como era !important,
+   vencia qualquer utilitário Tailwind e deixava todo popup do app escuro. */
 select {
-  color-scheme: dark;
+  color-scheme: light;
 }
 select option,
 select optgroup {
-  background-color: #0f1c33 !important;
-  color: #ffffff !important;
+  background-color: #ffffff;
+  color: var(--color-cx-text);
 }
 
 /* Impressão do editor de contratos — o PDF gerado por "Imprimir/Salvar
@@ -201,7 +240,9 @@ select optgroup {
     overflow: visible !important;
   }
 
-  .terminal-surface {
+  .terminal-surface,
+  .aqua-surface,
+  .cx-page {
     background: #ffffff !important;
   }
   .aurora {
@@ -330,6 +371,105 @@ select optgroup {
    entre o conteúdo do dashboard e a moldura (sidebar/header) ao redor. */
 .terminal-surface {
   background: linear-gradient(135deg, #0b1426 0%, #122240 50%, #162a4a 100%);
+}
+
+/* Superfície "aqua" — azul institucional no topo caindo para turquesa
+   embaixo. Vale para todas as páginas do app; os cartões em cima são vidro
+   claro (bg-white/10), então o gradiente É a cor do painel. Fixo (não
+   rola com o conteúdo) para páginas longas não perderem o turquesa. */
+.aqua-surface {
+  background: linear-gradient(200deg, var(--color-aqua-deep) 0%, var(--color-aqua) 48%, var(--color-aqua-teal) 100%);
+  background-attachment: fixed;
+}
+
+/* ─── Componentes do tema "cx" (claro) ─── */
+
+/* Fundo de página opaco: cobre a superfície aqua do AppShell, permitindo que
+   uma tela migre para o tema claro sem arrastar as outras junto. */
+.cx-page {
+  background: var(--color-cx-bg);
+  color: var(--color-cx-text);
+}
+
+.cx-card {
+  background: var(--color-cx-surface);
+  border: 1px solid var(--color-cx-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(16, 32, 52, 0.04);
+}
+
+.cx-input {
+  width: 100%;
+  border: 1px solid var(--color-cx-border);
+  border-radius: 0.5rem;
+  background: var(--color-cx-surface);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-cx-text);
+  outline: none;
+}
+.cx-input::placeholder {
+  color: #9aa6b4;
+}
+.cx-input:focus {
+  border-color: var(--color-cx-blue);
+  box-shadow: 0 0 0 3px rgba(0, 92, 169, 0.15);
+}
+
+.cx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.cx-btn-primary {
+  background: var(--color-cx-blue);
+  color: #ffffff;
+}
+.cx-btn-primary:hover:not(:disabled) {
+  background: var(--color-cx-blue-dark);
+}
+.cx-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cx-btn-outline {
+  border: 1px solid var(--color-cx-border);
+  background: var(--color-cx-surface);
+  color: var(--color-cx-text);
+}
+.cx-btn-outline:hover {
+  background: var(--color-cx-bg);
+}
+
+/* Flecha de status ("chevron" de esteira): borda esquerda reta e ponta à
+   direita, com o nome do status BRANCO dentro da forma cheia. A ponta é feita
+   com clip-path, então o padding-right precisa reservar o espaço dela —
+   senão a última letra entra na diagonal e some. */
+.cx-chevron {
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%);
+  padding-right: 1.35rem;
+  border-radius: 3px 0 0 3px;
+}
+
+/* Variante recuada: além da ponta à direita, tem o mesmo recorte à esquerda,
+   encaixando uma flecha na outra quando aparecem em sequência. */
+.cx-chevron-linked {
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%, 9px 50%);
+  padding-left: 1.35rem;
+  border-radius: 0;
+}
+
+/* Vidro padrão sobre a superfície aqua — usado pelos cards/tabelas. */
+.aqua-glass {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 /* grid de pontos técnico — textura de fundo bem discreta */

@@ -195,16 +195,16 @@ export default function WhatsAppQRPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-white">WhatsApp</h1>
-          <p className="text-sm text-white/50 mt-1">
+          <h1 className="text-xl font-semibold text-cx-text">WhatsApp</h1>
+          <p className="text-sm text-cx-muted mt-1">
             Conecte o WhatsApp da empresa {empresaLabel} para enviar e receber mensagens pelo sistema.
           </p>
         </div>
         <span
           className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${
             isConnected
-              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-              : "bg-red-500/20 text-red-400 border-red-500/30"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-red-50 text-red-700 border-red-200"
           }`}
         >
           {isConnected ? "Conectado" : "Desconectado"}
@@ -212,16 +212,16 @@ export default function WhatsAppQRPage() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+      <div className="rounded-xl border border-cx-border bg-cx-surface p-6">
         {blocked ? (
           <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-white font-semibold">Conexão bloqueada</p>
-            <p className="text-white/50 text-sm text-center max-w-sm">
+            <p className="text-cx-text font-semibold">Conexão bloqueada</p>
+            <p className="text-cx-muted text-sm text-center max-w-sm">
               O WhatsApp bloqueou esta sessão. Isso acontece quando a sessão expira ou há muitas tentativas.
             </p>
             <button onClick={handleReset} className="rounded-lg bg-caixa-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-caixa-orange-dark">
@@ -230,14 +230,14 @@ export default function WhatsAppQRPage() {
           </div>
         ) : connecting ? (
           <div className="flex flex-col items-center justify-center py-10 gap-2">
-            <p className="text-white font-semibold">Conectando ao WhatsApp...</p>
-            <p className="text-white/50 text-sm">Gerando QR Code, aguarde.</p>
+            <p className="text-cx-text font-semibold">Conectando ao WhatsApp...</p>
+            <p className="text-cx-muted text-sm">Gerando QR Code, aguarde.</p>
           </div>
         ) : isConnected ? (
           <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-white text-lg font-bold">WhatsApp conectado!</p>
-            <p className="text-white/50 text-sm">Pronto para enviar e receber mensagens pelo sistema.</p>
-            <button onClick={handleDisconnect} className="rounded-lg bg-red-500/20 border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-400 hover:bg-red-500/30">
+            <p className="text-cx-text text-lg font-bold">WhatsApp conectado!</p>
+            <p className="text-cx-muted text-sm">Pronto para enviar e receber mensagens pelo sistema.</p>
+            <button onClick={handleDisconnect} className="rounded-lg bg-red-50 border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">
               Desconectar WhatsApp
             </button>
           </div>
@@ -247,12 +247,12 @@ export default function WhatsAppQRPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrImage} alt="QR Code do WhatsApp" className="w-64 h-64" />
             </div>
-            <p className="text-white/40 text-xs">Escaneie com o WhatsApp: Aparelhos conectados → Conectar aparelho.</p>
+            <p className="text-cx-muted text-xs">Escaneie com o WhatsApp: Aparelhos conectados → Conectar aparelho.</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-white font-semibold">WhatsApp desconectado</p>
-            <p className="text-white/50 text-sm text-center max-w-sm">
+            <p className="text-cx-text font-semibold">WhatsApp desconectado</p>
+            <p className="text-cx-muted text-sm text-center max-w-sm">
               Clique no botão abaixo para gerar o QR Code e conectar o WhatsApp da empresa {empresaLabel} ao sistema.
             </p>
             <button onClick={handleConnect} disabled={connecting} className="rounded-lg bg-caixa-orange px-6 py-3 text-sm font-semibold text-white hover:bg-caixa-orange-dark disabled:opacity-50">

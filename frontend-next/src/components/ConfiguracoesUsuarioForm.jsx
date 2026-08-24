@@ -61,10 +61,10 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {message.text && (
-        <p className={`text-sm ${message.type === "success" ? "text-emerald-400" : "text-red-400"}`}>{message.text}</p>
+        <p className={`text-sm ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>{message.text}</p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <Field label="Nome" name="first_name" value={form.first_name} onChange={handleChange} />
         <Field label="Sobrenome" name="last_name" value={form.last_name} onChange={handleChange} />
         <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" />
@@ -73,24 +73,24 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
         <Field label="Endereço" name="address" value={form.address} onChange={handleChange} className="md:col-span-2" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div>
-          <label className="block text-sm text-white/50 mb-1">Nova senha</label>
+          <label className="block text-sm text-cx-muted mb-1">Nova senha</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Deixe em branco para manter"
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50"
+            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
           />
         </div>
         <div>
-          <label className="block text-sm text-white/50 mb-1">Confirmar senha</label>
+          <label className="block text-sm text-cx-muted mb-1">Confirmar senha</label>
           <input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50"
+            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
           />
         </div>
       </div>
@@ -109,13 +109,13 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 function Field({ label, name, value, onChange, type = "text", className = "" }) {
   return (
     <div className={className}>
-      <label className="block text-sm text-white/50 mb-1">{label}</label>
+      <label className="block text-sm text-cx-muted mb-1">{label}</label>
       <input
         type={type}
         name={name}
         value={value || ""}
         onChange={onChange}
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-caixa-orange/50"
+        className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
       />
     </div>
   );

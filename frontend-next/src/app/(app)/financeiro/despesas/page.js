@@ -31,7 +31,7 @@ export default async function DespesasPage() {
                 <Td muted className="tabular-nums">#{d.id}</Td>
                 <Td>{d.tipo}</Td>
                 <Td muted>{d.descricao || "—"}</Td>
-                <Td right className="tabular-nums text-red-300">{formatBRL(d.valor)}</Td>
+                <Td right className="tabular-nums text-red-700">{formatBRL(d.valor)}</Td>
                 <Td muted className="tabular-nums">{d.data ? new Date(d.data).toLocaleDateString("pt-BR") : "—"}</Td>
               </Row>
             ))}

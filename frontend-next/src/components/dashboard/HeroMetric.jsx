@@ -9,9 +9,9 @@ import { CHART_COLORS } from "@/lib/chart-colors";
 function TooltipContent({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0f1c33] px-2.5 py-1.5 text-[0.7rem] shadow-xl">
-      <span className="font-tabular text-white">{payload[0].value.toLocaleString("pt-BR")}</span>
-      <span className="ml-1 text-white/40">{label}</span>
+    <div className="rounded-lg border border-cx-border bg-[#0f1c33] px-2.5 py-1.5 text-[0.7rem] shadow-xl">
+      <span className="font-tabular text-cx-text">{payload[0].value.toLocaleString("pt-BR")}</span>
+      <span className="ml-1 text-cx-muted">{label}</span>
     </div>
   );
 }
@@ -22,13 +22,13 @@ export function HeroMetric({ label, value, delta, labels, data }) {
   const chartData = labels.map((l, i) => ({ label: l, v: data[i] ?? 0 }));
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 transition-colors hover:bg-white/[0.06]">
+    <div className="relative flex flex-col overflow-hidden rounded-lg border border-cx-border bg-cx-surface px-2.5 py-2 transition-colors hover:bg-cx-surface">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="truncate text-[0.65rem] text-white/45">{label}</p>
+        <p className="truncate text-[0.65rem] text-cx-muted">{label}</p>
         {hasDelta && (
           <span
             className={`font-tabular inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-px text-[0.58rem] font-semibold ${
-              positive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+              positive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
             }`}
           >
             {positive ? <TrendingUp className="h-2 w-2" /> : <TrendingDown className="h-2 w-2" />}
@@ -37,7 +37,7 @@ export function HeroMetric({ label, value, delta, labels, data }) {
         )}
       </div>
 
-      <span className="font-tabular mt-1 text-base font-bold leading-none text-white">{value}</span>
+      <span className="font-tabular mt-1 text-base font-bold leading-none text-cx-text">{value}</span>
 
       {chartData.length > 1 && (
         <div className="-mx-0.5 mt-1 h-3.5 w-full">
@@ -45,12 +45,12 @@ export function HeroMetric({ label, value, delta, labels, data }) {
             <AreaChart data={chartData} margin={{ top: 1, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="heroFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_COLORS.orange} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={CHART_COLORS.orange} stopOpacity={0} />
+                  <stop offset="0%" stopColor={CHART_COLORS.white} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={CHART_COLORS.white} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Tooltip content={<TooltipContent />} cursor={{ stroke: "rgba(255,255,255,0.15)", strokeDasharray: "3 3" }} />
-              <Area type="monotone" dataKey="v" stroke={CHART_COLORS.orange} strokeWidth={1.5} fill="url(#heroFill)" isAnimationActive={false} />
+              <Area type="monotone" dataKey="v" stroke={CHART_COLORS.white} strokeWidth={1.5} fill="url(#heroFill)" isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

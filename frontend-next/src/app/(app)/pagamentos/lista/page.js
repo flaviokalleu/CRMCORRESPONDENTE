@@ -46,11 +46,11 @@ export default async function ListaPagamentosPage() {
             {pagamentos.map((p) => (
               <Row key={p.id}>
                 <Td muted className="tabular-nums">#{p.id}</Td>
-                <Td className="font-medium text-white">{p.titulo}</Td>
+                <Td className="font-medium text-cx-text">{p.titulo}</Td>
                 <Td muted className="text-xs uppercase">{p.tipo}</Td>
                 <Td right className="tabular-nums">{formatBRL(p.valor)}</Td>
                 <Td>
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-cx-border bg-cx-surface px-2 py-1 text-[11px] font-medium text-cx-muted">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusDot(p.status) }} />
                     {p.status}
                   </span>

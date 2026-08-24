@@ -7,8 +7,8 @@ import { ImovelForm } from "@/components/ImovelForm";
 export function AddImovelForm() {
   return (
     <div className="p-6">
-      <h1 className="mb-1 text-xl font-semibold text-white">Adicionar Imóvel</h1>
-      <p className="mb-6 text-sm text-white/50">Cadastro completo — dados, valores, descrição e imagens.</p>
+      <h1 className="mb-1 text-xl font-semibold text-cx-text">Adicionar Imóvel</h1>
+      <p className="mb-6 text-sm text-cx-muted">Cadastro completo — dados, valores, descrição e imagens.</p>
       <ImovelForm mode="create" />
     </div>
   );

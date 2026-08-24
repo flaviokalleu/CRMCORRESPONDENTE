@@ -12,10 +12,10 @@ function TooltipContent({ active, payload }) {
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0f1c33] px-2.5 py-1.5 text-xs shadow-xl">
-      <p className="flex items-center gap-1.5 font-semibold text-white">
+    <div className="rounded-lg border border-cx-border bg-[#0f1c33] px-2.5 py-1.5 text-xs shadow-xl">
+      <p className="flex items-center gap-1.5 font-semibold text-cx-text">
         <span className="h-2 w-2 rounded-full" style={{ background: p.payload.color }} />
-        {p.value.toLocaleString("pt-BR")} <span className="font-normal text-white/40">{p.name}</span>
+        {p.value.toLocaleString("pt-BR")} <span className="font-normal text-cx-muted">{p.name}</span>
       </p>
     </div>
   );
@@ -76,11 +76,11 @@ export function StatusBreakdownChart({ aprovados, reprovados, pendentes }) {
       </ResponsiveContainer>
 
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-tabular text-lg font-bold text-white">{total.toLocaleString("pt-BR")}</span>
-        <span className="text-[0.6rem] uppercase tracking-wide text-white/40">clientes</span>
+        <span className="font-tabular text-lg font-bold text-cx-text">{total.toLocaleString("pt-BR")}</span>
+        <span className="text-[0.6rem] uppercase tracking-wide text-cx-muted">clientes</span>
       </div>
 
-      <div className="mt-2 flex items-center justify-center gap-3 text-[0.65rem] text-white/60">
+      <div className="mt-2 flex items-center justify-center gap-3 text-[0.65rem] text-cx-muted">
         {data.map((d) => (
           <span key={d.name} className="inline-flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />

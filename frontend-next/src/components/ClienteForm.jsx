@@ -114,11 +114,11 @@ const EMPTY_FILES = {
 
 // ── UI atoms ─────────────────────────────────────────────────────────────────
 const fieldCls =
-  "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none transition-colors focus:border-orange-500/50 focus:bg-white/[0.05] focus:ring-2 focus:ring-orange-500/25 [&>option]:bg-[#0f1a30]";
+  "w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text placeholder-[#9aa6b4] outline-none transition-colors focus:border-cx-blue focus:bg-cx-surface focus:ring-2 focus:ring-cx-blue/20 [&>option]:bg-white [&>option]:text-cx-text";
 
 function Label({ children, icon: Icon }) {
   return (
-    <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+    <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cx-muted">
       {Icon && <Icon className="h-3 w-3" />}
       {children}
     </span>
@@ -147,14 +147,14 @@ function Money({ label, icon, value, onChange, placeholder }) {
   return (
     <label className="block">
       <Label icon={icon}>{label}</Label>
-      <div className="flex items-stretch overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] transition-colors focus-within:border-orange-500/50 focus-within:ring-2 focus-within:ring-orange-500/25">
-        <span className="flex items-center border-r border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-white/40">R$</span>
+      <div className="flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface transition-colors focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
+        <span className="flex items-center border-r border-cx-border bg-cx-surface px-3 text-xs font-semibold text-cx-muted">R$</span>
         <input
           value={value}
           onChange={onChange}
           placeholder={placeholder}
           inputMode="numeric"
-          className="w-full bg-transparent px-3 py-2.5 text-sm tabular-nums text-white placeholder-white/25 outline-none"
+          className="w-full bg-transparent px-3 py-2.5 text-sm tabular-nums text-cx-text placeholder-[#9aa6b4] outline-none"
         />
       </div>
     </label>
@@ -168,7 +168,7 @@ function Switch({ checked, onChange }) {
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-orange-500" : "bg-white/15"}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-cx-orange" : "bg-cx-border"}`}
     >
       <span
         className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${checked ? "translate-x-5" : ""}`}
@@ -179,10 +179,10 @@ function Switch({ checked, onChange }) {
 
 function SwitchRow({ checked, onChange, title, desc }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-cx-border bg-cx-surface px-4 py-3">
       <div>
-        <p className="text-sm font-medium text-white">{title}</p>
-        {desc && <p className="text-[11px] text-white/40">{desc}</p>}
+        <p className="text-sm font-medium text-cx-text">{title}</p>
+        {desc && <p className="text-[11px] text-cx-muted">{desc}</p>}
       </div>
       <Switch checked={checked} onChange={onChange} />
     </div>
@@ -193,20 +193,20 @@ function Dropzone({ label, icon: Icon, files, onChange, onClear }) {
   return (
     <div className="space-y-1.5">
       <Label icon={Icon}>{label}</Label>
-      <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-5 text-center transition-colors hover:border-orange-500/40 hover:bg-white/[0.04]">
-        <Upload className="h-5 w-5 text-white/25 transition-colors group-hover:text-orange-400" />
-        <span className="text-[11px] text-white/30 group-hover:text-white/50">Selecionar arquivos</span>
+      <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-cx-border bg-cx-surface px-4 py-5 text-center transition-colors hover:border-orange-200 hover:bg-cx-surface">
+        <Upload className="h-5 w-5 text-cx-muted transition-colors group-hover:text-orange-700" />
+        <span className="text-[11px] text-cx-muted group-hover:text-cx-muted">Selecionar arquivos</span>
         <input type="file" multiple onChange={onChange} className="hidden" />
       </label>
       {files.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {files.map((f, i) => (
-            <span key={i} className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-md border border-orange-500/20 bg-orange-500/10 px-2 py-1 text-[10px] text-white/70">
+            <span key={i} className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-md border border-cx-orange/30 bg-orange-50 px-2 py-1 text-[10px] text-cx-orange-text">
               <FileText className="h-3 w-3 shrink-0" />
               <span className="truncate">{f.name}</span>
             </span>
           ))}
-          <button type="button" onClick={onClear} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] text-white/40 hover:text-white/70">
+          <button type="button" onClick={onClear} className="inline-flex items-center gap-1 rounded-md border border-cx-border px-2 py-1 text-[10px] text-cx-muted hover:text-cx-muted">
             <X className="h-3 w-3" /> limpar
           </button>
         </div>
@@ -217,16 +217,16 @@ function Dropzone({ label, icon: Icon, files, onChange, onClear }) {
 
 function Section({ id, refCb, icon: Icon, title, subtitle, done, children }) {
   return (
-    <section ref={refCb} id={id} className="scroll-mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
-      <header className="mb-5 flex items-center gap-3 border-b border-white/[0.07] pb-4">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${done ? "border-orange-500/40 bg-orange-500/15 text-orange-300" : "border-white/10 bg-white/[0.04] text-white/50"}`}>
+    <section ref={refCb} id={id} className="scroll-mt-6 rounded-2xl border border-cx-border bg-cx-surface p-5 sm:p-6">
+      <header className="mb-5 flex items-center gap-3 border-b border-cx-border/[0.15] pb-4">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${done ? "border-cx-orange/40 bg-orange-50 text-cx-orange-text" : "border-cx-border bg-cx-surface text-cx-muted"}`}>
           <Icon className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <h3 className="text-[15px] font-semibold tracking-tight text-white">{title}</h3>
-          {subtitle && <p className="truncate text-[11px] text-white/40">{subtitle}</p>}
+          <h3 className="text-[15px] font-semibold tracking-tight text-cx-text">{title}</h3>
+          {subtitle && <p className="truncate text-[11px] text-cx-muted">{subtitle}</p>}
         </div>
-        {done && <Check className="ml-auto h-4 w-4 text-orange-400" />}
+        {done && <Check className="ml-auto h-4 w-4 text-orange-700" />}
       </header>
       {children}
     </section>
@@ -234,9 +234,9 @@ function Section({ id, refCb, icon: Icon, title, subtitle, done, children }) {
 }
 
 const TONE = {
-  green: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
-  red: "border-red-400/30 bg-red-400/10 text-red-300",
-  amber: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+  green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  red: "border-red-200 bg-red-50 text-red-700",
+  amber: "border-amber-200 bg-amber-50 text-amber-700",
 };
 
 // ── Componente principal ────────────────────────────────────────────────────────
@@ -427,16 +427,16 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
       <aside className="lg:sticky lg:top-2 lg:self-start">
         <div className="space-y-4">
           {/* ficha */}
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02]">
+          <div className="overflow-hidden rounded-2xl border border-cx-border bg-cx-surface">
             <div className="flex items-center gap-3 p-4">
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-bold ${initials ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white" : "border border-dashed border-white/15 text-white/30"}`}>
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-bold ${initials ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white" : "border border-dashed border-cx-border text-cx-muted"}`}>
                 {initials || <User className="h-5 w-5" />}
               </div>
               <div className="min-w-0">
-                <p className={`truncate text-sm font-semibold ${form.nome ? "text-white" : "text-white/40"}`}>
+                <p className={`truncate text-sm font-semibold ${form.nome ? "text-cx-text" : "text-cx-muted"}`}>
                   {form.nome || "Novo cliente"}
                 </p>
-                <p className="truncate text-[11px] tabular-nums text-white/40">
+                <p className="truncate text-[11px] tabular-nums text-cx-muted">
                   {form.cpf || "CPF não informado"}
                 </p>
               </div>
@@ -450,26 +450,26 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
             </div>
 
             {/* renda combinada */}
-            <div className="border-t border-white/[0.07] p-4">
+            <div className="border-t border-cx-border/[0.15] p-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Renda combinada</span>
-                {rendaConjuge > 0 && <span className="text-[10px] text-white/30">2 rendas</span>}
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cx-muted">Renda combinada</span>
+                {rendaConjuge > 0 && <span className="text-[10px] text-cx-muted">2 rendas</span>}
               </div>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
-                <span className="text-sm text-white/40">R$ </span>{formatReais(rendaTotal)}
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-cx-text">
+                <span className="text-sm text-cx-muted">R$ </span>{formatReais(rendaTotal)}
               </p>
-              <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/8">
+              <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-cx-surface">
                 {rendaTotal > 0 ? (
                   <>
                     <div className="h-full bg-orange-500" style={{ width: `${(rendaCliente / rendaTotal) * 100}%` }} />
                     <div className="h-full bg-orange-500/40" style={{ width: `${(rendaConjuge / rendaTotal) * 100}%` }} />
                   </>
                 ) : (
-                  <div className="h-full w-full bg-white/5" />
+                  <div className="h-full w-full bg-cx-surface" />
                 )}
               </div>
               {rendaConjuge > 0 && (
-                <div className="mt-2 flex justify-between text-[10px] tabular-nums text-white/40">
+                <div className="mt-2 flex justify-between text-[10px] tabular-nums text-cx-muted">
                   <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-orange-500 align-middle" />Titular R$ {formatReais(rendaCliente)}</span>
                   <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-orange-500/40 align-middle" />Cônjuge R$ {formatReais(rendaConjuge)}</span>
                 </div>
@@ -477,9 +477,9 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
             </div>
 
             {/* chips */}
-            <div className="flex flex-wrap gap-1.5 border-t border-white/[0.07] p-4">
+            <div className="flex flex-wrap gap-1.5 border-t border-cx-border/[0.15] p-4">
               {dossieChips.map((chip) => (
-                <span key={chip.key} className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${chip.on ? "bg-orange-500/15 text-orange-300" : "bg-white/[0.04] text-white/30"}`}>
+                <span key={chip.key} className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${chip.on ? "bg-orange-50 text-cx-orange-text" : "bg-cx-bg text-cx-muted"}`}>
                   {chip.on ? <Check className="h-2.5 w-2.5" /> : <span className="h-2.5 w-2.5 rounded-full border border-current" />}
                   {chip.label}
                 </span>
@@ -488,13 +488,13 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
           </div>
 
           {/* índice / scroll-spy */}
-          <nav className="hidden rounded-2xl border border-white/10 bg-white/[0.02] p-2 lg:block">
+          <nav className="hidden rounded-2xl border border-cx-border bg-cx-surface p-2 lg:block">
             <div className="flex items-center justify-between px-2 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Seções</span>
-              <span className="text-[10px] font-semibold tabular-nums text-orange-400">{progress}%</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cx-muted">Seções</span>
+              <span className="text-[10px] font-semibold tabular-nums text-orange-700">{progress}%</span>
             </div>
             <ul className="relative">
-              <span className="absolute left-[15px] top-3 bottom-3 w-px bg-white/8" aria-hidden />
+              <span className="absolute left-[15px] top-3 bottom-3 w-px bg-cx-surface" aria-hidden />
               {sections.map((s) => {
                 const isActive = active === s.id;
                 return (
@@ -502,13 +502,13 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
                     <button
                       type="button"
                       onClick={() => goTo(s.id)}
-                      className={`relative flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${isActive ? "bg-white/[0.06] text-white" : "text-white/50 hover:text-white/80"}`}
+                      className={`relative flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors ${isActive ? "bg-cx-surface text-cx-text" : "text-cx-muted hover:text-cx-muted"}`}
                     >
-                      <span className={`z-10 flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${s.done ? "border-orange-500 bg-orange-500" : isActive ? "border-orange-400 bg-[#0f1a30]" : "border-white/20 bg-[#0f1a30]"}`}>
-                        {s.done && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
+                      <span className={`z-10 flex h-3 w-3 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${s.done ? "border-cx-orange bg-cx-orange" : isActive ? "border-cx-orange bg-cx-surface" : "border-cx-border bg-cx-surface"}`}>
+                        {s.done && <Check className="h-2 w-2 text-cx-text" strokeWidth={4} />}
                       </span>
                       {s.label}
-                      {isActive && <ChevronRight className="ml-auto h-3.5 w-3.5 text-orange-400" />}
+                      {isActive && <ChevronRight className="ml-auto h-3.5 w-3.5 text-orange-700" />}
                     </button>
                   </li>
                 );
@@ -521,7 +521,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
       {/* ══ Coluna direita: FORMULÁRIO ══ */}
       <div className="space-y-5">
         {(error || success) && (
-          <div className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${success ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
+          <div className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${success ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
             {success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
             {success || error}
           </div>

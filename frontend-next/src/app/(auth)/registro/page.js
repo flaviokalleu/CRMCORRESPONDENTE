@@ -101,15 +101,15 @@ export default function RegistroPage() {
   return (
     <div className="min-h-screen bg-caixa-primary flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-white text-center mb-6">Crie sua conta no CRM IMOB</h1>
+        <h1 className="text-2xl font-bold text-cx-text text-center mb-6">Crie sua conta no CRM IMOB</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.06] p-6">
+        <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-cx-border bg-cx-surface p-6">
           {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-white/70">Dados da empresa</h2>
+            <h2 className="text-sm font-semibold text-cx-muted">Dados da empresa</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Nome da empresa" value={empresa.nome} onChange={(v) => setEmpresa((p) => ({ ...p, nome: v }))} />
               <Field label="Slug" value={empresa.slug} onChange={(v) => setEmpresa((p) => ({ ...p, slug: slugify(v) }))} />
@@ -120,7 +120,7 @@ export default function RegistroPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-white/70">Dados do administrador</h2>
+            <h2 className="text-sm font-semibold text-cx-muted">Dados do administrador</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Nome" value={admin.first_name} onChange={(v) => setAdmin((p) => ({ ...p, first_name: v }))} />
               <Field label="Sobrenome" value={admin.last_name} onChange={(v) => setAdmin((p) => ({ ...p, last_name: v }))} />
@@ -132,11 +132,11 @@ export default function RegistroPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-white/70">Plano</h2>
+            <h2 className="text-sm font-semibold text-cx-muted">Plano</h2>
             <select
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-caixa-orange/50"
+              className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
             >
               <option value="">Selecione um plano...</option>
               {plans.map((p) => (
@@ -155,9 +155,9 @@ export default function RegistroPage() {
             {submitting ? "Criando conta..." : "Criar conta"}
           </button>
 
-          <p className="text-center text-sm text-white/40">
+          <p className="text-center text-sm text-cx-muted">
             Já tem conta?{" "}
-            <Link href="/login" className="text-caixa-orange hover:underline">
+            <Link href="/login" className="text-cx-orange-text hover:underline">
               Entrar
             </Link>
           </p>
@@ -170,12 +170,12 @@ export default function RegistroPage() {
 function Field({ label, value, onChange, type = "text" }) {
   return (
     <div>
-      <label className="block text-xs text-white/50 mb-1">{label}</label>
+      <label className="block text-xs text-cx-muted mb-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none focus:border-caixa-orange/50"
+        className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
       />
     </div>
   );

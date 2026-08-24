@@ -49,13 +49,13 @@ export default function ImovelCard({ imovel }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imagemUrl} alt={nome || "Imóvel"} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-gray-400 text-sm">Sem imagem</span>
+          <span className="text-gray-700 text-sm">Sem imagem</span>
         )}
       </div>
 
       <div className="p-4">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-caixa-orange">
+          <span className="text-xs font-semibold uppercase tracking-wide text-cx-orange-text">
             {tipo || "Imóvel"}
           </span>
         </div>

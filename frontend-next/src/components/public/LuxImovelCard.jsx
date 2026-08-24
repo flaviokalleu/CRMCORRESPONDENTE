@@ -27,7 +27,7 @@ export function LuxImovelCard({ imovel }) {
   return (
     <Link
       href={`/imoveis/${id}`}
-      className="group relative flex flex-col overflow-hidden rounded-3xl bg-white/[0.03] ring-gold transition-all duration-500 hover:-translate-y-1.5 hover:bg-white/[0.06]"
+      className="group relative flex flex-col overflow-hidden rounded-3xl bg-cx-bg ring-gold transition-all duration-500 hover:-translate-y-1.5 hover:bg-cx-surface"
     >
       <div className="relative h-56 w-full overflow-hidden">
         {imagemUrl ? (
@@ -54,38 +54,38 @@ export function LuxImovelCard({ imovel }) {
       <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-lg font-medium text-white">
+            <h3 className="truncate font-display text-lg font-medium text-cx-text">
               {nome || "Nome não disponível"}
             </h3>
-            <p className="truncate text-sm text-white/45">{localizacao || "Localização não informada"}</p>
+            <p className="truncate text-sm text-[#9aa6b4]">{localizacao || "Localização não informada"}</p>
           </div>
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-caixa-orange/10 text-caixa-orange transition-colors group-hover:bg-caixa-orange group-hover:text-white">
             <ArrowUpRight className="h-4 w-4" />
           </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/5 pt-4 text-xs text-white/50">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-cx-border pt-4 text-xs text-[#9aa6b4]">
           {!!quartos && (
             <span className="inline-flex items-center gap-1.5">
-              <BedDouble className="h-3.5 w-3.5 text-caixa-orange-light" />
+              <BedDouble className="h-3.5 w-3.5 text-cx-orange-text" />
               {quartos}
             </span>
           )}
           {!!banheiro && (
             <span className="inline-flex items-center gap-1.5">
-              <Bath className="h-3.5 w-3.5 text-caixa-orange-light" />
+              <Bath className="h-3.5 w-3.5 text-cx-orange-text" />
               {banheiro}
             </span>
           )}
           {!!vagasFinal && (
             <span className="inline-flex items-center gap-1.5">
-              <Car className="h-3.5 w-3.5 text-caixa-orange-light" />
+              <Car className="h-3.5 w-3.5 text-cx-orange-text" />
               {vagasFinal}
             </span>
           )}
           {!!area && (
             <span className="inline-flex items-center gap-1.5">
-              <Maximize className="h-3.5 w-3.5 text-caixa-orange-light" />
+              <Maximize className="h-3.5 w-3.5 text-cx-orange-text" />
               {area}m²
             </span>
           )}

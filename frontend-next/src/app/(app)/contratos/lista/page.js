@@ -15,12 +15,12 @@ export default async function ContratosListPage() {
       <PageHeader title="Contratos" subtitle="Cadastre e gerencie os contratos de aluguel" />
 
       <Card>
-        <h2 className="mb-4 text-sm font-semibold text-white">Novo contrato</h2>
+        <h2 className="mb-4 text-sm font-semibold text-cx-text">Novo contrato</h2>
         <ContratoVincularForm opcoes={opcoes || { imoveis: [], proprietarios: [], inquilinos: [] }} />
       </Card>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold text-white/70">Contratos cadastrados</h2>
+        <h2 className="mb-3 text-sm font-semibold text-cx-muted">Contratos cadastrados</h2>
         {lista.length === 0 ? (
           <EmptyState icon={FileSignature} title="Nenhum contrato cadastrado" hint="Vincule um imóvel a um inquilino acima." />
         ) : (
@@ -37,12 +37,12 @@ export default async function ContratosListPage() {
               {lista.map((c) => (
                 <Row key={c.id}>
                   <Td muted className="tabular-nums">#{c.id}</Td>
-                  <Td className="font-medium text-white">{c.nome || c.inquilino_nome || "—"}</Td>
+                  <Td className="font-medium text-cx-text">{c.nome || c.inquilino_nome || "—"}</Td>
                   <Td muted>{c.imovel?.nome_imovel || "Não vinculado"}</Td>
                   <Td muted>{c.proprietario?.name || c.proprietario_nome || "—"}</Td>
                   <Td muted>
                     <span className="inline-flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5 text-white/35" />
+                      <FileText className="h-3.5 w-3.5 text-cx-muted" />
                       {Array.isArray(c.contrato_documentos) ? c.contrato_documentos.length : 0}
                     </span>
                   </Td>

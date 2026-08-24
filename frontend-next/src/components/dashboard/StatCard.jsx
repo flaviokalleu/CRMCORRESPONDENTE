@@ -7,10 +7,10 @@ import { CHART_COLORS } from "@/lib/chart-colors";
 export function StatCard({ icon: Icon, label, value, delta, trend, accent = "orange" }) {
   const hasDelta = typeof delta === "number" && !Number.isNaN(delta);
   const positive = hasDelta && delta >= 0;
-  const accentColor = accent === "blue" ? CHART_COLORS.blue : CHART_COLORS.orange;
+  const accentColor = accent === "blue" ? CHART_COLORS.navy : CHART_COLORS.white;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 transition-colors hover:bg-white/[0.06]">
+    <div className="rounded-lg border border-cx-border bg-cx-surface px-2.5 py-2 transition-colors hover:bg-cx-surface">
       <div className="flex items-center justify-between gap-1.5">
         {Icon && (
           <span
@@ -23,7 +23,7 @@ export function StatCard({ icon: Icon, label, value, delta, trend, accent = "ora
         {hasDelta && (
           <span
             className={`font-tabular inline-flex items-center gap-0.5 rounded px-1 py-px text-[0.58rem] font-semibold ${
-              positive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+              positive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
             }`}
           >
             {positive ? <TrendingUp className="h-2 w-2" /> : <TrendingDown className="h-2 w-2" />}
@@ -32,8 +32,8 @@ export function StatCard({ icon: Icon, label, value, delta, trend, accent = "ora
         )}
       </div>
 
-      <p className="font-tabular mt-1 text-base font-bold leading-none text-white">{value}</p>
-      <p className="mt-0.5 truncate text-[0.65rem] text-white/45">{label}</p>
+      <p className="font-tabular mt-1 text-base font-bold leading-none text-cx-text">{value}</p>
+      <p className="mt-0.5 truncate text-[0.65rem] text-cx-muted">{label}</p>
 
       {trend?.length > 1 && (
         <div className="-mx-0.5 mt-1">
