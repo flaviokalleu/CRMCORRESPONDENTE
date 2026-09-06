@@ -11,7 +11,8 @@ import (
 
 func TestCriarRejeitaPapelInvalido(t *testing.T) {
 	svc := NewService(nil, nil)
-	_, err := svc.Criar(context.Background(), CriarRequest{Papel: "sindico", Nome: "Ana"})
+	// actor nil: a validação de papel retorna antes de qualquer uso do actor.
+	_, err := svc.Criar(context.Background(), CriarRequest{Papel: "sindico", Nome: "Ana"}, nil)
 	if !errors.Is(err, ErrPapelInvalido) {
 		t.Fatalf("erro = %v, quero ErrPapelInvalido", err)
 	}
@@ -19,7 +20,7 @@ func TestCriarRejeitaPapelInvalido(t *testing.T) {
 
 func TestCriarRejeitaNomeVazio(t *testing.T) {
 	svc := NewService(nil, nil)
-	_, err := svc.Criar(context.Background(), CriarRequest{Papel: PapelComprador, Nome: "   "})
+	_, err := svc.Criar(context.Background(), CriarRequest{Papel: PapelComprador, Nome: "   "}, nil)
 	if !errors.Is(err, ErrNomeObrigatorio) {
 		t.Fatalf("erro = %v, quero ErrNomeObrigatorio", err)
 	}
@@ -85,8 +86,9 @@ func TestFormatDatePtrNilRetornaNil(t *testing.T) {
 func TestFichaCompradorFormataDataNascimentoComoString(t *testing.T) {
 	nasc := time.Date(1990, 5, 20, 0, 0, 0, 0, time.UTC)
 	p := &models.Pessoa{ID: 7, Nome: "Ana", DataNascimento: &nasc}
+	actor := &models.User{ID: 42}
 
-	c := fichaComprador(p)
+	c := fichaComprador(p, actor)
 	if c.DataNascimento == nil {
 		t.Fatal("Cliente.DataNascimento = nil, queria \"1990-05-20\"")
 	}
@@ -100,9 +102,33 @@ func TestFichaCompradorFormataDataNascimentoComoString(t *testing.T) {
 
 func TestFichaCompradorSemDataNascimentoNaoQuebra(t *testing.T) {
 	p := &models.Pessoa{ID: 7, Nome: "Ana"}
-	c := fichaComprador(p)
+	c := fichaComprador(p, &models.User{ID: 1})
 	if c.DataNascimento != nil {
 		t.Fatalf("Cliente.DataNascimento = %v, quero nil", *c.DataNascimento)
+	}
+}
+
+// TestFichaCompradorPreencheUserIDComOAutor cobre o Fix 1 do relatório final:
+// sem UserID, a ficha nasce órfã (user_id NULL) e clientes.CanAccessClient
+// nunca deixa o corretor que acabou de criá-la voltar a acessá-la.
+func TestFichaCompradorPreencheUserIDComOAutor(t *testing.T) {
+	p := &models.Pessoa{ID: 7, Nome: "Ana"}
+	actor := &models.User{ID: 99}
+
+	c := fichaComprador(p, actor)
+	if c.UserID == nil {
+		t.Fatal("Cliente.UserID = nil, queria o id do autor (99)")
+	}
+	if *c.UserID != 99 {
+		t.Fatalf("Cliente.UserID = %d, quero 99", *c.UserID)
+	}
+}
+
+func TestFichaCompradorSemActorDeixaUserIDNil(t *testing.T) {
+	p := &models.Pessoa{ID: 7, Nome: "Ana"}
+	c := fichaComprador(p, nil)
+	if c.UserID != nil {
+		t.Fatalf("Cliente.UserID = %v, quero nil quando não há actor", *c.UserID)
 	}
 }
 
@@ -122,7 +148,7 @@ func TestFichaInquilinoMantemDataComoTime(t *testing.T) {
 func TestCriarFichaPapelInvalidoRetornaErro(t *testing.T) {
 	db := dryRunDB(t)
 	p := &models.Pessoa{ID: 7, Nome: "Ana"}
-	if _, err := criarFicha(ctxComTenant(), db, p, "sindico"); !errors.Is(err, ErrPapelInvalido) {
+	if _, err := criarFicha(ctxComTenant(), db, p, "sindico", &models.User{ID: 1}); !errors.Is(err, ErrPapelInvalido) {
 		t.Fatalf("erro = %v, quero ErrPapelInvalido", err)
 	}
 }

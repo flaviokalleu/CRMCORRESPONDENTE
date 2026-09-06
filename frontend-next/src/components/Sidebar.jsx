@@ -173,7 +173,7 @@ export function Sidebar({ onClose, onToggleVisibility }) {
         items: isStaff ? [
           { href: "/corretores/lista", icon: UserCog, label: "Corretores" },
           { href: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
-          { href: "/pessoas?papel=proprietario", icon: Users, label: "Proprietários" },
+          { href: "/proprietarios/lista", icon: Users, label: "Proprietários" },
         ] : [],
       },
       {

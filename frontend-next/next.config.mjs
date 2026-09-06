@@ -4,7 +4,6 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/clientes/adicionar", destination: "/pessoas/nova", permanent: true },
-      { source: "/proprietarios/lista", destination: "/pessoas?papel=proprietario", permanent: true },
     ];
   },
   async headers() {

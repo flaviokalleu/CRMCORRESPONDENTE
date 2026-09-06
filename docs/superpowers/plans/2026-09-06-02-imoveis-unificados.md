@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- Migrations golang-migrate, numeradas. Este plano usa **0005**.
+- Migrations golang-migrate, numeradas. Este plano usa **0008**.
 - Sem dados em produção: migrations não precisam preservar linhas.
 - Tenant scoping é automático para models com `tenant_id`. Não escrever `WHERE tenant_id` à mão.
 - `imoveis` tem timestamps em **camelCase** (`"createdAt"`, `"updatedAt"`) além de `created_at`/`updated_at` — divergência preservada do Sequelize. Não "consertar" isso aqui.
@@ -26,8 +26,8 @@
 ### Task 1: Migration de fusão de imóveis
 
 **Files:**
-- Create: `backend-go/migrations/0005_imoveis_finalidade.up.sql`
-- Create: `backend-go/migrations/0005_imoveis_finalidade.down.sql`
+- Create: `backend-go/migrations/0008_imoveis_finalidade.up.sql`
+- Create: `backend-go/migrations/0008_imoveis_finalidade.down.sql`
 
 **Interfaces:**
 - Consumes: plano 01 Task 1.
@@ -43,7 +43,7 @@ Expected: 3 linhas — `chamado_manutencaos_aluguel_id_fkey`, `cliente_aluguels_
 
 - [ ] **Step 2: Escrever a migration up**
 
-`backend-go/migrations/0005_imoveis_finalidade.up.sql`:
+`backend-go/migrations/0008_imoveis_finalidade.up.sql`:
 ```sql
 -- imoveis absorve alugueis. valor_venda passa a aceitar NULL porque um imóvel
 -- exclusivamente de locação não tem preço de venda.
@@ -87,7 +87,7 @@ WHERE confrelid = 'public.alugueis'::regclass;
 
 - [ ] **Step 3: Escrever a migration down**
 
-`backend-go/migrations/0005_imoveis_finalidade.down.sql`:
+`backend-go/migrations/0008_imoveis_finalidade.down.sql`:
 ```sql
 CREATE TABLE public.alugueis (
     id serial PRIMARY KEY,
@@ -165,7 +165,7 @@ Expected: sem erro.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend-go/migrations/0005_imoveis_finalidade.*.sql
+git add backend-go/migrations/0008_imoveis_finalidade.*.sql
 git commit -m "feat(db): funde alugueis em imoveis com coluna finalidade"
 ```
 

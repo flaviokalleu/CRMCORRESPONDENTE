@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- Migrations golang-migrate, numeradas. Este plano usa **0006**.
+- Migrations golang-migrate, numeradas. Este plano usa **0009**.
 - Sem dados em produção.
 - Tenant scoping automático para models com `tenant_id`.
 - Rodar backend: `cd backend-go && go build ./... && go test ./...`
@@ -25,8 +25,8 @@
 ### Task 1: Migration de propostas
 
 **Files:**
-- Create: `backend-go/migrations/0006_propostas_flexiveis.up.sql`
-- Create: `backend-go/migrations/0006_propostas_flexiveis.down.sql`
+- Create: `backend-go/migrations/0009_propostas_flexiveis.up.sql`
+- Create: `backend-go/migrations/0009_propostas_flexiveis.down.sql`
 
 **Interfaces:**
 - Consumes: tabela `pessoas` (plano 01 Task 2).
@@ -34,7 +34,7 @@
 
 - [ ] **Step 1: Escrever a migration up**
 
-`backend-go/migrations/0006_propostas_flexiveis.up.sql`:
+`backend-go/migrations/0009_propostas_flexiveis.up.sql`:
 ```sql
 -- imovel_id nulo cobre a proposta feita antes de existir imóvel cadastrado.
 ALTER TABLE public.propostas ALTER COLUMN imovel_id DROP NOT NULL;
@@ -65,7 +65,7 @@ CREATE INDEX idx_propostas_pessoa ON public.propostas (pessoa_id);
 
 - [ ] **Step 2: Escrever a migration down**
 
-`backend-go/migrations/0006_propostas_flexiveis.down.sql`:
+`backend-go/migrations/0009_propostas_flexiveis.down.sql`:
 ```sql
 DROP INDEX IF EXISTS public.idx_propostas_pessoa;
 ALTER TABLE public.propostas DROP CONSTRAINT propostas_pessoa_id_fkey;
@@ -124,7 +124,7 @@ Expected: sem erro.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend-go/migrations/0006_propostas_flexiveis.*.sql
+git add backend-go/migrations/0009_propostas_flexiveis.*.sql
 git commit -m "feat(db): proposta com imovel opcional e vinculada a pessoa"
 ```
 

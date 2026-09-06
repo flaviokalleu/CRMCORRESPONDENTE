@@ -41,12 +41,27 @@ migrate create -ext sql -dir migrations -seq nome_da_mudanca
 migrate -path migrations -database "$DATABASE_URL" up
 ```
 
-## Banco `crmjs` local (dev)
+## Banco novo e banco local
 
-Já está marcado como versão `2` (`migrate force 2`) — **não rode `up` nele**, ele já
-tem o schema+seed aplicados (foi a própria fonte do dump). `force` é usado quando o
-banco já tem o schema mas nunca rodou pelo `golang-migrate` (evita re-executar
-`CREATE TABLE` em tabelas que já existem).
+Em um banco vazio, execute `migrate up`: as migrations 0001–0007 criam o schema,
+o seed e aplicam as correções de FKs, pessoas e tipos numéricos. Em banco já
+versionado, o mesmo comando aplica apenas as versões pendentes. Não use `force`
+para substituir a execução de migrations.
+
+O banco local foi atualizado para a versão 7 em 2026-09-06.
+
+- 0006 vincula os cadastros existentes a pessoas, por CPF normalizado e empresa.
+  Cadastros sem CPF recebem identidades separadas. Dados inválidos interrompem a
+  transação; nenhum cadastro é descartado. O down preserva esses vínculos.
+- 0007 torna a unicidade de e-mail de clientes restrita à empresa. O down falha
+  sem alterar dados se já houver e-mails iguais em empresas diferentes.
+
+### Teste em banco descartável
+
+Com PostgreSQL local e credenciais de desenvolvimento em `backend-go/.env`,
+execute `TEST_MIGRATIONS=1 go test ./migrations -v -count=1` (no PowerShell,
+defina `$env:TEST_MIGRATIONS='1'` antes do comando). O teste exige permissão para
+criar banco, aplica o histórico completo e remove seu banco temporário ao fim.
 
 ## Convenções
 

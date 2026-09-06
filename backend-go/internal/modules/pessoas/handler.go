@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	"crmimob/internal/auth"
 )
 
 type Handler struct{ svc *Service }
@@ -69,12 +71,17 @@ func (h *Handler) Get(c *gin.Context) {
 }
 
 func (h *Handler) Criar(c *gin.Context) {
+	actor, ok := auth.UserFrom(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Não autorizado"})
+		return
+	}
 	var req CriarRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "papel e nome são obrigatórios"})
 		return
 	}
-	out, err := h.svc.Criar(c.Request.Context(), req)
+	out, err := h.svc.Criar(c.Request.Context(), req, actor)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrPapelInvalido):

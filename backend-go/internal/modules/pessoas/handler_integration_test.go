@@ -9,20 +9,29 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	"crmimob/internal/auth"
+	"crmimob/internal/models"
 )
 
 // newTestRouter monta um *gin.Engine só com o handler de pessoas montado sob
-// /api, sem auth nem tenant middleware — a responsabilidade deles é de quem
-// monta o grupo real (ver internal/server/router.go), não do handler. O
-// isolamento de tenant continua ativo porque vem dos callbacks do GORM
-// (registrados por integrationDB), acionados por qualquer db.WithContext(ctx)
-// que o service faça — daí o contexto de cada requisição ser trocado por
-// integrationCtx() antes do ServeHTTP, no mesmo espírito de
+// /api, sem o middleware real de auth/tenant (ver internal/server/router.go)
+// — só um stub que injeta um *models.User no contexto Gin, na mesma chave
+// (auth.CtxUser) que auth.Required() usaria, porque Handler.Criar agora
+// exige actor (Fix 1 do relatório final: Cliente.UserID precisa vir de
+// alguém). O isolamento de tenant continua ativo por fora disso, pelos
+// callbacks do GORM (registrados por integrationDB), acionados por qualquer
+// db.WithContext(ctx) que o service faça — daí o contexto de cada requisição
+// ser trocado por integrationCtx() antes do ServeHTTP, no mesmo espírito de
 // internal/tenant/scope_test.go.
 func newTestRouter(db *gorm.DB) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	api := r.Group("/api")
+	api.Use(func(c *gin.Context) {
+		c.Set(auth.CtxUser, &models.User{ID: 1, IsAdministrador: true})
+		c.Next()
+	})
 	h := NewHandler(NewService(NewRepository(db), db))
 	h.Register(api)
 	return r

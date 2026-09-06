@@ -92,6 +92,13 @@ func integrationCtx() context.Context {
 	return tenant.With(context.Background(), tenant.Scope{TenantID: &id})
 }
 
+// testActor é o corretor "autenticado" usado nos testes de integração que
+// chamam svc.Criar — precisa ser não-nil para fichaComprador preencher
+// Cliente.UserID (Fix 1 do relatório final).
+func testActor() *models.User {
+	return &models.User{ID: 2, IsCorretor: true}
+}
+
 // limparPorCPF apaga, nesta ordem (fichas antes da identidade, por causa da FK
 // pessoa_id), qualquer linha de teste que tenha sobrado com o CPF dado. Usado
 // em t.Cleanup para não deixar lixo no banco de desenvolvimento mesmo quando o
@@ -146,7 +153,7 @@ func TestCriarIntegracaoRollbackQuandoFichaFalha(t *testing.T) {
 		Papel: PapelComprador,
 		Nome:  "Pessoa Deve Ser Revertida",
 		CPF:   cpf,
-	})
+	}, testActor())
 	if err == nil {
 		t.Fatal("Criar = nil, queria erro de constraint ao gravar ficha com CPF já usado por outra ficha do tenant")
 	}
@@ -171,12 +178,12 @@ func TestCriarIntegracaoReaproveitaIdentidadePorCPF(t *testing.T) {
 	const cpf = "90022233344"
 	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
 
-	primeira, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Reaproveitamento CPF", CPF: cpf})
+	primeira, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Reaproveitamento CPF", CPF: cpf}, testActor())
 	if err != nil {
 		t.Fatalf("criar comprador: %v", err)
 	}
 
-	segunda, err := svc.Criar(ctx, CriarRequest{Papel: PapelInquilino, Nome: "Reaproveitamento CPF", CPF: cpf})
+	segunda, err := svc.Criar(ctx, CriarRequest{Papel: PapelInquilino, Nome: "Reaproveitamento CPF", CPF: cpf}, testActor())
 	if err != nil {
 		t.Fatalf("criar inquilino reaproveitando cpf: %v", err)
 	}
@@ -208,11 +215,11 @@ func TestListIntegracaoDevolvePapeisSemNMaisUm(t *testing.T) {
 	const cpf = "90044455566"
 	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
 
-	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Lista Com Papeis", CPF: cpf})
+	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Lista Com Papeis", CPF: cpf}, testActor())
 	if err != nil {
 		t.Fatalf("criar comprador: %v", err)
 	}
-	if _, err := svc.Criar(ctx, CriarRequest{Papel: PapelProprietario, Nome: "Lista Com Papeis", CPF: cpf}); err != nil {
+	if _, err := svc.Criar(ctx, CriarRequest{Papel: PapelProprietario, Nome: "Lista Com Papeis", CPF: cpf}, testActor()); err != nil {
 		t.Fatalf("criar proprietario: %v", err)
 	}
 
@@ -243,11 +250,11 @@ func TestCriarIntegracaoPapelDuplicadoNaoEscreveNada(t *testing.T) {
 	const cpf = "90033344455"
 	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
 
-	if _, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Papel Duplicado", CPF: cpf}); err != nil {
+	if _, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Papel Duplicado", CPF: cpf}, testActor()); err != nil {
 		t.Fatalf("criar comprador: %v", err)
 	}
 
-	_, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Papel Duplicado", CPF: cpf})
+	_, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Papel Duplicado", CPF: cpf}, testActor())
 	if !errors.Is(err, ErrPapelJaExiste) {
 		t.Fatalf("erro = %v, quero ErrPapelJaExiste", err)
 	}
@@ -274,7 +281,7 @@ func TestCriarIntegracaoDevolveFichaIDDoComprador(t *testing.T) {
 	const cpf = "90055566677"
 	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
 
-	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Ficha ID Comprador", CPF: cpf})
+	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Ficha ID Comprador", CPF: cpf}, testActor())
 	if err != nil {
 		t.Fatalf("criar comprador: %v", err)
 	}
@@ -289,5 +296,41 @@ func TestCriarIntegracaoDevolveFichaIDDoComprador(t *testing.T) {
 	}
 	if *criada.FichaID != cliente.ID {
 		t.Fatalf("FichaID = %d, queria %d (id real da linha em clientes)", *criada.FichaID, cliente.ID)
+	}
+}
+
+// TestCriarIntegracaoCompradorHerdaUserIDDoAutor cobre o Fix 1 do relatório
+// final: o dashboard leva o corretor para o wizard em /pessoas/nova, que
+// chama este Criar. Sem UserID preenchido, a linha de clientes nasce com
+// user_id NULL e clientes.CanAccessClient nunca deixa o corretor que a criou
+// voltar a abri-la em /editar-cliente/<ficha_id> — ela fica órfã e
+// inacessível. Este teste grava de verdade contra o banco e confirma que o
+// user_id gravado é o do actor que chamou Criar, não NULL.
+func TestCriarIntegracaoCompradorHerdaUserIDDoAutor(t *testing.T) {
+	db := integrationDB(t)
+	ctx := integrationCtx()
+	svc := NewService(NewRepository(db), db)
+
+	const cpf = "90066677788"
+	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
+
+	corretor := &models.User{ID: 3, IsCorretor: true}
+	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Comprador Do Corretor", CPF: cpf}, corretor)
+	if err != nil {
+		t.Fatalf("criar comprador: %v", err)
+	}
+	if criada.FichaID == nil {
+		t.Fatal("FichaID = nil, queria o id da ficha de cliente recém-criada")
+	}
+
+	var cliente models.Cliente
+	if err := db.WithContext(ctx).First(&cliente, *criada.FichaID).Error; err != nil {
+		t.Fatalf("buscar cliente gravado: %v", err)
+	}
+	if cliente.UserID == nil {
+		t.Fatal("cliente.UserID = nil, queria o id do corretor autor (ficha órfã e inacessível)")
+	}
+	if *cliente.UserID != corretor.ID {
+		t.Fatalf("cliente.UserID = %d, quero %d (id do corretor que criou a ficha)", *cliente.UserID, corretor.ID)
 	}
 }

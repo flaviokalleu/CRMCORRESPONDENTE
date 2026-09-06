@@ -23,9 +23,9 @@ type Cliente struct {
 
 	// 3.1 Identificação / pessoais
 	Nome           *string `gorm:"column:nome" json:"nome"`
-	Email          *string `gorm:"column:email;uniqueIndex" json:"email"`
+	Email          *string `gorm:"column:email" json:"email"`
 	Telefone       *string `gorm:"column:telefone" json:"telefone"`
-	CPF            *string `gorm:"column:cpf;uniqueIndex" json:"cpf"`
+	CPF            *string `gorm:"column:cpf" json:"cpf"`
 	EstadoCivil    *string `gorm:"column:estado_civil" json:"estado_civil"`
 	Naturalidade   *string `gorm:"column:naturalidade" json:"naturalidade"`
 	Profissao      *string `gorm:"column:profissao" json:"profissao"`

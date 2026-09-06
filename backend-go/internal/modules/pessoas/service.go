@@ -127,7 +127,15 @@ func (s *Service) BuscarPorID(ctx context.Context, id uint) (*PessoaComPapeis, e
 
 // Criar grava identidade e ficha na MESMA transação. Se a ficha falhar, a
 // pessoa não é criada — é isso que impede pessoas e ficha de divergirem.
-func (s *Service) Criar(ctx context.Context, req CriarRequest) (*PessoaComPapeis, error) {
+//
+// actor é o usuário autenticado que está fazendo a chamada (vindo de
+// auth.UserFrom no handler, igual a clientes.Handler.Create) — precisa
+// chegar até fichaComprador para preencher Cliente.UserID, senão a ficha
+// nasce órfã (user_id NULL) e o corretor que acabou de criá-la não consegue
+// mais abri-la, porque clientes.CanAccessClient só libera acesso a quem é
+// dono. actor pode ser nil só em teste unitário que nunca alcança
+// criarFicha (ex.: papel inválido / nome vazio, que retornam antes).
+func (s *Service) Criar(ctx context.Context, req CriarRequest, actor *models.User) (*PessoaComPapeis, error) {
 	if !papelValido(req.Papel) {
 		return nil, ErrPapelInvalido
 	}
@@ -170,7 +178,7 @@ func (s *Service) Criar(ctx context.Context, req CriarRequest) (*PessoaComPapeis
 			return ErrPapelJaExiste
 		}
 
-		fichaID, err := criarFicha(ctx, tx, pessoa, req.Papel)
+		fichaID, err := criarFicha(ctx, tx, pessoa, req.Papel, actor)
 		if err != nil {
 			return err
 		}
@@ -204,7 +212,12 @@ func jaTem(p models.Papeis, papel string) bool {
 // clientes.data_nascimento é VARCHAR(10) legado (*string), diferente de
 // pessoas.data_nascimento que é DATE (*time.Time) — por isso formata de volta
 // para string aqui.
-func fichaComprador(p *models.Pessoa) models.Cliente {
+//
+// UserID segue a MESMA regra de clientes.Service.Create (internal/modules/
+// clientes/service.go): sem um user_id explícito para transferir a posse
+// (esta rota não expõe um campo assim), a ficha pertence a quem a está
+// criando — corretor, admin ou correspondente. Ver resolveClienteOwner.
+func fichaComprador(p *models.Pessoa, actor *models.User) models.Cliente {
 	return models.Cliente{
 		PessoaID:       &p.ID,
 		Nome:           &p.Nome,
@@ -213,7 +226,28 @@ func fichaComprador(p *models.Pessoa) models.Cliente {
 		Telefone:       p.Telefone,
 		Status:         "aguardando_aprovacao",
 		DataNascimento: formatDatePtr(p.DataNascimento),
+		UserID:         resolveClienteOwner(actor),
 	}
+}
+
+// resolveClienteOwner devolve o user_id a gravar em Cliente.UserID.
+//
+// Mirror de clientes.Service.Create (~linhas 183-194): lá, quando o request
+// não traz um user_id explícito para transferir a posse a outra pessoa,
+// TODOS os papéis (corretor, admin, correspondente) caem no mesmo "else" e
+// o dono vira quem está autenticado. O branch de corretor só existe naquele
+// código para o caso em que UM user_id explícito FOI enviado — aí sim
+// corretor é impedido de usar esse valor e é forçado a si mesmo, diferente
+// de admin/correspondente. CriarRequest (POST /pessoas) não expõe nenhum
+// campo equivalente para escolher outro dono, então esse branch nunca entra
+// em jogo aqui: o resultado observável, para os três papéis, é sempre
+// actor.ID — daí não haver um switch nesta função.
+func resolveClienteOwner(actor *models.User) *uint {
+	if actor == nil {
+		return nil
+	}
+	id := actor.ID
+	return &id
 }
 
 // fichaInquilino monta a ficha de cliente_aluguels a partir da identidade.
@@ -245,10 +279,10 @@ func fichaProprietario(p *models.Pessoa) models.Proprietario {
 // Create, então basta ler de volta. As fichas mantêm nome/cpf/email/
 // telefone/data de nascimento como cópia de leitura: pessoas é a fonte da
 // verdade, mas os módulos que consultam as fichas continuam funcionando.
-func criarFicha(ctx context.Context, tx *gorm.DB, p *models.Pessoa, papel string) (uint, error) {
+func criarFicha(ctx context.Context, tx *gorm.DB, p *models.Pessoa, papel string, actor *models.User) (uint, error) {
 	switch papel {
 	case PapelComprador:
-		c := fichaComprador(p)
+		c := fichaComprador(p, actor)
 		if err := tx.WithContext(ctx).Create(&c).Error; err != nil {
 			return 0, err
 		}
