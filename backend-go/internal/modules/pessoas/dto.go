@@ -26,7 +26,16 @@ type CriarRequest struct {
 }
 
 // PessoaComPapeis é o que a API devolve: a identidade mais os papéis derivados.
+//
+// FichaID só é preenchido por Criar — é o id da ficha (clientes /
+// cliente_aluguels / proprietario, conforme o papel) recém-criada na mesma
+// transação, para o frontend poder linkar direto na tela de edição daquele
+// papel sem precisar de uma segunda chamada. Buscar/BuscarPorID não
+// preenchem esse campo (fica nil / omitido do JSON): não fazem sentido para
+// uma pessoa já existente, que pode ter várias fichas — uma por papel — e
+// nenhuma delas é "a" ficha da consulta.
 type PessoaComPapeis struct {
 	models.Pessoa
-	Papeis models.Papeis `json:"papeis"`
+	Papeis  models.Papeis `json:"papeis"`
+	FichaID *uint         `json:"ficha_id,omitempty"`
 }

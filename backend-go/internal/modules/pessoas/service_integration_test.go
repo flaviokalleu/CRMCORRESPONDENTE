@@ -260,3 +260,34 @@ func TestCriarIntegracaoPapelDuplicadoNaoEscreveNada(t *testing.T) {
 		t.Fatalf("esperava exatamente 1 ficha de cliente com cpf=%q, achei %d (papel duplicado escreveu algo)", cpf, count)
 	}
 }
+
+// TestCriarIntegracaoDevolveFichaIDDoComprador cobre o campo FichaID: o
+// frontend usa ele para linkar direto na ficha recém-criada (/editar-cliente/
+// <ficha_id>) sem precisar de uma segunda chamada para descobrir o id.
+// Confirma que o valor devolvido por Criar é o id de verdade da linha
+// gravada em clientes, não um valor qualquer.
+func TestCriarIntegracaoDevolveFichaIDDoComprador(t *testing.T) {
+	db := integrationDB(t)
+	ctx := integrationCtx()
+	svc := NewService(NewRepository(db), db)
+
+	const cpf = "90055566677"
+	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
+
+	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Ficha ID Comprador", CPF: cpf})
+	if err != nil {
+		t.Fatalf("criar comprador: %v", err)
+	}
+
+	if criada.FichaID == nil {
+		t.Fatal("FichaID = nil, queria o id da ficha de cliente recém-criada")
+	}
+
+	var cliente models.Cliente
+	if err := db.WithContext(ctx).Where("cpf = ?", cpf).First(&cliente).Error; err != nil {
+		t.Fatalf("buscar cliente gravado: %v", err)
+	}
+	if *criada.FichaID != cliente.ID {
+		t.Fatalf("FichaID = %d, queria %d (id real da linha em clientes)", *criada.FichaID, cliente.ID)
+	}
+}

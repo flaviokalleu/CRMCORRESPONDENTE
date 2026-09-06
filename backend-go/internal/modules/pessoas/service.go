@@ -170,7 +170,8 @@ func (s *Service) Criar(ctx context.Context, req CriarRequest) (*PessoaComPapeis
 			return ErrPapelJaExiste
 		}
 
-		if err := criarFicha(ctx, tx, pessoa, req.Papel); err != nil {
+		fichaID, err := criarFicha(ctx, tx, pessoa, req.Papel)
+		if err != nil {
 			return err
 		}
 
@@ -178,7 +179,7 @@ func (s *Service) Criar(ctx context.Context, req CriarRequest) (*PessoaComPapeis
 		if err != nil {
 			return err
 		}
-		out = &PessoaComPapeis{Pessoa: *pessoa, Papeis: papeis}
+		out = &PessoaComPapeis{Pessoa: *pessoa, Papeis: papeis, FichaID: &fichaID}
 		return nil
 	})
 	if err != nil {
@@ -239,23 +240,33 @@ func fichaProprietario(p *models.Pessoa) models.Proprietario {
 	}
 }
 
-// criarFicha abre a ficha mínima do papel, copiando a identidade. As fichas
-// mantêm nome/cpf/email/telefone/data de nascimento como cópia de leitura:
-// pessoas é a fonte da verdade, mas os módulos que consultam as fichas
-// continuam funcionando.
-func criarFicha(ctx context.Context, tx *gorm.DB, p *models.Pessoa, papel string) error {
+// criarFicha abre a ficha mínima do papel, copiando a identidade, e devolve
+// o id da linha criada — GORM preenche o campo ID da struct depois do
+// Create, então basta ler de volta. As fichas mantêm nome/cpf/email/
+// telefone/data de nascimento como cópia de leitura: pessoas é a fonte da
+// verdade, mas os módulos que consultam as fichas continuam funcionando.
+func criarFicha(ctx context.Context, tx *gorm.DB, p *models.Pessoa, papel string) (uint, error) {
 	switch papel {
 	case PapelComprador:
 		c := fichaComprador(p)
-		return tx.WithContext(ctx).Create(&c).Error
+		if err := tx.WithContext(ctx).Create(&c).Error; err != nil {
+			return 0, err
+		}
+		return c.ID, nil
 
 	case PapelInquilino:
 		ca := fichaInquilino(p)
-		return tx.WithContext(ctx).Create(&ca).Error
+		if err := tx.WithContext(ctx).Create(&ca).Error; err != nil {
+			return 0, err
+		}
+		return ca.ID, nil
 
 	case PapelProprietario:
 		pr := fichaProprietario(p)
-		return tx.WithContext(ctx).Create(&pr).Error
+		if err := tx.WithContext(ctx).Create(&pr).Error; err != nil {
+			return 0, err
+		}
+		return pr.ID, nil
 	}
-	return ErrPapelInvalido
+	return 0, ErrPapelInvalido
 }

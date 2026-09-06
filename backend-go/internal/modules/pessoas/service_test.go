@@ -122,7 +122,7 @@ func TestFichaInquilinoMantemDataComoTime(t *testing.T) {
 func TestCriarFichaPapelInvalidoRetornaErro(t *testing.T) {
 	db := dryRunDB(t)
 	p := &models.Pessoa{ID: 7, Nome: "Ana"}
-	if err := criarFicha(ctxComTenant(), db, p, "sindico"); !errors.Is(err, ErrPapelInvalido) {
+	if _, err := criarFicha(ctxComTenant(), db, p, "sindico"); !errors.Is(err, ErrPapelInvalido) {
 		t.Fatalf("erro = %v, quero ErrPapelInvalido", err)
 	}
 }
