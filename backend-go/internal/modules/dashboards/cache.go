@@ -31,13 +31,18 @@ func NewCache() *Cache {
 	return &Cache{data: make(map[string]entry)}
 }
 
-// Key monta a chave de cache: tenant_id (ou "global") + email + role.
-func Key(tenantID *uint, email, role string) string {
+// Key monta a chave de cache: tenant_id (ou "global") + email + role +
+// responsável opcional. O último componente evita misturar recortes do filtro.
+func Key(tenantID *uint, email, role string, responsavelID ...*uint) string {
 	tid := "global"
 	if tenantID != nil {
 		tid = uintToString(*tenantID)
 	}
-	return tid + "|" + email + "|" + role
+	responsavel := "todos"
+	if len(responsavelID) > 0 && responsavelID[0] != nil {
+		responsavel = uintToString(*responsavelID[0])
+	}
+	return tid + "|" + email + "|" + role + "|" + responsavel
 }
 
 func (c *Cache) Get(key string) (*MainDashboardResponse, bool) {

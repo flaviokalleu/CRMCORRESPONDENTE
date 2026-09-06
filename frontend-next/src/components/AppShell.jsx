@@ -15,18 +15,23 @@ export function AppShell({ children }) {
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
+    const check = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    const frame = window.requestAnimationFrame(check);
     window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", check);
+    };
   }, []);
 
   useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile]);
-
-  useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
+    if (!isMobile) return undefined;
+    const frame = window.requestAnimationFrame(() => setSidebarOpen(false));
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname, isMobile]);
 
   return (
@@ -42,7 +47,7 @@ export function AppShell({ children }) {
 
       {sidebarVisible && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/20 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
+          className={`fixed inset-y-0 left-0 z-50 w-[240px] shrink-0 border-r border-white/20 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

@@ -36,25 +36,28 @@ type Performance struct {
 	EficienciaMedia float64 `json:"eficienciaMedia"`
 	TaxaAprovacao   float64 `json:"taxaAprovacao"`
 	TaxaRejeicao    float64 `json:"taxaRejeicao"`
+	TaxaResolucao   float64 `json:"taxaResolucao"`
 	TotalUsuarios   int64   `json:"totalUsuarios"`
 }
 
 // RendaAnalysis replica o bloco `rendaAnalysis` (agregação CAST de valor_renda).
 type RendaAnalysis struct {
-	RendaMedia      float64 `json:"rendaMedia"`
-	RendaMaxima     float64 `json:"rendaMaxima"`
-	RendaMinima     float64 `json:"rendaMinima"`
-	ClientesComRenda int64  `json:"clientesComRenda"`
+	RendaMedia       float64 `json:"rendaMedia"`
+	RendaMaxima      float64 `json:"rendaMaxima"`
+	RendaMinima      float64 `json:"rendaMinima"`
+	ClientesComRenda int64   `json:"clientesComRenda"`
 }
 
 // ClienteResumo é o subconjunto de colunas usado em listas do dashboard
 // (aguardando-aprovação, notificações etc.).
 type ClienteResumo struct {
-	ID        uint      `json:"id"`
-	Nome      string    `json:"nome"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	ID              uint      `json:"id"`
+	Nome            string    `json:"nome"`
+	Status          string    `json:"status"`
+	ResponsavelID   *uint     `json:"responsavel_id,omitempty"`
+	ResponsavelNome string    `json:"responsavel_nome,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
 // MainDashboardResponse é o payload de GET /api/dashboard/.
@@ -92,20 +95,20 @@ type MonthlyResponse struct {
 
 // WeeklyResponse é o payload de GET /api/dashboard/weekly.
 type WeeklyResponse struct {
-	WeeklyData        [7]int64  `json:"weeklyData"`
-	PreviousWeekData  [7]int64  `json:"previousWeekData"`
-	TotalWeek         int64     `json:"totalWeek"`
-	WeeklyGrowth      float64   `json:"weeklyGrowth"`
-	Labels            [7]string `json:"labels"`
+	WeeklyData       [7]int64  `json:"weeklyData"`
+	PreviousWeekData [7]int64  `json:"previousWeekData"`
+	TotalWeek        int64     `json:"totalWeek"`
+	WeeklyGrowth     float64   `json:"weeklyGrowth"`
+	Labels           [7]string `json:"labels"`
 }
 
 // SystemStatsResponse é o payload de GET /api/dashboard/system-stats.
 type SystemStatsResponse struct {
-	TotalRegistros     int64     `json:"totalRegistros"`
-	TotalUsuarios      int64     `json:"totalUsuarios"`
-	AtividadeRecente   int64     `json:"atividadeRecente"`
-	UsuariosRecentes   int64     `json:"usuariosRecentes"`
-	Timestamp          time.Time `json:"timestamp"`
+	TotalRegistros   int64     `json:"totalRegistros"`
+	TotalUsuarios    int64     `json:"totalUsuarios"`
+	AtividadeRecente int64     `json:"atividadeRecente"`
+	UsuariosRecentes int64     `json:"usuariosRecentes"`
+	Timestamp        time.Time `json:"timestamp"`
 }
 
 // ActivityMetricsResponse é o payload de GET /api/dashboard/activity-metrics.
@@ -119,17 +122,52 @@ type ActivityMetricsResponse struct {
 
 // Notification é um item dinâmico de GET /api/dashboard/notifications.
 type Notification struct {
-	Type      string    `json:"type"` // warning|info|alert
-	Title     string    `json:"title"`
-	Message   string    `json:"message"`
-	ClienteID uint      `json:"cliente_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	Type            string    `json:"type"` // warning|info|alert
+	Title           string    `json:"title"`
+	Message         string    `json:"message"`
+	ClienteID       uint      `json:"cliente_id,omitempty"`
+	ClienteNome     string    `json:"cliente_nome,omitempty"`
+	Status          string    `json:"status,omitempty"`
+	ResponsavelID   *uint     `json:"responsavel_id,omitempty"`
+	ResponsavelNome string    `json:"responsavel_nome,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty"`
 }
 
 // NotificationsResponse é o payload de GET /api/dashboard/notifications.
 type NotificationsResponse struct {
 	Notifications []Notification `json:"notifications"`
-	UnreadCount   int            `json:"unreadCount"`
+	ActiveCount   int            `json:"activeCount"`
+}
+
+// AnalyticsQuery representa o recorte global aplicado aos gráficos do painel.
+// Fim é exclusivo para evitar ambiguidades de horário no último dia.
+type AnalyticsQuery struct {
+	Periodo       string
+	Inicio        time.Time
+	Fim           time.Time
+	ResponsavelID *uint
+}
+
+// AnalyticsResponse reúne comparação temporal, desfechos e ranking sob o
+// mesmo recorte. Taxas ponteiro viram null quando não existe base válida.
+type AnalyticsResponse struct {
+	Periodo            string       `json:"periodo"`
+	Inicio             string       `json:"inicio"`
+	Fim                string       `json:"fim"`
+	Labels             []string     `json:"labels"`
+	CurrentData        []int64      `json:"currentData"`
+	PreviousData       []int64      `json:"previousData"`
+	TotalCurrent       int64        `json:"totalCurrent"`
+	TotalPrevious      int64        `json:"totalPrevious"`
+	Growth             *float64     `json:"growth"`
+	ClientesAprovados  int64        `json:"clientesAprovados"`
+	ClientesReprovados int64        `json:"clientesReprovados"`
+	ClientesPendentes  int64        `json:"clientesPendentes"`
+	TaxaAprovacao      *float64     `json:"taxaAprovacao"`
+	TaxaRejeicao       *float64     `json:"taxaRejeicao"`
+	TaxaResolucao      *float64     `json:"taxaResolucao"`
+	TopUsuarios        []TopUsuario `json:"topUsuarios"`
 }
 
 // mesesPT são os rótulos de mês em português (índice 0 = Janeiro).

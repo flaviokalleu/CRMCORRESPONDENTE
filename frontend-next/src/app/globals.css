@@ -93,6 +93,28 @@
   --color-caixa-error: #ef4444;
   --color-caixa-info: #3b82f6;
 
+  /* ─── Tema "wb" — Dashboard Webba (escuro) ───────────────────────────
+     Superfície escura profunda derivada do navy da marca (não um preto
+     genérico). O azul Webba #1c60ab é a cor de PRESENÇA (filetes, estados
+     ativos); sobre fundo escuro ele fica escuro demais como tinta de dado,
+     então wb-brand-ink (#4f92e8) é o passo claro usado em gráficos e
+     números coloridos. Semânticas em passos claros, todas ≥ 3:1 sobre
+     wb-surface — e sempre acompanhadas de rótulo em texto. ─── */
+  --color-wb-bg: #f4f7fb;
+  --color-wb-surface: #ffffff;
+  --color-wb-surface-2: #f7f9fc;
+  --color-wb-border: #e0e7f0;
+  --color-wb-text: #17243a;
+  --color-wb-muted: #64748b;
+  --color-wb-brand: #005ca9;
+  --color-wb-brand-ink: #1467ad;
+  --color-wb-good: #047857;
+  --color-wb-bad: #b42318;
+  --color-wb-warn: #a65308;
+  --color-wb-info: #075985;
+  --color-wb-analytics: #6d28d9;
+  --color-wb-tech: #0f766e;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -544,5 +566,556 @@ select optgroup {
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot::after {
     animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dashboard Webba — "Central de Inteligência da Operação" (escuro).
+   Escopado por classe: só a rota /dashboard usa. O tema claro "cx" das
+   demais páginas permanece intacto. A superfície carrega uma aura azul
+   Webba muito sutil no topo — é a assinatura da marca sem logotipo.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Página: fundo profundo + aura da marca no topo. Cobre a superfície clara
+   do <main> do AppShell apenas nesta rota (mesmo padrão da .cx-page). */
+.wb-page {
+  background:
+    radial-gradient(900px 460px at 82% -8%, rgba(0, 92, 169, 0.08), transparent 66%),
+    var(--color-wb-bg);
+  color: var(--color-wb-text);
+}
+
+/* Painel: profundidade por gradiente vertical discreto + borda hairline.
+   Sem vidro, sem sombra pesada — a hierarquia vem da composição. */
+.wb-panel {
+  background: var(--color-wb-surface);
+  border: 1px solid var(--color-wb-border);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 1px 2px rgba(23, 36, 58, 0.04),
+    0 5px 16px rgba(23, 36, 58, 0.035);
+}
+
+/* Painel-herói: único brilho permitido — filete superior azul Webba. */
+.wb-panel-hero {
+  position: relative;
+}
+.wb-panel-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 92, 169, 0.55), transparent);
+}
+
+/* Rótulo de bloco ("eyebrow"): hierarquia silenciosa acima do número-âncora. */
+.wb-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-wb-brand);
+}
+
+/* Chip compacto de informação (papel do usuário, contagens, selo de tipo). */
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--color-wb-border);
+  background: var(--color-wb-surface-2);
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-wb-muted);
+}
+
+/* O navy fica concentrado no briefing: presença de marca sem transformar o
+   dashboard inteiro em uma parede escura. */
+.wb-briefing {
+  border: 1px solid rgba(0, 47, 87, 0.3);
+  border-top: 4px solid var(--color-cx-orange-bright);
+  background: linear-gradient(108deg, #003b71 0%, #005ca9 68%, #0874b9 100%);
+}
+
+.wb-briefing-orbit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(90deg, transparent 18%, black 100%);
+  pointer-events: none;
+}
+/* Identidade visual compartilhada — referência CAIXA CRM Imobiliário. */
+@theme inline {
+  --color-cx-bg: #f3f7fc;
+  --color-cx-border: #e4ebf5;
+  --color-cx-text: #081c3c;
+  --color-cx-muted: #4b6182;
+  --color-cx-blue: #0064ce;
+  --color-cx-blue-dark: #003d77;
+  --color-cx-blue-soft: #eaf4ff;
+  --color-wb-bg: #f3f7fc;
+  --color-wb-text: #081c3c;
+  --color-wb-brand: #0064ce;
+  --color-wb-border: #e4ebf5;
+}
+.app-shell-root { --primary: #0064ce; --ring: #1685ed; --border: #e4ebf5; --foreground: #081c3c; --muted: #f0f5fb; --muted-foreground: #4b6182; }
+.app-shell-scroll { background: #f3f7fc; }
+.app-shell-scroll :is(input,select,textarea) { accent-color: #0075e8; }
+.app-shell-scroll :is(input,select,textarea):focus-visible { outline: 2px solid #1685ed; outline-offset: 2px; }
+.app-shell-scroll :is(a,button):focus-visible,.ref-sidebar :is(a,button):focus-visible { outline: 2px solid #ff9b22; outline-offset: 3px; }
+.app-shell-scroll table thead { background: #f5f8fd; }
+.app-shell-scroll table tbody tr:hover { background: #f3f8ff; }
+.app-shell-scroll .cx-chevron { clip-path: none; border-radius: 20px; }
+.ref-sidebar { background: linear-gradient(150deg,#00579c 0%,#034a86 36%,#003566 100%); }
+.ref-sidebar-brand { min-height: 117px; position: relative; }
+.ref-sidebar-brand > div { position: absolute; right: 2px; top: 5px; }
+.caixa-brand { display: inline-flex; flex-direction: column; color: white; line-height: 1; }
+.caixa-wordmark { font-family: Arial, sans-serif; font-size: 53px; font-weight: 950; letter-spacing: -3px; font-style: italic; }
+.caixa-wordmark > span { color: #ff971c; }
+.caixa-brand-subtitle { margin-top: 8px; font-size: 18px; letter-spacing: .8px; font-weight: 650; }
+.ref-sidebar nav { padding: 10px 16px; }
+.ref-sidebar nav > p { display: none; }
+.ref-sidebar nav :is(a,button) { min-height: 43px; font-size: 14px; font-weight: 400; color: #c0ddf6; }
+.ref-sidebar nav :is(a,button) svg { width: 21px; height: 21px; color: #7cbae9; }
+.ref-sidebar nav .ref-nav-active { background: #0070cd; color: white; box-shadow: inset 0 0 0 1px #ffffff08; }
+.ref-sidebar nav .ref-nav-active svg { color: white; }
+.ref-sidebar nav .ref-nav-active > span.absolute { display: none; }
+/* Rolagem do menu: a barra nativa cortava o azul da sidebar. Fica invisivel em
+   repouso e so aparece — fina e translucida — quando o mouse esta sobre o menu
+   ou o foco entra nele via teclado. A rolagem continua funcionando em telas
+   baixas; some so a barra. */
+.ref-sidebar nav { overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color .25s ease; }
+.ref-sidebar nav:hover, .ref-sidebar nav:focus-within { scrollbar-color: #ffffff40 transparent; }
+@supports not (scrollbar-color: auto) {
+  .ref-sidebar nav::-webkit-scrollbar { width: 6px; }
+  .ref-sidebar nav::-webkit-scrollbar-track { background: transparent; }
+  .ref-sidebar nav::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; transition: background .25s ease; }
+  .ref-sidebar nav:hover::-webkit-scrollbar-thumb, .ref-sidebar nav:focus-within::-webkit-scrollbar-thumb { background: #ffffff40; }
+  .ref-sidebar nav::-webkit-scrollbar-thumb:hover { background: #ffffff66; }
+}
+.ref-header { background: #ffffff; border-bottom: 1px solid #eaf0f8; color: #0a2446; }
+.ref-header > div:first-child { display: none; }
+.ref-header > div:last-child { height: 72px; padding: 0 28px; gap: 16px; }
+.ref-header > div:last-child > div:first-child { flex: 1; min-width: 0; }
+.ref-header :is(button,p,svg,span) { color: #173452; }
+.ref-header button:hover { background: #edf5ff; }
+.ref-header [data-slot=avatar] { width: 41px; height: 41px; background: #deefff; }
+.ref-header [data-slot=avatar-fallback] { background: #deefff; color: #0065c6; }
+.ref-header p { font-size: 13px; line-height: 1.35; }
+.ref-search { width: min(100%,620px); display: flex; align-items: center; gap: 12px; background: #f2f5f9; border: 1px solid #edf1f7; border-radius: 9px; padding: 9px 12px; }
+.ref-search input { width: 100%; min-width: 0; outline: none; font-size: 13px; background: transparent; }
+.ref-search input::placeholder { color: #607593; }
+.ref-search kbd { white-space: nowrap; color: #586e8d; font-size: 12px; background: #e8edf5; border-radius: 4px; padding: 2px 6px; }
+.ref-dashboard { padding: 0 15px 14px; max-width: 1800px; margin: auto; color: #071b3c; }
+.ref-welcome { display: flex; position: relative; align-items: center; justify-content: space-between; min-height: 125px; gap: 12px; padding: 15px 14px; isolation: isolate; }
+.ref-welcome h1 { font-size: clamp(29px,2.8vw,42px); font-weight: 750; letter-spacing: -1.3px; line-height: 1.15; }
+.ref-welcome p { margin-top: 7px; font-size: 16px; color: #3e5578; }
+.ref-campaign { display: flex; align-items: center; align-self: stretch; width: 47%; max-width: 600px; flex-shrink: 0; }
+.ref-campaign strong { font-size: 18px; line-height: 1.12; color: #0061c9; letter-spacing: -.5px; z-index: 1; }
+.ref-campaign strong span { color: #003c76; }
+.ref-campaign-photo { position: absolute; right: -15px; top: 0; bottom: 0; width: 36%; background-image: url('/dashboard-reference.png'); background-size: 1536px 1024px; background-position: right -72px; clip-path: polygon(22% 0,100% 0,100% 100%,0 100%); z-index: -1; }
+.ref-kpis { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+.ref-kpi { background: linear-gradient(115deg,#fff,#fcfdff); display: flex; gap: 15px; border: 1px solid #e4ebf5; border-radius: 14px; padding: 17px 15px 14px; min-height: 117px; align-items: flex-start; }
+.ref-kpi-icon { display: grid; place-items: center; width: 57px; height: 57px; flex-shrink: 0; border-radius: 50%; background: radial-gradient(circle,#f6fbff,#e5f3ff); color: #0070df; }
+.ref-kpi p { font-size: 12px; margin: 1px 0 5px; }
+.ref-kpi-value { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ref-kpi strong { font-size: 30px; line-height: 1.2; font-weight: 750; letter-spacing: -.7px; }
+.ref-kpi small { display: block; font-size: 10px; margin-top: 8px; }
+.ref-growth { color: #00852d; font-size: 12px; font-weight: 650; }
+.ref-negative { color: #bc391b; font-size: 12px; }
+.ref-charts { display: grid; grid-template-columns: 1.13fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.ref-panel { min-width: 0; background: #fff; border: 1px solid #e4ebf5; border-radius: 14px; padding: 16px; box-shadow: 0 2px 5px #17478002; }
+.ref-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 33px; margin-bottom: 8px; }
+.ref-panel h2 { font-size: 16px; font-weight: 750; letter-spacing: -.45px; }
+.ref-panel-heading a { display: flex; align-items: center; gap: 7px; color: #0064d9; font-size: 11px; white-space: nowrap; }
+.ref-panel select,.ref-scope { font-size: 10px; border: 1px solid #e0e8f3; border-radius: 9px; padding: 8px 10px; background: white; color: #405778; }
+.ref-chart { height: 190px; margin-top: 16px; }
+.ref-status { min-height: 206px; display: flex; align-items: center; gap: 12px; }
+.ref-donut { position: relative; width: 52%; height: 190px; flex-shrink: 0; }
+.ref-donut-label { pointer-events: none; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.ref-donut-label strong { font-size: 27px; font-weight: 750; }
+.ref-donut-label span { font-size: 12px; }
+.ref-legend { flex: 1; }
+.ref-legend > div { display: flex; align-items: center; gap: 7px; font-size: 10px; margin: 19px 0; }
+.ref-legend i { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.ref-legend b { margin-left: auto; font-weight: 550; }
+.ref-origins { display: grid; gap: 19px; margin-top: 20px; }
+.ref-origins > div { display: grid; align-items: center; grid-template-columns: 111px 1fr 18px; gap: 8px; font-size: 10px; color: #3c5274; }
+.ref-origins i { height: 16px; background: #edf4fb; border-radius: 3px; }
+.ref-source-note { margin-top: 12px; font-size: 10px; color: #5b708c; }
+.ref-lists { display: grid; grid-template-columns: 1.08fr 1fr 1fr; gap: 10px; }
+.ref-client-row { display: flex; align-items: center; gap: 12px; padding: 7px 3px; border-bottom: 1px solid #f0f3f8; min-height: 49px; }
+.ref-client-row:last-child,.ref-task-row:last-child,.ref-property:last-child { border-bottom: 0; }
+.ref-avatar { display: grid; place-items: center; flex-shrink: 0; border-radius: 50%; height: 36px; width: 36px; background: linear-gradient(140deg,#30a9ed,#005ad4); color: white; font-size: 12px; }
+.ref-client-row > div { flex: 1; min-width: 0; }
+.ref-client-row strong,.ref-task-row strong,.ref-property strong { display: block; font-size: 12px; font-weight: 600; }
+.ref-client-row small,.ref-task-row small,.ref-property small { display: block; color: #4b6182; font-size: 11px; margin-top: 2px; }
+.ref-badge { font-size: 10px; border-radius: 30px; padding: 4px 9px; color: #0057be; background: #e1efff; max-width: 130px; line-height: 1.25; }
+.ref-badge.positive { background: #e0f6e9; color: #007c31; }
+.ref-badge.attention { background: #fff0dc; color: #a8460b; }
+.ref-badge.negative { background: #ffe9e5; color: #b52f26; }
+.ref-task-row { display: flex; align-items: flex-start; gap: 13px; padding: 9px 0; border-bottom: 1px solid #f0f3f8; min-height: 49px; }
+.ref-task-row input { margin-top: 4px; width: 17px; height: 17px; flex-shrink: 0; cursor: pointer; }
+.ref-task-row a { flex: 1; }
+.ref-task-row time { font-size: 11px; color: #c6490b; white-space: nowrap; margin-top: 5px; }
+.ref-property { display: flex; align-items: center; gap: 14px; padding: 8px 0; border-bottom: 1px solid #f0f3f8; }
+.ref-property > img,.ref-property-placeholder { height: 71px; width: 112px; object-fit: cover; flex-shrink: 0; border-radius: 7px; }
+.ref-property-placeholder { display: grid; place-items: center; background: #e8f3fc; color: #0870c6; }
+.ref-property > div { flex: 1; min-width: 0; }
+.ref-property > div > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ref-property b { font-size: 13px; color: #0060c7; }
+.ref-empty { display: grid; align-content: center; text-align: center; min-height: 185px; color: #60738c; font-size: 13px; padding: 16px; }
+.ref-banner { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-top: 11px; border-radius: 14px; padding: 19px 20px; background: linear-gradient(110deg,#003e75,#0065b9); color: #fff; }
+.ref-banner .caixa-wordmark { font-size: 49px; }
+.ref-banner h2 { font-size: 21px; font-weight: 650; line-height: 1.22; letter-spacing: -.4px; }
+.ref-banner > span:not(.caixa-brand) { display: flex; align-items: center; gap: 9px; font-size: 11px; }
+.ref-banner > span > svg { width: 42px; height: 42px; padding: 10px; border-radius: 50%; background: #1383d1; }
+.ref-banner > a { display: flex; align-items: center; gap: 25px; border-radius: 14px; padding: 13px 23px; background: linear-gradient(110deg,#ffad2e,#ff8319); color: #39200b; font-size: 13px; font-weight: 650; }
+.ref-management { margin: 0 15px 20px; border: 1px solid #e4ebf5; border-radius: 13px; background: #fff; }
+.ref-management > summary { padding: 13px 18px; cursor: pointer; color: #005bb5; font-size: 13px; font-weight: 600; }
+@media(min-width:1400px) { .ref-lists .ref-panel { min-height: 297px; } }
+@media(max-width:1250px) { .ref-kpi { gap: 9px; padding: 14px 10px; } .ref-kpi-icon { width: 39px; height: 39px; } .ref-kpi-icon svg { width: 24px; } .ref-kpi strong { font-size: 25px; } .ref-campaign { display: none; } .ref-welcome { min-height: 120px; } .ref-status { flex-direction: column; gap: 0; } .ref-donut { width: 100%; height: 155px; } .ref-legend { width: 100%; } .ref-legend > div { margin: 7px 0; } .ref-chart { height: 235px; } .ref-banner > span:not(.caixa-brand) { display: none; } .ref-property > img,.ref-property-placeholder { width: 70px; height: 64px; } .ref-client-row { gap: 6px; } }
+@media(max-width:1050px) { .ref-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); } .ref-charts,.ref-lists { grid-template-columns: 1fr 1fr; } .ref-charts > :last-child,.ref-lists > :last-child { grid-column: 1 / -1; } .ref-banner h2 { font-size: 17px; } .ref-banner .caixa-wordmark { font-size: 35px; } .ref-origins { margin-bottom: 10px; } }
+@media(max-width:767px) { .ref-header > div:last-child { padding: 0 12px; height: 64px; } .ref-search kbd { display: none; } .ref-dashboard { padding: 0 12px 12px; } .ref-welcome { padding: 20px 3px; } .ref-welcome p { font-size: 13px; } }
+@media(max-width:560px) { .ref-kpis { grid-template-columns: 1fr 1fr; } .ref-kpis > :last-child { grid-column: 1 / -1; } .ref-charts,.ref-lists { grid-template-columns: 1fr; } .ref-status { flex-direction: row; } .ref-donut { width: 52%; height: 185px; } .ref-legend > div { margin: 20px 0; } .ref-banner { flex-wrap: wrap; gap: 16px; } .ref-banner h2 { flex: 1; min-width: 180px; } .ref-banner a { width: 100%; justify-content: space-between; } .ref-search { padding: 8px; gap: 7px; } .ref-search input { font-size: 11px; } .ref-header > div:last-child { gap: 4px; } }
+@media print { .ref-header,.ref-sidebar { display: none; } .ref-panel,.ref-kpi { break-inside: avoid; } .ref-management { border: 0; } }
+.ref-more-menu { margin-top: 9px; } .ref-more-menu > summary { padding: 10px 12px; color: #c0ddf6; font-size: 12px; cursor: pointer; }
+
+/* Landing institucional e autenticação */
+.marketing-page { min-height: 100vh; overflow: hidden; background: #f6faff; color: #0a2147; }
+.marketing-header { height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 0 clamp(22px,6vw,74px); background: #fff; border-bottom: 1px solid #edf2f8; position: relative; z-index: 2; }
+.marketing-logo { display: inline-flex; align-items: center; gap: 5px; color: #0b2d59; font-size: 13px; font-weight: 650; }
+.marketing-logo .caixa-brand { transform: scale(.4); transform-origin: right center; width: 91px; margin-right: -53px; }
+.marketing-logo .caixa-wordmark { font-size: 38px; }
+.marketing-logo .caixa-brand-subtitle { display: none; }
+.marketing-header nav { display: flex; gap: clamp(18px,3vw,38px); align-items: center; font-size: 11px; color: #3d5880; }
+.marketing-header nav a:hover { color: #006bd5; }
+.marketing-header-actions { display: flex; align-items: center; gap: 14px; }
+.marketing-login-link { font-size: 11px; font-weight: 650; color: #0067cd; }
+.marketing-primary,.marketing-secondary,.marketing-outline,.marketing-white-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 7px; font-size: 12px; font-weight: 650; transition: transform .18s, box-shadow .18s, background .18s; }
+.marketing-primary { padding: 12px 20px; color: #fff; background: #0875dc; box-shadow: 0 7px 16px #0072db29; }
+.marketing-primary:hover { background: #0059b9; transform: translateY(-1px); }
+.marketing-primary.small { padding: 10px 16px; font-size: 11px; }
+.marketing-secondary { padding: 11px 19px; color: #0870d5; border: 1px solid #83baff; background: #fff; }
+.marketing-secondary:hover,.marketing-outline:hover { background: #edf6ff; }
+.marketing-outline { padding: 9px 15px; color: #0069d0; border: 1px solid #7eb8fa; background: transparent; }
+.marketing-mobile-menu { display: none; color: #075bab; }
+.marketing-hero { position: relative; display: grid; grid-template-columns: minmax(330px, .82fr) minmax(480px,1.18fr); align-items: center; gap: 35px; min-height: 478px; padding: 54px clamp(22px,6vw,74px) 46px; background: linear-gradient(120deg,#fafdff 0%,#edf6ff 48%,#f8fbff 100%); }
+.marketing-hero-copy { position: relative; z-index: 1; max-width: 490px; }
+.marketing-eyebrow { margin: 0 0 14px; color: #4381bb; font-size: 9px; letter-spacing: 1.8px; font-weight: 750; }
+.marketing-hero h1 { margin: 0; font-size: clamp(34px,4.2vw,52px); line-height: 1.1; letter-spacing: -1.9px; font-weight: 800; }
+.marketing-hero h1 span { color: #0875dc; }
+.marketing-hero-text { margin-top: 17px; max-width: 410px; color: #526d95; font-size: 14px; line-height: 1.55; }
+.marketing-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 24px; }
+.marketing-proof { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 26px; color: #6580a0; font-size: 9px; }
+.marketing-proof span { display: inline-flex; align-items: center; gap: 5px; }
+.marketing-proof svg { color: #0875dc; }
+.marketing-hero-visual { position: relative; min-width: 0; padding: 18px 0 24px; }
+.marketing-dashboard-mockup { position: relative; display: flex; width: 100%; min-height: 270px; overflow: hidden; border: 1px solid #dce8f6; border-radius: 14px; background: #fff; box-shadow: 0 18px 38px #245a8a24; transform: perspective(1300px) rotateY(-5deg) rotateX(1deg); }
+.marketing-mockup-sidebar { width: 118px; flex-shrink: 0; display: flex; flex-direction: column; gap: 11px; padding: 18px 13px; color: #a9d0f5; font-size: 8px; background: linear-gradient(180deg,#064e88,#022f5d); }
+.marketing-mockup-sidebar .caixa-brand { transform: scale(.28); transform-origin: left top; width: 100px; height: 40px; margin-bottom: -6px; }
+.marketing-mockup-sidebar .caixa-wordmark { font-size: 42px; }.marketing-mockup-sidebar .caixa-brand-subtitle { font-size: 12px; margin-top: 4px; }
+.marketing-mockup-sidebar span:not(.caixa-brand) { padding: 4px 5px; border-radius: 4px; }.marketing-mockup-sidebar .active { color: #fff; background: #0878da; }
+.marketing-mockup-main { flex: 1; padding: 16px 18px; color: #122b52; min-width: 0; }.marketing-mockup-top { display: flex; justify-content: space-between; color: #8195ae; font-size: 8px; }.marketing-mockup-top small { text-align: right; color: #2c4467; }.marketing-mockup-main h3 { margin: 18px 0 2px; font-size: 19px; }.marketing-mockup-main h3 span { font-size: 16px; }.marketing-mockup-main > p { font-size: 8px; color: #7387a2; }
+.marketing-mockup-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 14px; }.marketing-mockup-kpis > div { position: relative; display: grid; grid-template-columns: 21px 1fr; column-gap: 6px; padding: 9px 8px; border: 1px solid #e6eef8; border-radius: 8px; }.marketing-mockup-kpis svg { grid-row: span 2; align-self: center; color: #0878dc; width: 19px; }.marketing-mockup-kpis b { font-size: 15px; }.marketing-mockup-kpis small { color: #7289a5; font-size: 7px; }.marketing-mockup-kpis em { position: absolute; right: 6px; top: 7px; color: #12a05b; font-size: 7px; font-style: normal; }.marketing-mockup-graphs { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; margin-top: 12px; }.marketing-mockup-graphs > div { min-height: 91px; padding: 9px; border: 1px solid #e8eef7; border-radius: 7px; font-size: 8px; }.marketing-mini-chart { display: flex; align-items: end; gap: 5px; height: 60px; padding: 10px 5px 0; background: linear-gradient(180deg,#e7f3ff,#fff); border-bottom: 1px solid #d9e5f1; }.marketing-mini-chart i { display: block; flex: 1; border-radius: 3px 3px 0 0; background: #1688ed; }.marketing-mini-chart i:nth-child(1){height:25%}.marketing-mini-chart i:nth-child(2){height:38%}.marketing-mini-chart i:nth-child(3){height:34%}.marketing-mini-chart i:nth-child(4){height:58%}.marketing-mini-chart i:nth-child(5){height:74%}.marketing-mini-chart i:nth-child(6){height:90%}.marketing-funnel { display: grid; gap: 4px; margin-top: 12px; }.marketing-funnel i { display: block; height: 12px; margin: auto; border-radius: 3px; background: #0878dc; }.marketing-funnel i:nth-child(1){width:95%}.marketing-funnel i:nth-child(2){width:77%;background:#359bed}.marketing-funnel i:nth-child(3){width:58%;background:#f5a623}.marketing-funnel i:nth-child(4){width:39%;background:#25a86b}
+.marketing-visual-swoosh { position: absolute; right: 8%; bottom: 0; width: 43%; height: 12px; border-radius: 50%; background: #0878dc; filter: blur(1px); transform: skewX(-32deg); opacity: .9; }
+.marketing-trust { padding: 23px clamp(22px,6vw,74px); background: #fff; text-align: center; border-bottom: 1px solid #e7eef7; }.marketing-trust p { margin-bottom: 17px; color: #87a0bc; font-size: 8px; letter-spacing: 1.3px; font-weight: 700; }.marketing-trust div { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px; color: #6a819d; font-size: 17px; font-weight: 750; }.marketing-trust strong:nth-child(3){font-size:14px}.marketing-trust strong:nth-child(4){font-size:17px;font-weight:500}.marketing-trust strong:nth-child(5){font-size:15px}.marketing-trust strong:nth-child(7){font-size:14px;font-weight:600}
+.marketing-section,.marketing-device-section,.marketing-plans,.marketing-testimonials { max-width: 1120px; margin: 0 auto; padding: 80px clamp(22px,6vw,50px); }.marketing-section { display: grid; grid-template-columns: .82fr 1.18fr; gap: 70px; align-items: center; }.marketing-section h2,.marketing-device-section h2,.marketing-plans h2,.marketing-testimonials h2 { margin: 0; color: #102b55; font-size: clamp(27px,3vw,37px); line-height: 1.13; letter-spacing: -1.2px; }.marketing-section-heading > p:not(.marketing-eyebrow),.marketing-device-section > div:last-child > p:not(.marketing-eyebrow),.marketing-plans > p:not(.marketing-eyebrow) { margin-top: 11px; color: #637a99; font-size: 12px; line-height: 1.55; }.marketing-section-heading .marketing-outline { margin-top: 21px; }.marketing-feature-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }.marketing-feature-grid article { display: flex; gap: 11px; padding: 17px 14px; border: 1px solid #e5edf7; border-radius: 10px; background: #fff; box-shadow: 0 5px 13px #1e548a09; }.marketing-feature-grid article > span { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; color: #0579dc; background: #e8f4ff; }.marketing-feature-grid article:nth-child(2) > span { color: #168a77; background: #e5f7f2; }.marketing-feature-grid article:nth-child(3) > span { color: #f18b1c; background: #fff1df; }.marketing-feature-grid h3 { color: #173357; font-size: 11px; }.marketing-feature-grid p { margin-top: 4px; color: #7389a4; font-size: 9px; line-height: 1.35; }
+.marketing-device-section { display: grid; grid-template-columns: 1.12fr .88fr; align-items: center; gap: 75px; }.marketing-device-mockup { position: relative; min-height: 260px; }.marketing-device-screen { width: 85%; padding: 9px; border-radius: 9px; background: #172942; box-shadow: 0 12px 23px #143f6b32; }.marketing-device-screen .marketing-dashboard-mockup { min-height: 215px; transform: none; }.marketing-device-screen .marketing-mockup-sidebar { width: 70px; padding: 11px 8px; gap: 6px; font-size: 5px; }.marketing-device-screen .marketing-mockup-sidebar .caixa-brand { transform: scale(.2); height: 27px; }.marketing-device-screen .marketing-mockup-main { padding: 11px; }.marketing-device-screen .marketing-mockup-main h3 { margin-top: 8px; font-size: 13px; }.marketing-device-screen .marketing-mockup-kpis b { font-size: 11px; }.marketing-device-screen .marketing-mockup-graphs > div { min-height: 68px; }.marketing-phone { position: absolute; right: 2%; bottom: 0; width: 100px; height: 196px; padding: 6px; border-radius: 16px; background: #13263d; box-shadow: 0 11px 25px #143f6b38; transform: rotate(7deg); }.marketing-phone-screen { height: 100%; padding: 14px 8px; border-radius: 11px; color: #0c2d59; background: #f8fbff; font-size: 8px; font-weight: 700; }.marketing-phone-screen small { display: block; margin: 15px 0 9px; color: #6c84a0; font-weight: 500; }.marketing-phone-screen i { display: block; height: 25px; margin-top: 6px; border: 1px solid #e3edf7; border-radius: 5px; background: #fff; }.marketing-device-section li { display: flex; align-items: center; gap: 7px; margin-top: 11px; color: #536c8f; font-size: 11px; }.marketing-device-section li svg { width: 15px; color: #0878dc; }.marketing-store-buttons { display: flex; gap: 7px; margin-top: 22px; }.marketing-store-buttons span { padding: 7px 12px; border-radius: 5px; color: #fff; background: #111; font-size: 9px; }
+.marketing-stats-band { display: grid; grid-template-columns: 1fr .86fr; align-items: center; gap: 45px; padding: 63px clamp(22px,9vw,130px); color: #fff; background: linear-gradient(110deg,#00376a,#0066bb); }.marketing-stats-band h2 { font-size: clamp(29px,3vw,39px); line-height: 1.08; letter-spacing: -1px; }.marketing-stats-band > div:first-child > p:last-child { margin-top: 17px; color: #c2ddf4; font-size: 11px; line-height: 1.5; }.marketing-stats-band .marketing-eyebrow { color: #9bcaff; }.marketing-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }.marketing-stat-grid strong { display: grid; place-items: center; padding: 23px 12px; border-radius: 9px; background: #ffffff12; font-size: 27px; }.marketing-stat-grid small { margin-top: 4px; font-size: 10px; font-weight: 450; color: #cee4f6; }
+.marketing-plans { text-align: center; }.marketing-plans > p:not(.marketing-eyebrow) { margin: 7px auto 0; }.marketing-plans-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 32px; text-align: left; }.marketing-plans-grid article { position: relative; display: flex; flex-direction: column; padding: 21px 16px 17px; min-height: 300px; border: 1px solid #e0e9f3; border-radius: 10px; background: #fff; }.marketing-plans-grid article.featured { border: 2px solid #1685ed; box-shadow: 0 8px 20px #0573d829; }.marketing-plan-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); padding: 4px 12px; border-radius: 20px; background: #0878dc; color: #fff; font-size: 8px; white-space: nowrap; }.marketing-plans-grid h3 { color: #173357; font-size: 14px; }.marketing-plans-grid article > small { margin-top: 3px; color: #6f85a1; font-size: 9px; }.marketing-plans-grid article > strong { margin-top: 20px; color: #122c57; font-size: 26px; }.marketing-plans-grid article > strong em { margin-left: 3px; color: #6e84a0; font-size: 9px; font-style: normal; font-weight: 500; }.marketing-plans-grid ul { flex: 1; margin-top: 14px; }.marketing-plans-grid li { display: flex; align-items: center; gap: 5px; margin-top: 7px; color: #526c8f; font-size: 9px; }.marketing-plans-grid li svg { width: 12px; color: #3ca1d7; }.marketing-plans-grid .marketing-primary,.marketing-plans-grid .marketing-outline { width: 100%; margin-top: 16px; padding: 9px; font-size: 10px; }
+.marketing-testimonials { text-align: left; }.marketing-testimonials > h2 { margin-bottom: 25px; }.marketing-testimonials > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 13px; }.marketing-testimonials blockquote { display: flex; flex-direction: column; justify-content: space-between; min-height: 140px; padding: 20px; border: 1px solid #e1eaf4; border-radius: 10px; background: #fff; color: #586f90; font-size: 11px; line-height: 1.5; }.marketing-testimonials cite { display: flex; flex-direction: column; margin-top: 18px; color: #15345e; font-size: 10px; font-style: normal; font-weight: 700; }.marketing-testimonials cite small { color: #7990aa; font-size: 8px; font-weight: 500; }
+.marketing-faq { max-width: 760px; margin: 0 auto; padding: 35px 22px 75px; }.marketing-faq h2 { margin-bottom: 18px; color: #102b55; font-size: 28px; }.marketing-faq details { border-top: 1px solid #e0eaf5; padding: 15px 0; }.marketing-faq summary { cursor: pointer; color: #17345d; font-size: 13px; font-weight: 650; }.marketing-faq details p { margin-top: 8px; color: #627a98; font-size: 11px; line-height: 1.5; }
+.marketing-final-cta { display: flex; align-items: center; justify-content: space-between; gap: 25px; padding: 39px clamp(22px,9vw,130px); color: #fff; background: linear-gradient(110deg,#00366a,#005da8); }.marketing-final-cta .marketing-eyebrow { color: #9bcaff; }.marketing-final-cta h2 { font-size: clamp(22px,3vw,31px); }.marketing-final-cta p:last-child { margin-top: 7px; color: #c4dcf1; font-size: 11px; }.marketing-white-button { padding: 12px 20px; color: #0870d5; background: #fff; white-space: nowrap; }.marketing-white-button:hover { transform: translateY(-1px); }
+.marketing-footer { display: grid; grid-template-columns: 1.7fr repeat(4,1fr); gap: 30px; padding: 38px clamp(22px,6vw,74px) 20px; color: #b9d0e9; background: #002d58; }.marketing-footer .marketing-logo { color: #fff; }.marketing-footer .marketing-logo .caixa-brand { transform: scale(.33); width: 75px; margin-right: -43px; }.marketing-footer p { margin-top: 14px; max-width: 160px; font-size: 9px; line-height: 1.45; }.marketing-footer div:not(:first-child) { display: flex; flex-direction: column; gap: 8px; font-size: 9px; }.marketing-footer b { color: #fff; font-size: 10px; margin-bottom: 5px; }.marketing-footer a:hover { color: #fff; }.marketing-footer > small { grid-column: 1 / -1; padding-top: 20px; border-top: 1px solid #ffffff1a; font-size: 8px; }
+.auth-page { display: grid; grid-template-columns: 51% 49%; min-height: 100vh; background: #fff; color: #102c59; }.auth-story { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: 58px clamp(35px,7vw,85px); color: #fff; background: linear-gradient(90deg,#001c39e8 0%,#002e5fe8 57%,#003c76cf 100%), url('/login-house.png') center / cover; }.auth-story:after { content: ''; position: absolute; top: 0; right: -1px; width: 38%; height: 100%; background: linear-gradient(133deg,transparent 47%,#0084ec 47.4%,#0084ec 48%,transparent 48.4%); pointer-events: none; }.auth-story-logo { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 9px; width: fit-content; }.auth-story-logo .caixa-brand { transform: scale(.72); transform-origin: left center; width: 178px; margin-right: -49px; }.auth-story-logo .caixa-wordmark { font-size: 51px; }.auth-story-logo .caixa-brand-subtitle { display: none; }.auth-story-logo > span { font-size: 27px; color: #b8d6f2; font-weight: 350; }.auth-story-copy { position: relative; z-index: 1; max-width: 430px; margin-top: auto; margin-bottom: auto; padding: 55px 0 30px; }.auth-orange-line,.auth-blue-line { display: block; width: 35px; height: 3px; background: #ff981f; margin-bottom: 37px; }.auth-eyebrow { color: #aecbf0; font-size: 11px; letter-spacing: 4px; line-height: 1.8; }.auth-story h1 { margin-top: 27px; font-size: clamp(34px,4.3vw,56px); line-height: 1.05; letter-spacing: -2px; }.auth-story h1 span { color: #12a7ff; }.auth-story-copy > p:last-of-type { margin-top: 25px; max-width: 400px; color: #b0cbed; font-size: 16px; line-height: 1.6; }.auth-benefits { display: grid; gap: 21px; margin-top: 47px; }.auth-benefits > div { display: flex; align-items: center; gap: 16px; }.auth-benefits > div > svg { width: 49px; height: 49px; padding: 14px; border-radius: 10px; color: #fff; background: #1664a77a; }.auth-benefits strong,.auth-benefits small { display: block; }.auth-benefits strong { font-size: 15px; }.auth-benefits small { margin-top: 4px; color: #9bbbe1; font-size: 11px; }.auth-story blockquote { position: relative; z-index: 1; color: #d4e5f7; font-size: 13px; line-height: 1.6; }.auth-story blockquote b { display: block; margin-top: 8px; font-size: 18px; font-weight: 400; }.auth-form-panel { position: relative; padding: 52px clamp(28px,7vw,92px); background: #fff; }.auth-top-link { display: flex; justify-content: flex-end; align-items: center; gap: 24px; color: #657a98; font-size: 13px; }.auth-top-link a { padding: 12px 21px; border: 1px solid #0878e3; border-radius: 8px; color: #0067d2; font-weight: 650; }.auth-form-wrap { max-width: 480px; margin: 95px auto 0; }.auth-blue-line { background: #006ed5; margin-bottom: 28px; }.auth-form-wrap h2 { color: #112856; font-size: 31px; letter-spacing: -.8px; }.auth-form-wrap > p { margin: 6px 0 49px; color: #5b7090; font-size: 18px; }.auth-form-wrap form { display: flex; flex-direction: column; gap: 19px; }.auth-form-wrap form > div { margin: 0; }.auth-form-wrap label { color: #10254a; font-size: 13px; font-weight: 650; }.auth-form-wrap input { height: 52px; border-color: #cbd9ea; border-radius: 9px; color: #152e58; font-size: 14px; }.auth-form-wrap input:focus { border-color: #0878e3; box-shadow: 0 0 0 3px #0878e31f; }.auth-form-wrap button[type=submit] { height: 52px; margin-top: 3px; border-radius: 9px; background: #0878dd; font-size: 14px; }.auth-form-wrap button[type=submit]:hover { background: #005bb8; }.auth-forgot-row { display: flex; justify-content: space-between; gap: 12px; color: #758aa5; font-size: 11px; }.auth-forgot-row a { color: #006ed5; font-weight: 650; }.auth-security { display: flex; gap: 15px; align-items: center; margin-top: 42px; padding: 20px 22px; border-radius: 12px; background: #f3f7fd; }.auth-security > svg { width: 37px; height: 37px; padding: 9px; border-radius: 50%; color: #fff; background: #0878dd; }.auth-security strong,.auth-security small { display: block; }.auth-security strong { font-size: 12px; }.auth-security small { margin-top: 5px; color: #516887; font-size: 11px; line-height: 1.4; }
+@media(max-width:900px){.marketing-header nav,.marketing-header-actions{display:none}.marketing-mobile-menu{display:block}.marketing-hero{grid-template-columns:1fr;padding-top:45px}.marketing-hero-visual{max-width:650px;width:100%;margin:auto}.marketing-section,.marketing-device-section{grid-template-columns:1fr;gap:35px}.marketing-plans-grid{grid-template-columns:repeat(2,1fr)}.auth-page{grid-template-columns:1fr}.auth-story{display:none}.auth-form-panel{padding:28px 22px}.auth-form-wrap{margin:80px auto 0}.auth-top-link{font-size:11px}.marketing-stats-band{grid-template-columns:1fr}.marketing-footer{grid-template-columns:repeat(3,1fr)}.marketing-footer > div:first-child{grid-column:1/-1}}
+@media(max-width:580px){.marketing-hero{padding:35px 18px}.marketing-hero h1{font-size:37px}.marketing-proof{gap:8px}.marketing-dashboard-mockup{min-height:230px}.marketing-mockup-sidebar{width:86px;padding:12px 8px}.marketing-mockup-main{padding:11px}.marketing-mockup-kpis b{font-size:11px}.marketing-mockup-kpis small{font-size:6px}.marketing-section,.marketing-device-section,.marketing-plans,.marketing-testimonials{padding:58px 18px}.marketing-feature-grid,.marketing-plans-grid,.marketing-testimonials > div{grid-template-columns:1fr}.marketing-stats-band{padding:53px 22px}.marketing-final-cta{flex-direction:column;align-items:flex-start;padding:40px 22px}.marketing-footer{grid-template-columns:1fr 1fr;gap:24px}.marketing-footer > div:first-child{grid-column:1/-1}}
+
+/* Escala e contenção compartilhadas por todas as rotas. O conteúdo ganha uma
+   largura confortável em monitores grandes e nunca força o viewport em
+   celulares estreitos. Tabelas continuam rolando dentro do próprio cartão. */
+html, body { max-width: 100%; overflow-x: hidden; }
+*, *::before, *::after { box-sizing: border-box; }
+img, video, canvas, svg { max-width: 100%; }
+.app-shell-root, .app-shell-main, .app-shell-scroll, .cx-page, .wb-page { min-width: 0; max-width: 100%; }
+.app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) { width: min(100%, 1760px); margin-inline: auto; }
+.app-shell-scroll .overflow-x-auto { max-width: 100%; -webkit-overflow-scrolling: touch; }
+.app-shell-scroll :where(input, select, textarea, button) { max-width: 100%; }
+.auth-register-page > div { width: min(100%, 920px); }
+.auth-register-page form { min-width: 0; }
+.pricing-page > section, .pricing-page > div { width: min(100%, 1360px); }
+.pricing-page .overflow-x-auto { max-width: 100%; }
+.pricing-page {
+  background: #f3f7fc;
+  color: #081c3c;
+}
+.pricing-card {
+  background: #fff;
+  border-color: #e4ebf5;
+  box-shadow: 0 8px 24px rgba(18, 57, 96, .06);
+}
+.pricing-card.highlighted {
+  border-color: #ff971c;
+  box-shadow: 0 12px 28px rgba(0, 100, 206, .14);
+}
+.pricing-card-title, .pricing-card-price, .pricing-card-limit-value { color: #081c3c; }
+.pricing-card-description, .pricing-card-currency, .pricing-card-limit { color: #4b6182; }
+.pricing-card-kicker { color: #7186a0; }
+.pricing-card-feature.enabled { color: #315778; }
+.pricing-card-feature.enabled svg { color: #0a9a63; }
+.pricing-card-feature.disabled { color: #9aaac0; }
+.pricing-card-feature.disabled svg { color: #b8c4d2; }
+.pricing-card-cta {
+  min-height: 44px;
+  border: 1px solid #9bc8f7;
+  color: #0064ce;
+  background: #fff;
+}
+.pricing-card-cta:hover { background: #edf6ff; }
+.pricing-card-cta.highlighted {
+  border-color: #0875dc;
+  color: #fff;
+  background: #0875dc;
+}
+.pricing-card-cta.highlighted:hover { background: #005bb8; }
+.pricing-card-badge { color: #fff; }
+.pricing-page .bg-white\/5 { background: #fff !important; }
+.pricing-page [class*="border-gray-7"] { border-color: #e4ebf5 !important; }
+.pricing-page .text-white { color: #081c3c !important; }
+.pricing-page .text-gray-300, .pricing-page .text-gray-400 { color: #4b6182 !important; }
+.pricing-page .text-gray-500 { color: #7186a0 !important; }
+.pricing-page .text-gray-600 { color: #9aaac0 !important; }
+.pricing-page .pricing-card-cta.highlighted, .pricing-page .pricing-card-badge { color: #fff !important; }
+.pricing-page .text-green-400 { color: #0a9a63 !important; }
+@media (min-width: 1920px) {
+  .app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) { width: min(100%, 1920px); padding-inline: 42px; }
+  .app-shell-scroll { font-size: 1.02rem; }
+  .ref-dashboard { max-width: 1920px; padding-inline: 22px; }
+  .ref-header > div:last-child { padding-inline: 48px; }
+}
+@media (max-width: 767px) {
+  .app-shell-root { height: 100dvh; }
+  .app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) { width: 100%; padding: 16px; }
+  .app-shell-scroll .cx-page > div { padding-inline: 16px; }
+  .ref-header > div:last-child > div:first-child { min-width: 0; }
+  .ref-header .ref-search { min-width: 0; }
+  .ref-management { margin-inline: 12px; }
+  .auth-register-page { align-items: flex-start; padding: 18px 12px 28px; }
+  .auth-register-page > div { width: 100%; }
+  .auth-register-page form { padding: 18px; }
+  .auth-register-page h1 { font-size: 23px; }
+}
+@media (max-width: 420px) {
+  .app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) { padding: 12px; }
+  .ref-header > div:last-child { padding-inline: 9px; }
+  .ref-header .ref-search { gap: 5px; padding: 7px; }
+  .ref-header .ref-search svg { width: 17px; }
+  .ref-header .ref-search input { font-size: 10px; }
+  .auth-form-panel { padding-inline: 16px; }
+  .auth-form-wrap { margin-top: 54px; }
+  .auth-form-wrap > p { margin-bottom: 30px; font-size: 15px; }
+  .auth-forgot-row { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+
+/* Guardas finais de responsividade.
+   Todas as rotas compartilham estas regras para que nenhum filho com largura
+   fixa consiga aumentar o viewport. No celular, tabelas e grades refluem no
+   próprio cartão, preservando a ordem de leitura sem rolagem lateral. */
+html,
+body {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+body * {
+  min-width: 0;
+}
+
+body :where(img, video, canvas, iframe, embed, object) {
+  max-width: 100%;
+}
+
+body :where(button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]) {
+  min-height: 44px;
+}
+
+body :where(a.marketing-primary, a.marketing-secondary, a.marketing-outline, a.marketing-white-button,
+  .auth-page a, .pricing-page a, .ref-banner > a) {
+  min-height: 44px;
+}
+
+.app-shell-root,
+.app-shell-main,
+.app-shell-scroll,
+.marketing-page,
+.auth-page,
+.pricing-page,
+.auth-register-page,
+.cx-page,
+.wb-page {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell-scroll > div,
+.app-shell-scroll > div > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell-scroll :where(input, select, textarea, button) {
+  max-width: 100%;
+}
+
+@media (min-width: 1920px) {
+  .marketing-page > * {
+    max-width: 1920px;
+    margin-inline: auto;
+  }
+
+  .marketing-header,
+  .marketing-final-cta,
+  .marketing-footer {
+    padding-inline: clamp(48px, 7vw, 140px);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Reflow every application grid, including responsive Tailwind variants. */
+  .app-shell-scroll :where([class~="grid-cols-2"], [class~="grid-cols-3"], [class~="grid-cols-4"], [class~="grid-cols-5"], [class~="grid-cols-6"],
+    [class~="sm:grid-cols-2"], [class~="sm:grid-cols-3"], [class~="sm:grid-cols-4"], [class~="md:grid-cols-2"], [class~="md:grid-cols-4"],
+    [class~="lg:grid-cols-2"], [class~="lg:grid-cols-3"], [class~="lg:grid-cols-4"], [class~="xl:grid-cols-4"], [class~="xl:grid-cols-12"]) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* The client kanban used a min-width flex row; it becomes a vertical list. */
+  .app-shell-scroll .min-w-max {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+  }
+
+  .app-shell-scroll .min-w-max > * {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .app-shell-scroll :where(.min-w-\[220px\], .min-w-\[190px\], .w-\[190px\], .w-\[228px\]) {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .app-shell-scroll :where([class~="justify-between"]) {
+    flex-wrap: wrap;
+  }
+
+  /* Data tables fit the card at phone widths; long values wrap in cells. */
+  .app-shell-scroll :where(.overflow-x-auto) {
+    overflow-x: hidden !important;
+  }
+
+  .app-shell-scroll table,
+  .pricing-page table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
+
+  .app-shell-scroll th,
+  .app-shell-scroll td,
+  .pricing-page th,
+  .pricing-page td {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .app-shell-scroll pre {
+    max-width: 100%;
+    overflow-x: hidden !important;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) {
+    padding: 16px;
+  }
+
+  .app-shell-scroll .cx-page > div {
+    padding-inline: 16px;
+  }
+
+  .marketing-header {
+    min-height: 64px;
+    height: auto;
+    padding: 12px 18px;
+  }
+
+  .marketing-hero,
+  .marketing-section,
+  .marketing-device-section,
+  .marketing-final-cta {
+    min-width: 0;
+  }
+
+  .auth-form-panel,
+  .auth-form-wrap,
+  .auth-form-wrap form {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pricing-page > section,
+  .pricing-page > div {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  body {
+    font-size: 16px;
+  }
+
+  .app-shell-scroll > div > :where(.p-6, .space-y-4, .space-y-6) {
+    padding: 12px;
+  }
+
+  .app-shell-scroll .cx-page > div {
+    padding-inline: 12px;
+  }
+
+  .marketing-header,
+  .marketing-hero,
+  .marketing-section,
+  .marketing-device-section,
+  .marketing-plans,
+  .marketing-testimonials,
+  .marketing-final-cta,
+  .marketing-footer {
+    padding-inline: 14px;
+  }
+
+  .auth-form-panel {
+    padding-inline: 14px;
   }
 }

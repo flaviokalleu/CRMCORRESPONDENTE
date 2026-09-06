@@ -1,84 +1,13 @@
 import { redirect } from "next/navigation";
-import { Building2, ShieldCheck, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, ShieldCheck, Users } from "lucide-react";
 import { hasSession } from "@/lib/session";
+import { CaixaBrand } from "@/components/CaixaBrand";
 import { LoginForm } from "@/components/LoginForm";
 
-export const metadata = {
-  title: "Entrar",
-};
+export const metadata = { title: "Entrar no CAIXA CRM", description: "Acesse seu painel CAIXA CRM." };
 
-// Server Component: checagem de sessão acontece no servidor, antes de
-// qualquer HTML ser enviado — se já está logado, redireciona sem nunca
-// renderizar o formulário (mais rápido que checar no cliente).
 export default async function LoginPage() {
-  if (await hasSession()) {
-    redirect("/dashboard");
-  }
-
-  return (
-    <div className="min-h-screen flex bg-white">
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] flex-col justify-between bg-caixa-primary px-12 py-12 text-white">
-        <a href="/" className="flex items-center gap-2.5">
-          <span className="text-base font-semibold tracking-tight">CRM IMOB</span>
-        </a>
-
-        <div className="space-y-8 max-w-md">
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight">
-            Gestão imobiliária completa, em um só lugar.
-          </h1>
-          <p className="text-white/80 text-sm leading-relaxed">
-            Clientes, imóveis, aluguéis e pagamentos organizados com o padrão de
-            confiabilidade que sua operação exige.
-          </p>
-
-          <div className="space-y-4 pt-2">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-white/10">
-                <Building2 className="h-4 w-4 text-caixa-orange" strokeWidth={1.8} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Cadastro unificado</p>
-                <p className="text-xs text-white/75">Clientes, imóveis e aluguéis num só fluxo.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-white/10">
-                <TrendingUp className="h-4 w-4 text-caixa-orange" strokeWidth={1.8} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Indicadores em tempo real</p>
-                <p className="text-xs text-white/75">Acompanhe o funil de vendas e a carteira de locação.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-white/10">
-                <ShieldCheck className="h-4 w-4 text-caixa-orange" strokeWidth={1.8} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Acesso seguro</p>
-                <p className="text-xs text-white/75">Sessão em cookie httpOnly — nunca exposta ao JavaScript.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-white/80">&copy; {new Date().getFullYear()} CRM IMOB. Todos os direitos reservados.</p>
-      </div>
-
-      <div className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
-        <div className="w-full max-w-sm">
-          <div className="mb-10 flex items-center gap-2.5 lg:hidden">
-            <span className="text-base font-semibold tracking-tight text-caixa-primary">CRM IMOB</span>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-caixa-gray-900">Entrar na conta</h2>
-            <p className="mt-1.5 text-sm text-caixa-gray-500">Informe suas credenciais para acessar o painel.</p>
-          </div>
-
-          <LoginForm />
-        </div>
-      </div>
-    </div>
-  );
+  if (await hasSession()) redirect("/dashboard");
+  return <div className="auth-page"><section className="auth-story"><Link href="/" className="auth-story-logo"><CaixaBrand /><span>CRM</span></Link><div className="auth-story-copy"><span className="auth-orange-line" /><p className="auth-eyebrow">MAIS QUE OPORTUNIDADES<br />REALIZAMOS HISTÓRIAS</p><h1>Conectando<br />pessoas a um<br /><span>futuro melhor.</span></h1><p>Organize seus atendimentos, acompanhe suas oportunidades e conquiste mais resultados com o CAIXA CRM.</p><div className="auth-benefits"><div><BarChart3 /><span><strong>Mais produtividade</strong><small>Processos simples e eficientes</small></span></div><div><Users /><span><strong>Mais relacionamento</strong><small>Clientes no centro de tudo</small></span></div><div><ShieldCheck /><span><strong>Mais conquistas</strong><small>Segurança em cada etapa</small></span></div></div></div><blockquote>“O maior valor do nosso trabalho<br />é ver sonhos ganhando endereço.”<br /><b>—</b></blockquote></section><section className="auth-form-panel"><div className="auth-top-link"><span>Não tem uma conta?</span><a href="/registro">Fale com a gente</a></div><div className="auth-form-wrap"><span className="auth-blue-line" /><h2>Bem-vindo de volta!</h2><p>Faça login para acessar o CAIXA CRM.</p><LoginForm /><div className="auth-security"><ShieldCheck /><span><strong>Seus dados estão protegidos</strong><small>Utilizamos criptografia e seguimos os mais altos padrões de segurança.</small></span></div></div></section></div>;
 }

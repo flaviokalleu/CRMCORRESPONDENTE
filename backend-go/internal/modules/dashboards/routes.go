@@ -19,6 +19,7 @@ func Register(rg *gin.RouterGroup, h *Handler) {
 	rg.GET("/", h.Main)
 	rg.GET("/monthly", h.Monthly)
 	rg.GET("/weekly", h.Weekly)
+	rg.GET("/analytics", h.Analytics)
 	rg.GET("/system-stats", h.SystemStats)
 	rg.GET("/activity-metrics", h.ActivityMetrics)
 	rg.GET("/notifications", h.Notifications)

@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, PanelLeft, Settings, LogOut, ChevronDown, Bell } from "lucide-react";
+import { Menu, PanelLeft, Settings, LogOut, ChevronDown, Bell, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 const PAGE_TITLES = {
@@ -37,6 +37,12 @@ const initialsOf = (name) =>
   (name || "U").split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 
 export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSidebar }) {
+  const searchRef = useRef(null);
+  useEffect(() => {
+    const shortcut = (event) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); searchRef.current?.focus(); } };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, hasRole } = useAuth();
@@ -52,7 +58,7 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
   const fullName = `${user?.first_name || "Usuário"} ${user?.last_name || ""}`.trim();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-aqua-frame/90 backdrop-blur-md">
+    <header className="ref-header sticky top-0 z-40">
       <div aria-hidden="true" className="h-px bg-gradient-to-r from-transparent via-caixa-orange/50 to-transparent" />
       <div className="flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-3">
@@ -67,11 +73,11 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
               <span className="text-sm">Menu</span>
             </button>
           )}
-          <h1 className="hidden text-sm font-semibold text-white/90 sm:block">{pageTitle}</h1>
+          <form action="/clientes/lista" className="ref-search" role="search"><Search size={21} /><input ref={searchRef} name="search" aria-label="Buscar clientes por nome ou CPF" placeholder="Buscar leads, clientes, CPF..." /><kbd>Ctrl + K</kbd></form>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button aria-label="Notificações" title="Notificações" className="flex h-9 w-9 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+          <button onClick={() => router.push("/lembretes")} aria-label="Notificações" title="Notificações" className="flex h-9 w-9 items-center justify-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white">
             <Bell className="h-4 w-4" strokeWidth={1.8} />
           </button>
 
@@ -87,10 +93,12 @@ export function Header({ isMobile, sidebarVisible, onToggleSidebarOpen, onShowSi
               <ChevronDown className="hidden h-3.5 w-3.5 text-white/70 lg:block" />
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuLabel>
-                <p className="text-caixa-gray-700">{fullName}</p>
-                <p className="mt-0.5 font-normal text-caixa-gray-400">{user?.email}</p>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <p className="text-caixa-gray-700">{fullName}</p>
+                  <p className="mt-0.5 font-normal text-caixa-gray-400">{user?.email}</p>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/configuracoes">

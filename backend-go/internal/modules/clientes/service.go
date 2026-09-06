@@ -306,7 +306,11 @@ func (s *Service) Get(ctx context.Context, id uint, actor *models.User) (*models
 }
 
 func (s *Service) List(ctx context.Context, actor *models.User, q ListQuery) ([]models.Cliente, int64, error) {
-	f := ListFilters{Page: q.Page, Limit: q.Limit, Search: q.Search, Status: q.Status, Corretor: q.Corretor}
+	f := ListFilters{
+		Recentes: q.Recentes,
+		Page:     q.Page, Limit: q.Limit, Search: q.Search, Status: q.Status,
+		Corretor: q.Corretor, Inicio: q.Inicio, Fim: q.Fim,
+	}
 	if actor.IsCorretor && !actor.IsAdministrador && !actor.IsCorrespondente {
 		f.OnlyUserID = &actor.ID
 		f.Corretor = "" // corretor não pode filtrar por outro corretor

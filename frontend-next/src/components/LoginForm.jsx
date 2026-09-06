@@ -92,6 +92,11 @@ export function LoginForm() {
         </div>
       </div>
 
+      <div className="auth-forgot-row">
+        <span>Use o e-mail cadastrado na sua empresa.</span>
+        <Link href="/registro">Precisa de acesso?</Link>
+      </div>
+
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</div>
       )}

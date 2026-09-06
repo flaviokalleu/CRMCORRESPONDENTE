@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -56,11 +57,29 @@ func (h *Handler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	q := ListQuery{
+		Recentes: c.Query("sort") == "recentes",
 		Page:     page,
 		Limit:    limit,
 		Search:   c.Query("search"),
 		Status:   c.Query("status"),
 		Corretor: c.Query("corretor"),
+	}
+	if raw := c.Query("inicio"); raw != "" {
+		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data inicial inválida"})
+			return
+		}
+		q.Inicio = &value
+	}
+	if raw := c.Query("fim"); raw != "" {
+		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data final inválida"})
+			return
+		}
+		value = value.AddDate(0, 0, 1)
+		q.Fim = &value
 	}
 
 	list, total, err := h.svc.List(c.Request.Context(), actor, q)
@@ -139,7 +158,7 @@ func (h *Handler) Create(c *gin.Context) {
 		"cliente": toResponse(cliente),
 		// whatsapp / notificacaoCorrespondentes: integração fora do escopo desta
 		// tarefa (ver internal/integrations/whatsapp, módulo separado).
-		"whatsapp":                nil,
+		"whatsapp":                   nil,
 		"notificacaoCorrespondentes": nil,
 	})
 }

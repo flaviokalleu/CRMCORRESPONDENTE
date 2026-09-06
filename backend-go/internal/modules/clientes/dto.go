@@ -1,6 +1,10 @@
 package clientes
 
-import "crmimob/internal/models"
+import (
+	"time"
+
+	"crmimob/internal/models"
+)
 
 // ClienteResponse é o shape devolvido nas rotas de leitura — inclui o campo
 // derivado `valor_renda_formatado` que o Node sempre anexa nas respostas de
@@ -21,11 +25,14 @@ func toResponse(c *models.Cliente) ClienteResponse {
 
 // ListQuery replica os query params de GET /api/clientes (§2.1).
 type ListQuery struct {
-	Page    int
-	Limit   int
-	Search  string
-	Status  string
+	Recentes bool
+	Page     int
+	Limit    int
+	Search   string
+	Status   string
 	Corretor string
+	Inicio   *time.Time
+	Fim      *time.Time
 }
 
 // ListResponse replica `{ success, clientes, pagination }`.
@@ -80,8 +87,8 @@ type ClienteInput struct {
 
 	PossuiFormulariosCaixa *string
 
-	Status     *string // ignorado no update se quem chama for corretor
-	UserID     *string // aceita "user_id" OU "userId"
+	Status      *string // ignorado no update se quem chama for corretor
+	UserID      *string // aceita "user_id" OU "userId"
 	DataCriacao *string
 }
 

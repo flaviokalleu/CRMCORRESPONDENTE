@@ -49,3 +49,28 @@ func (r *Repository) CountPendencias(ctx context.Context) (int64, error) {
 	err := r.db.WithContext(ctx).Model(&models.FluxoCaixa{}).Where("data > ?", time.Now()).Count(&count).Error
 	return count, err
 }
+
+// Projection soma os lançamentos previstos numa janela futura.
+func (r *Repository) Projection(ctx context.Context, inicio, fim time.Time) (entradas, saidas float64, err error) {
+	type row struct {
+		Tipo  string
+		Total float64
+	}
+	var rows []row
+	err = r.db.WithContext(ctx).Model(&models.FluxoCaixa{}).
+		Select("tipo, COALESCE(SUM(valor), 0) AS total").
+		Where("data >= ? AND data < ?", inicio, fim).
+		Group("tipo").Scan(&rows).Error
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, item := range rows {
+		switch item.Tipo {
+		case "entrada":
+			entradas += item.Total
+		case "saida", "saída":
+			saidas += item.Total
+		}
+	}
+	return entradas, saidas, nil
+}

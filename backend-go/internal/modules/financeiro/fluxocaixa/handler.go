@@ -33,7 +33,30 @@ func (h *Handler) Register(rg *gin.RouterGroup) {
 }
 
 func (h *Handler) dashboard(c *gin.Context) {
-	resp, err := h.svc.Dashboard(c.Request.Context())
+	var inicio, fim *time.Time
+	if c.Query("inicio") != "" || c.Query("fim") != "" {
+		if c.Query("inicio") == "" || c.Query("fim") == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "início e fim são obrigatórios juntos"})
+			return
+		}
+		start, err := time.ParseInLocation("2006-01-02", c.Query("inicio"), time.Local)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data inicial inválida"})
+			return
+		}
+		lastDay, err := time.ParseInLocation("2006-01-02", c.Query("fim"), time.Local)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data final inválida"})
+			return
+		}
+		end := lastDay.AddDate(0, 0, 1)
+		if !end.After(start) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "período inválido"})
+			return
+		}
+		inicio, fim = &start, &end
+	}
+	resp, err := h.svc.DashboardFiltered(c.Request.Context(), inicio, fim)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

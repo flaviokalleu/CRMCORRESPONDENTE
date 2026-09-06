@@ -37,11 +37,6 @@ export default function RegistroPage() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    setEmpresa((p) => ({ ...p, slug: slugify(p.nome) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [empresa.nome]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -99,7 +94,7 @@ export default function RegistroPage() {
   };
 
   return (
-    <div className="min-h-screen bg-caixa-primary flex items-center justify-center p-4 py-10">
+    <div className="auth-register-page min-h-screen bg-cx-bg flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-2xl">
         <h1 className="text-2xl font-bold text-cx-text text-center mb-6">Crie sua conta no CRM IMOB</h1>
 
@@ -111,7 +106,7 @@ export default function RegistroPage() {
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-cx-muted">Dados da empresa</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nome da empresa" value={empresa.nome} onChange={(v) => setEmpresa((p) => ({ ...p, nome: v }))} />
+              <Field label="Nome da empresa" value={empresa.nome} onChange={(v) => setEmpresa((p) => ({ ...p, nome: v, slug: slugify(v) }))} />
               <Field label="Slug" value={empresa.slug} onChange={(v) => setEmpresa((p) => ({ ...p, slug: slugify(v) }))} />
               <Field label="CNPJ" value={empresa.cnpj} onChange={(v) => setEmpresa((p) => ({ ...p, cnpj: v }))} />
               <Field label="E-mail da empresa" type="email" value={empresa.email} onChange={(v) => setEmpresa((p) => ({ ...p, email: v }))} />

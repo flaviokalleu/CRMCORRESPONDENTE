@@ -2,6 +2,7 @@ package despesas
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -46,4 +47,18 @@ func (r *Repository) Sum(ctx context.Context) (float64, error) {
 	var total float64
 	err := r.db.WithContext(ctx).Model(&models.Despesa{}).Select("COALESCE(SUM(valor),0)").Scan(&total).Error
 	return total, err
+}
+
+func (r *Repository) SumBetween(ctx context.Context, inicio, fim time.Time) (float64, error) {
+	var total float64
+	err := r.db.WithContext(ctx).Model(&models.Despesa{}).
+		Where("data >= ? AND data < ?", inicio, fim).
+		Select("COALESCE(SUM(valor),0)").Scan(&total).Error
+	return total, err
+}
+
+func (r *Repository) ListBetween(ctx context.Context, inicio, fim time.Time) ([]models.Despesa, error) {
+	var rows []models.Despesa
+	err := r.db.WithContext(ctx).Where("data >= ? AND data < ?", inicio, fim).Order("data ASC").Find(&rows).Error
+	return rows, err
 }

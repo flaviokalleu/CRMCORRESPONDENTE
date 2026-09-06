@@ -2,6 +2,7 @@ package receitas
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -49,4 +50,18 @@ func (r *Repository) Sum(ctx context.Context) (float64, error) {
 	var total float64
 	err := r.db.WithContext(ctx).Model(&models.Receita{}).Select("COALESCE(SUM(valor),0)").Scan(&total).Error
 	return total, err
+}
+
+func (r *Repository) SumBetween(ctx context.Context, inicio, fim time.Time) (float64, error) {
+	var total float64
+	err := r.db.WithContext(ctx).Model(&models.Receita{}).
+		Where("data >= ? AND data < ?", inicio, fim).
+		Select("COALESCE(SUM(valor),0)").Scan(&total).Error
+	return total, err
+}
+
+func (r *Repository) ListBetween(ctx context.Context, inicio, fim time.Time) ([]models.Receita, error) {
+	var rows []models.Receita
+	err := r.db.WithContext(ctx).Where("data >= ? AND data < ?", inicio, fim).Order("data ASC").Find(&rows).Error
+	return rows, err
 }

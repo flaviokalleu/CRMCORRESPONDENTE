@@ -85,19 +85,30 @@ function StatusControl({ cliente, onChange, saving }) {
   );
 }
 
-export function ClientesLista({ initialData }) {
+export function ClientesLista({ initialSearch = "",
+  initialData,
+  initialStatus = "",
+  initialView = "lista",
+  initialCorretor = "",
+  initialInicio = "",
+  initialFim = "",
+  responsaveis = [],
+}) {
   const { user } = useAuth();
   const canChangeStatus = !!(user?.is_administrador || user?.is_correspondente);
 
   const [clientes, setClientes] = useState(initialData?.clientes ?? []);
   const [pagination, setPagination] = useState(initialData?.pagination ?? { total: (initialData?.clientes ?? []).length, page: 1, limit: LIMIT, pages: 1 });
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
+  const [q, setQ] = useState(initialSearch);
+  const [status, setStatus] = useState(initialStatus);
+  const [corretor, setCorretor] = useState(initialCorretor);
+  const [inicio, setInicio] = useState(initialInicio);
+  const [fim, setFim] = useState(initialFim);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState(null);
   const [notesFor, setNotesFor] = useState(null); // { id, nome } — modal de notas
-  const [view, setView] = useState("lista"); // "lista" | "kanban"
+  const [view, setView] = useState(initialView); // "lista" | "kanban"
   const [editingId, setEditingId] = useState(null); // painel lateral de edição
   const [dragId, setDragId] = useState(null);
   const [overLane, setOverLane] = useState(null);
@@ -105,11 +116,12 @@ export function ClientesLista({ initialData }) {
   // Preferência de visão sobrevive ao reload (só conveniência local, por isso
   // localStorage e não servidor). Em janela anônima o acesso pode lançar.
   useEffect(() => {
+    if (initialView === "kanban") return;
     try {
       const saved = window.localStorage.getItem("clientes:view");
       if (saved === "kanban" || saved === "lista") setView(saved);
     } catch {}
-  }, []);
+  }, [initialView]);
   const changeView = (v) => {
     setView(v);
     try { window.localStorage.setItem("clientes:view", v); } catch {}
@@ -123,12 +135,15 @@ export function ClientesLista({ initialData }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [notesFor]);
 
-  const fetchList = useCallback(async ({ q, status, page, limit = LIMIT }) => {
+  const fetchList = useCallback(async ({ q, status, corretor, inicio, fim, page, limit = LIMIT }) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (q) params.set("search", q);
       if (status) params.set("status", status);
+      if (corretor) params.set("corretor", corretor);
+      if (inicio) params.set("inicio", inicio);
+      if (fim) params.set("fim", fim);
       const res = await fetch(`/api/backend/clientes?${params.toString()}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       setClientes(Array.isArray(data) ? data : data.clientes ?? []);
@@ -145,9 +160,9 @@ export function ClientesLista({ initialData }) {
     if (!didMount.current && view === "lista") { didMount.current = true; return; }
     didMount.current = true;
     const limit = view === "kanban" ? KANBAN_LIMIT : LIMIT;
-    const t = setTimeout(() => fetchList({ q, status, page: view === "kanban" ? 1 : page, limit }), 300);
+    const t = setTimeout(() => fetchList({ q, status, corretor, inicio, fim, page: view === "kanban" ? 1 : page, limit }), 300);
     return () => clearTimeout(t);
-  }, [q, status, page, view, fetchList]);
+  }, [q, status, corretor, inicio, fim, page, view, fetchList]);
 
   const changeStatus = async (id, newStatus) => {
     const prev = clientes;
@@ -205,7 +220,7 @@ export function ClientesLista({ initialData }) {
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-cx-text">Clientes</h1>
           <p className="text-sm text-cx-muted">
-            {loading ? "Carregando…" : `${total} cliente${total === 1 ? "" : "s"}${status || q ? " no filtro" : ""}`}
+            {loading ? "Carregando…" : `${total} cliente${total === 1 ? "" : "s"}${status || q || corretor || inicio || fim ? " no filtro" : ""}`}
           </p>
         </div>
         <Link href="/clientes/adicionar" className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark">
@@ -230,8 +245,40 @@ export function ClientesLista({ initialData }) {
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text outline-none transition-colors focus:border-cx-blue [&>option]:bg-white [&>option]:text-cx-text"
         >
           <option value="">Todos os status</option>
+          <option value="atencao">Fila de atenção</option>
           {STATUS_LIST.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
+        {responsaveis.length > 0 ? (
+          <select
+            value={corretor}
+            onChange={(e) => { setCorretor(e.target.value); setPage(1); }}
+            className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text outline-none transition-colors focus:border-cx-blue"
+            aria-label="Filtrar por responsável"
+          >
+            <option value="">Toda a equipe</option>
+            {responsaveis.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
+          </select>
+        ) : null}
+        <label className="inline-flex items-center gap-1.5 rounded-lg border border-cx-border bg-cx-surface px-2.5 py-2 text-xs text-cx-muted">
+          <span>De</span>
+          <input
+            type="date"
+            value={inicio}
+            onChange={(e) => { setInicio(e.target.value); setPage(1); }}
+            className="bg-transparent text-xs text-cx-text outline-none"
+            aria-label="Data inicial"
+          />
+        </label>
+        <label className="inline-flex items-center gap-1.5 rounded-lg border border-cx-border bg-cx-surface px-2.5 py-2 text-xs text-cx-muted">
+          <span>Até</span>
+          <input
+            type="date"
+            value={fim}
+            onChange={(e) => { setFim(e.target.value); setPage(1); }}
+            className="bg-transparent text-xs text-cx-text outline-none"
+            aria-label="Data final"
+          />
+        </label>
         <div className="inline-flex overflow-hidden rounded-lg border border-cx-border">
           {[
             { id: "lista", label: "Lista", Icon: Rows3 },
@@ -252,7 +299,7 @@ export function ClientesLista({ initialData }) {
         </div>
         <button
           type="button"
-          onClick={() => fetchList({ q, status, page, limit: view === "kanban" ? KANBAN_LIMIT : LIMIT })}
+          onClick={() => fetchList({ q, status, corretor, inicio, fim, page, limit: view === "kanban" ? KANBAN_LIMIT : LIMIT })}
           className="inline-flex items-center justify-center rounded-lg border border-cx-border bg-cx-surface p-2.5 text-cx-muted transition-colors hover:text-cx-text"
           title="Recarregar"
         >
@@ -270,9 +317,9 @@ export function ClientesLista({ initialData }) {
             </div>
             <div>
               <p className="text-sm font-medium text-cx-text">Nenhum cliente encontrado</p>
-              <p className="text-xs text-cx-muted">{q || status ? "Ajuste a busca ou o filtro." : "Cadastre o primeiro cliente para começar."}</p>
+              <p className="text-xs text-cx-muted">{q || status || corretor || inicio || fim ? "Ajuste a busca ou os filtros." : "Cadastre o primeiro cliente para começar."}</p>
             </div>
-            {!q && !status && (
+            {!q && !status && !corretor && !inicio && !fim && (
               <Link href="/clientes/adicionar" className="mt-1 inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2 text-sm font-semibold text-white hover:bg-cx-orange-dark">
                 <Plus className="h-4 w-4" /> Adicionar cliente
               </Link>

@@ -2,6 +2,7 @@ package clientes
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -23,12 +24,15 @@ func (r *Repository) DB() *gorm.DB { return r.db }
 
 // ListFilters replica os filtros de GET /api/clientes (§2.1).
 type ListFilters struct {
-	Page     int
-	Limit    int
-	Search   string
-	Status   string
-	Corretor string // filtra por user_id quando admin/correspondente escolhe um corretor
-	OnlyUserID *uint // corretor só vê os próprios (userId=self)
+	Recentes   bool
+	Page       int
+	Limit      int
+	Search     string
+	Status     string
+	Corretor   string // filtra por user_id quando admin/correspondente escolhe um corretor
+	OnlyUserID *uint  // corretor só vê os próprios (userId=self)
+	Inicio     *time.Time
+	Fim        *time.Time // exclusivo
 }
 
 // List devolve os clientes paginados + total, com `user` e `notas(id)` carregados
@@ -42,11 +46,26 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente,
 		q = q.Where("user_id = ?", f.Corretor)
 	}
 	if f.Status != "" {
-		q = q.Where("status = ?", f.Status)
+		if f.Status == "atencao" {
+			// Filtro agregado usado pelo dashboard: espelha exatamente a mesma
+			// definição da fila de atenção do módulo de dashboards.
+			q = q.Where(
+				"(status ILIKE ? OR status ILIKE ? OR status ILIKE ? OR status ILIKE ? OR status = ?)",
+				"%aguardando%", "%pendente%", "%análise%", "%em análise%", "aguardando_aprovacao",
+			)
+		} else {
+			q = q.Where("status = ?", f.Status)
+		}
 	}
 	if f.Search != "" {
 		like := "%" + f.Search + "%"
 		q = q.Where("nome ILIKE ? OR email ILIKE ? OR cpf ILIKE ?", like, like, like)
+	}
+	if f.Inicio != nil {
+		q = q.Where("created_at >= ?", *f.Inicio)
+	}
+	if f.Fim != nil {
+		q = q.Where("created_at < ?", *f.Fim)
 	}
 
 	var total int64
@@ -66,13 +85,14 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente,
 		limit = 100
 	}
 
+	// O dashboard solicita ordem cronológica; a fila mantém sua prioridade.
+	if !f.Recentes {
+		q = q.Order("(status = 'aguardando_aprovacao') DESC")
+	}
 	var clientes []models.Cliente
 	err := q.Preload("User").
 		Preload("Notas", func(db *gorm.DB) *gorm.DB { return db.Select("id", "cliente_id") }).
-		// Clientes "aguardando_aprovacao" sempre no topo (independe da página),
-		// depois os mais recentes primeiro.
-		Order("(status = 'aguardando_aprovacao') DESC").
-		Order("created_at DESC").
+		Order("created_at DESC").Order("id DESC").
 		Limit(limit).Offset((page - 1) * limit).
 		Find(&clientes).Error
 	return clientes, total, err

@@ -148,57 +148,51 @@ const FAQ_ITEMS = [
 function PlanCard({ plan }) {
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border p-8 ${
-        plan.highlighted ? "border-caixa-orange bg-caixa-primary shadow-lg" : "border-gray-700/50 bg-caixa-primary/70"
-      }`}
+      className={`pricing-card relative flex flex-col rounded-2xl border p-8 ${plan.highlighted ? "highlighted" : ""}`}
     >
       {plan.badge && (
-        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold rounded-full bg-cx-orange text-white">
+        <span className="pricing-card-badge absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold rounded-full bg-cx-orange text-white">
           {plan.badge}
         </span>
       )}
 
-      <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-      <p className="text-sm text-gray-400 mb-6">{plan.description}</p>
+      <h3 className="pricing-card-title text-xl font-bold mb-1">{plan.name}</h3>
+      <p className="pricing-card-description text-sm mb-6">{plan.description}</p>
 
       <div className="mb-6">
         <div className="flex items-baseline gap-1">
-          <span className="text-sm text-gray-400">R$</span>
-          <span className="text-4xl font-extrabold text-white">{plan.priceMonthly.toLocaleString("pt-BR")}</span>
-          {plan.priceMonthly > 0 && <span className="text-sm text-gray-400">/mês</span>}
+          <span className="pricing-card-currency text-sm">R$</span>
+          <span className="pricing-card-price text-4xl font-extrabold">{plan.priceMonthly.toLocaleString("pt-BR")}</span>
+          {plan.priceMonthly > 0 && <span className="pricing-card-currency text-sm">/mês</span>}
         </div>
       </div>
 
       <div className="mb-6 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Limites</p>
+        <p className="pricing-card-kicker text-xs font-semibold uppercase tracking-wider">Limites</p>
         {Object.entries(plan.limits).map(([key, value]) => (
-          <div key={key} className="text-sm text-gray-300">
-            <span className="font-semibold text-white">{value}</span> {LIMIT_LABELS[key]}
+          <div key={key} className="pricing-card-limit text-sm">
+            <span className="pricing-card-limit-value font-semibold">{value}</span> {LIMIT_LABELS[key]}
           </div>
         ))}
       </div>
 
       <div className="mb-8 space-y-2 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Funcionalidades</p>
+        <p className="pricing-card-kicker text-xs font-semibold uppercase tracking-wider">Funcionalidades</p>
         {Object.entries(plan.features).map(([key, enabled]) => (
-          <div key={key} className="flex items-center gap-2 text-sm">
+          <div key={key} className={`pricing-card-feature flex items-center gap-2 text-sm ${enabled ? "enabled" : "disabled"}`}>
             {enabled ? (
-              <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+              <Check className="w-4 h-4 flex-shrink-0" />
             ) : (
-              <X className="w-4 h-4 text-gray-600 flex-shrink-0" />
+              <X className="w-4 h-4 flex-shrink-0" />
             )}
-            <span className={enabled ? "text-gray-300" : "text-gray-600"}>{FEATURE_LABELS[key]}</span>
+            <span>{FEATURE_LABELS[key]}</span>
           </div>
         ))}
       </div>
 
       <Link
         href={plan.ctaLink}
-        className={`block w-full text-center py-3 px-6 rounded-xl font-semibold text-sm transition-colors ${
-          plan.highlighted
-            ? "bg-cx-orange text-white hover:bg-cx-orange-dark"
-            : "bg-white/10 text-white hover:bg-white/20 border border-gray-600"
-        }`}
+        className={`pricing-card-cta block w-full text-center py-3 px-6 rounded-xl font-semibold text-sm transition-colors ${plan.highlighted ? "highlighted" : ""}`}
       >
         {plan.cta}
       </Link>
@@ -260,7 +254,7 @@ function ComparisonTable() {
 
 export default function PrecosPage() {
   return (
-    <div className="min-h-screen bg-caixa-primary">
+    <div className="pricing-page min-h-screen bg-cx-bg text-cx-text">
       <div className="max-w-6xl mx-auto px-4 pt-6">
         <Link href="/" className="text-sm text-gray-400 hover:text-white">
           &larr; Voltar
@@ -276,7 +270,7 @@ export default function PrecosPage() {
       </section>
 
       <section className="max-w-6xl mx-auto px-4 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {PLANS.map((plan) => (
             <PlanCard key={plan.id} plan={plan} />
           ))}

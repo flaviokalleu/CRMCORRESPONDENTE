@@ -16,8 +16,23 @@ type UpsertRequest struct {
 // Corrige o gotcha do Node (03-spec §"Financeiro CRUD"): totais e pendências
 // agora respeitam o escopo de tenant (via callbacks GORM + WithContext).
 type DashboardResponse struct {
-	TotalReceitas float64 `json:"totalReceitas"`
-	TotalDespesas float64 `json:"totalDespesas"`
-	Lucro         float64 `json:"lucro"`
-	Pendencias    int64   `json:"pendencias"`
+	TotalReceitas float64            `json:"totalReceitas"`
+	TotalDespesas float64            `json:"totalDespesas"`
+	Lucro         float64            `json:"lucro"`
+	Pendencias    int64              `json:"pendencias"`
+	MonthlySeries []MonthlyCashPoint `json:"monthlySeries"`
+	Projection    CashProjection     `json:"projection"`
+}
+
+type MonthlyCashPoint struct {
+	Label    string  `json:"label"`
+	Receitas float64 `json:"receitas"`
+	Despesas float64 `json:"despesas"`
+}
+
+type CashProjection struct {
+	Entradas       float64 `json:"entradas"`
+	Saidas         float64 `json:"saidas"`
+	SaldoProjetado float64 `json:"saldoProjetado"`
+	Dias           int     `json:"dias"`
 }

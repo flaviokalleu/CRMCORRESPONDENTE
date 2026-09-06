@@ -1,0 +1,26 @@
+[mcp_servers.chrome-devtools]
+command = "cmd"
+args = [
+    "/c",
+    "npx",
+    "chrome-devtools-mcp@latest",
+]
+
+[mcp_servers.magic]
+command = "cmd"
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "@21st-dev/magic@latest",
+    "API_KEY=SUA_API_KEY_AQUI",
+]
+
+[mcp_servers.shadcn]
+command = "cmd"
+args = [
+    "/c",
+    "npx",
+    "shadcn@latest",
+    "mcp",
+]
