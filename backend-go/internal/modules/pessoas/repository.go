@@ -24,13 +24,24 @@ func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 func (r *Repository) listQuery(ctx context.Context, papel, busca string) *gorm.DB {
 	q := r.db.WithContext(ctx).Model(&models.Pessoa{})
 
+	// GORM nunca interpreta SQL cru: o callback global de tenant (internal/tenant)
+	// só enxerga statements que ele monta, então não alcança o SELECT interno do
+	// EXISTS abaixo. Por isso, e só aqui, o filtro de tenant é escrito à mão —
+	// correlacionado com pessoas.tenant_id da linha externa, não com um parâmetro,
+	// para funcionar não importa qual seja o tenant do chamador. Sem isso, uma
+	// ficha de outro tenant apontando para esta pessoa faria a pessoa aparecer no
+	// filtro de papel do tenant errado (não há FK composta ligando o tenant da
+	// ficha ao da pessoa — ver migrations/0004_pessoas.up.sql).
+	// cliente_aluguels.tenant_id e proprietario.tenant_id são anuláveis; a
+	// comparação "=" não casa com NULL, então uma ficha sem tenant simplesmente
+	// não conta para nenhum tenant — comportamento intencional, não bug.
 	switch papel {
 	case "comprador":
-		q = q.Where("EXISTS (SELECT 1 FROM clientes c WHERE c.pessoa_id = pessoas.id)")
+		q = q.Where("EXISTS (SELECT 1 FROM clientes c WHERE c.pessoa_id = pessoas.id AND c.tenant_id = pessoas.tenant_id)")
 	case "inquilino":
-		q = q.Where("EXISTS (SELECT 1 FROM cliente_aluguels ca WHERE ca.pessoa_id = pessoas.id)")
+		q = q.Where("EXISTS (SELECT 1 FROM cliente_aluguels ca WHERE ca.pessoa_id = pessoas.id AND ca.tenant_id = pessoas.tenant_id)")
 	case "proprietario":
-		q = q.Where("EXISTS (SELECT 1 FROM proprietario p WHERE p.pessoa_id = pessoas.id)")
+		q = q.Where("EXISTS (SELECT 1 FROM proprietario p WHERE p.pessoa_id = pessoas.id AND p.tenant_id = pessoas.tenant_id)")
 	}
 
 	if busca != "" {
@@ -55,11 +66,17 @@ func (r *Repository) FindByID(ctx context.Context, id uint) (*models.Pessoa, err
 	return &p, nil
 }
 
+// findByCPFQuery monta a query de busca por CPF. Separado de FindByCPF para
+// ser inspecionável em teste com DryRun, no mesmo espírito de listQuery.
+func (r *Repository) findByCPFQuery(ctx context.Context, cpf string) *gorm.DB {
+	return r.db.WithContext(ctx).Where("cpf = ?", cpf)
+}
+
 // FindByCPF devolve (nil, nil) quando não há pessoa com aquele CPF no tenant —
 // "não existe" é resposta esperada no fluxo de cadastro, não erro.
 func (r *Repository) FindByCPF(ctx context.Context, cpf string) (*models.Pessoa, error) {
 	var p models.Pessoa
-	err := r.db.WithContext(ctx).Where("cpf = ?", cpf).First(&p).Error
+	err := r.findByCPFQuery(ctx, cpf).First(&p).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
