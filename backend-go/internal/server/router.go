@@ -41,6 +41,7 @@ import (
 	"crmimob/internal/modules/locations"
 	"crmimob/internal/modules/notas"
 	"crmimob/internal/modules/pagamentos"
+	"crmimob/internal/modules/pessoas"
 	"crmimob/internal/modules/portalinquilino"
 	"crmimob/internal/modules/propostas"
 	"crmimob/internal/modules/proprietarios"
@@ -283,6 +284,9 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 
 	proprietariosHandler := proprietarios.NewHandler(proprietarios.NewService(proprietarios.NewRepository(db)))
 
+	pessoasRepo := pessoas.NewRepository(db)
+	pessoasHandler := pessoas.NewHandler(pessoas.NewService(pessoasRepo, db))
+
 	vistoriasRepo := vistorias.NewRepository(db)
 	vistoriasSvc := vistorias.NewService(vistoriasRepo, vistorias.NoopPDFEngine{})
 	vistoriasHandler := vistorias.NewHandler(vistoriasSvc)
@@ -307,6 +311,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 		alugueisHandler.Register(cluster04)
 		contratosHandler.Register(cluster04)
 		proprietariosHandler.Register(cluster04)
+		pessoasHandler.Register(cluster04)
 		vistoriasHandler.Register(cluster04)
 		chamadosHandler.RegisterAdmin(cluster04)
 		reguaHandler.Register(cluster04)

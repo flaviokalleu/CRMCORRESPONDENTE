@@ -86,6 +86,22 @@ func (s *Service) Buscar(ctx context.Context, cpf string) (*PessoaComPapeis, err
 	return &PessoaComPapeis{Pessoa: *p, Papeis: papeis}, nil
 }
 
+// BuscarPorID devolve a pessoa com seus papéis, ou ErrNaoEncontrada.
+func (s *Service) BuscarPorID(ctx context.Context, id uint) (*PessoaComPapeis, error) {
+	p, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNaoEncontrada
+		}
+		return nil, err
+	}
+	papeis, err := s.repo.Papeis(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &PessoaComPapeis{Pessoa: *p, Papeis: papeis}, nil
+}
+
 // Criar grava identidade e ficha na MESMA transação. Se a ficha falhar, a
 // pessoa não é criada — é isso que impede pessoas e ficha de divergirem.
 func (s *Service) Criar(ctx context.Context, req CriarRequest) (*PessoaComPapeis, error) {
