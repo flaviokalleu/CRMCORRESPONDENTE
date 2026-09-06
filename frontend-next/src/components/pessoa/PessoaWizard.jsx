@@ -44,8 +44,9 @@ const ETAPAS_POR_PAPEL = {
 //   - inquilino    -> /clientes-aluguel: hoje é só uma lista (não existe
 //     formulário de inquilino nesse frontend ainda), então é o melhor
 //     destino disponível. Gap pré-existente, fora do escopo desta tarefa.
-//   - proprietario -> /proprietarios/lista: tem o cadastro rápido, mas não
-//     tem edição por id nem busca — mesma limitação do inquilino, mesmo gap.
+//   - proprietario -> /pessoas?papel=proprietario: a antiga /proprietarios/lista
+//     foi removida (Task 9); a listagem em /pessoas não tem edição por id nem
+//     cadastro rápido — mesma limitação do inquilino, mesmo gap.
 const DESTINO_POR_PAPEL = {
   comprador: {
     href: (resultado, busca) =>
@@ -61,7 +62,7 @@ const DESTINO_POR_PAPEL = {
     resta: "contrato e valores, fiador e documentos",
   },
   proprietario: {
-    href: () => "/proprietarios/lista",
+    href: () => "/pessoas?papel=proprietario",
     label: () => "Ir para proprietários",
     resta: "os dados de repasse",
   },

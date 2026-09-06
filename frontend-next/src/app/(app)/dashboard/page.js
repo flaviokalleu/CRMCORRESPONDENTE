@@ -220,10 +220,10 @@ export default async function DashboardPage({ searchParams }) {
       : "Fila operacional em dia — nenhuma análise aguardando ação.";
 
   const acoes = isCorrespondente
-    ? [{ label: "Abrir fila", href: filaHref, icone: "fila", primaria: true }, { label: "Novo cliente", href: "/clientes/adicionar", icone: "adicionar" }]
+    ? [{ label: "Abrir fila", href: filaHref, icone: "fila", primaria: true }, { label: "Novo cliente", href: "/pessoas/nova", icone: "adicionar" }]
     : isAdmin
-      ? [{ label: "Novo cliente", href: "/clientes/adicionar", icone: "adicionar", primaria: true }, { label: "Ver relatório", href: "/relatorio", icone: "relatorio" }]
-      : [{ label: "Novo cliente", href: "/clientes/adicionar", icone: "adicionar", primaria: true }, { label: "Ver carteira", href: carteiraHref, icone: "carteira" }];
+      ? [{ label: "Novo cliente", href: "/pessoas/nova", icone: "adicionar", primaria: true }, { label: "Ver relatório", href: "/relatorio", icone: "relatorio" }]
+      : [{ label: "Novo cliente", href: "/pessoas/nova", icone: "adicionar", primaria: true }, { label: "Ver carteira", href: carteiraHref, icone: "carteira" }];
 
   const vitais = [
     {
