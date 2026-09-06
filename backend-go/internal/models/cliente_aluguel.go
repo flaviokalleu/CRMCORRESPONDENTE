@@ -77,6 +77,9 @@ type ClienteAluguel struct {
 	DocumentoIDPath        *string `gorm:"column:documento_id_path" json:"documento_id_path,omitempty"`
 	FiadorDocumentoIDPath  *string `gorm:"column:fiador_documento_id_path" json:"fiador_documento_id_path,omitempty"`
 
+	// PessoaID liga esta ficha de inquilino ao núcleo de identidade.
+	PessoaID *uint `gorm:"column:pessoa_id;index" json:"pessoa_id,omitempty"`
+
 	// Multitenancy
 	TenantID *uint `gorm:"column:tenant_id" json:"tenant_id,omitempty"`
 

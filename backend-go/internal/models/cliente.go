@@ -72,6 +72,9 @@ type Cliente struct {
 	// 3.7 Status / relacionamentos / tenant
 	Status   string `gorm:"column:status;default:aguardando_aprovacao" json:"status"`
 	UserID   *uint  `gorm:"column:user_id" json:"user_id"`
+	// PessoaID liga esta ficha de comprador ao núcleo de identidade (tabela
+	// pessoas). Nullable: fichas criadas antes da unificação não têm pessoa.
+	PessoaID *uint `gorm:"column:pessoa_id;index" json:"pessoa_id,omitempty"`
 	TenantID uint   `gorm:"column:tenant_id;not null;index" json:"tenant_id"` // clientes SEMPRE têm tenant
 
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`

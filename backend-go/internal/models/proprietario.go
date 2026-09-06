@@ -10,6 +10,7 @@ type Proprietario struct {
 	Name      string    `gorm:"column:name;size:255;not null" json:"name"`
 	Address   *string   `gorm:"column:address;size:255" json:"address,omitempty"`
 	Phone     *string   `gorm:"column:phone;size:255" json:"phone,omitempty"`
+	PessoaID  *uint     `gorm:"column:pessoa_id;index" json:"pessoa_id,omitempty"`
 	TenantID  *uint     `gorm:"column:tenant_id" json:"tenant_id,omitempty"`
 	CreatedAt time.Time `gorm:"column:createdAt" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updatedAt" json:"updated_at"`
