@@ -68,8 +68,31 @@ func formatDatePtr(t *time.Time) *string {
 	return &s
 }
 
-func (s *Service) List(ctx context.Context, papel, busca string) ([]models.Pessoa, error) {
-	return s.repo.List(ctx, papel, busca)
+// List devolve as pessoas do filtro já COM os papéis derivados — a tela
+// /pessoas do frontend usa "papeis" de cada item para desenhar os badges de
+// papel, e buscar isso pessoa a pessoa seria um N+1 (uma query de papéis por
+// linha da lista). Por isso os papéis são resolvidos em lote
+// (repo.PapeisEmLote), em 3 consultas totais para a página inteira.
+func (s *Service) List(ctx context.Context, papel, busca string) ([]PessoaComPapeis, error) {
+	pessoas, err := s.repo.List(ctx, papel, busca)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]uint, len(pessoas))
+	for i, p := range pessoas {
+		ids[i] = p.ID
+	}
+	papeisPorID, err := s.repo.PapeisEmLote(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]PessoaComPapeis, len(pessoas))
+	for i, p := range pessoas {
+		out[i] = PessoaComPapeis{Pessoa: p, Papeis: papeisPorID[p.ID]}
+	}
+	return out, nil
 }
 
 // Buscar procura por CPF. Devolve (nil, nil) quando não existe — o frontend usa

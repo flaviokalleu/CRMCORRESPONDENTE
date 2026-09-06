@@ -118,3 +118,51 @@ func (r *Repository) Papeis(ctx context.Context, pessoaID uint) (models.Papeis, 
 
 	return out, nil
 }
+
+// papeisTabelaQuery monta a query que verifica, dentro de um conjunto de
+// pessoas, quais têm ficha na tabela do modelo dado. Separada de PapeisEmLote
+// para ser inspecionável em teste com DryRun, no mesmo espírito de listQuery
+// — em especial para garantir que o callback global de tenant (que só enxerga
+// query construída via GORM, não SQL cru) segue sendo aplicado aqui.
+func (r *Repository) papeisTabelaQuery(ctx context.Context, tabela any, pessoaIDs []uint) *gorm.DB {
+	return r.db.WithContext(ctx).Model(tabela).Where("pessoa_id IN ?", pessoaIDs)
+}
+
+// PapeisEmLote deriva os papéis de várias pessoas de uma só vez: 3 consultas
+// no total (uma por tabela de papel), não 3 por pessoa. Existe para que
+// List possa devolver "papeis" em GET /pessoas sem cair num N+1 — a versão
+// por pessoa (Papeis) é usada só pelos endpoints de pessoa única.
+func (r *Repository) PapeisEmLote(ctx context.Context, pessoaIDs []uint) (map[uint]models.Papeis, error) {
+	out := make(map[uint]models.Papeis, len(pessoaIDs))
+	for _, id := range pessoaIDs {
+		out[id] = models.Papeis{}
+	}
+	if len(pessoaIDs) == 0 {
+		return out, nil
+	}
+
+	marcar := func(tabela any, marcar func(*models.Papeis)) error {
+		var comFicha []uint
+		if err := r.papeisTabelaQuery(ctx, tabela, pessoaIDs).Pluck("pessoa_id", &comFicha).Error; err != nil {
+			return err
+		}
+		for _, id := range comFicha {
+			p := out[id]
+			marcar(&p)
+			out[id] = p
+		}
+		return nil
+	}
+
+	if err := marcar(&models.Cliente{}, func(p *models.Papeis) { p.Comprador = true }); err != nil {
+		return nil, err
+	}
+	if err := marcar(&models.ClienteAluguel{}, func(p *models.Papeis) { p.Inquilino = true }); err != nil {
+		return nil, err
+	}
+	if err := marcar(&models.Proprietario{}, func(p *models.Papeis) { p.Proprietario = true }); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}

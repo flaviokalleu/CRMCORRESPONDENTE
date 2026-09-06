@@ -196,6 +196,42 @@ func TestCriarIntegracaoReaproveitaIdentidadePorCPF(t *testing.T) {
 	}
 }
 
+// TestListIntegracaoDevolvePapeisSemNMaisUm cobre o contrato que a tela
+// /pessoas do frontend depende: GET /pessoas precisa devolver "papeis" por
+// pessoa (não só a identidade), resolvido em lote — testar List sem isso não
+// pegaria uma regressão que faria os badges de papel sumirem da lista.
+func TestListIntegracaoDevolvePapeisSemNMaisUm(t *testing.T) {
+	db := integrationDB(t)
+	ctx := integrationCtx()
+	svc := NewService(NewRepository(db), db)
+
+	const cpf = "90044455566"
+	t.Cleanup(func() { limparPorCPF(t, db, cpf) })
+
+	criada, err := svc.Criar(ctx, CriarRequest{Papel: PapelComprador, Nome: "Lista Com Papeis", CPF: cpf})
+	if err != nil {
+		t.Fatalf("criar comprador: %v", err)
+	}
+	if _, err := svc.Criar(ctx, CriarRequest{Papel: PapelProprietario, Nome: "Lista Com Papeis", CPF: cpf}); err != nil {
+		t.Fatalf("criar proprietario: %v", err)
+	}
+
+	lista, err := svc.List(ctx, "", cpf)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(lista) != 1 {
+		t.Fatalf("len(lista) = %d, queria 1", len(lista))
+	}
+	got := lista[0]
+	if got.ID != criada.ID {
+		t.Fatalf("id = %d, queria %d", got.ID, criada.ID)
+	}
+	if !got.Papeis.Comprador || !got.Papeis.Proprietario || got.Papeis.Inquilino {
+		t.Fatalf("papeis = %+v, queria comprador=true proprietario=true inquilino=false", got.Papeis)
+	}
+}
+
 // TestCriarIntegracaoPapelDuplicadoNaoEscreveNada cobre o terceiro
 // comportamento central: pedir um papel que a pessoa já tem devolve
 // ErrPapelJaExiste e não grava uma segunda ficha.

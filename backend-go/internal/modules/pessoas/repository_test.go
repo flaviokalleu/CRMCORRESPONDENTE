@@ -100,3 +100,37 @@ func TestListFiltroPapelCorrelacionaTenant(t *testing.T) {
 		})
 	}
 }
+
+// TestPapeisTabelaQueryFiltraPorTenantEPessoa garante que a consulta em lote
+// usada por PapeisEmLote (chamada por List, para montar a coluna "Papéis" da
+// tela /pessoas sem N+1) continua passando pelo callback global de tenant —
+// diferente do EXISTS de listQuery, aqui a query é construída via GORM
+// (Model+Where), então o callback deveria injetar o filtro sozinho.
+func TestPapeisTabelaQueryFiltraPorTenantEPessoa(t *testing.T) {
+	casos := []struct {
+		tabela     any
+		nomeTabela string
+	}{
+		{&models.Cliente{}, "clientes"},
+		{&models.ClienteAluguel{}, "cliente_aluguels"},
+		{&models.Proprietario{}, "proprietario"},
+	}
+	for _, tc := range casos {
+		t.Run(tc.nomeTabela, func(t *testing.T) {
+			db := dryRunDB(t)
+			repo := NewRepository(db)
+			stmt := repo.papeisTabelaQuery(ctxComTenant(), tc.tabela, []uint{1, 2, 3}).Find(&[]struct{}{}).Statement
+			sql := stmt.SQL.String()
+
+			if !strings.Contains(sql, `FROM "`+tc.nomeTabela+`"`) {
+				t.Fatalf("esperava consulta em %q, sql: %s", tc.nomeTabela, sql)
+			}
+			if !strings.Contains(sql, "pessoa_id") {
+				t.Fatalf("esperava filtro por pessoa_id, sql: %s", sql)
+			}
+			if !strings.Contains(sql, "tenant_id") {
+				t.Fatalf("esperava filtro de tenant (via callback global), sql: %s", sql)
+			}
+		})
+	}
+}
