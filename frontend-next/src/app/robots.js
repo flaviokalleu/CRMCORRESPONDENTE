@@ -12,6 +12,7 @@ const PRIVADAS = [
   "/corretores",
   "/correspondentes",
   "/proprietarios",
+  "/pessoas",
   "/alugueis",
   "/clientes-aluguel",
   "/contratos",

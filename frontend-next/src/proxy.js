@@ -22,7 +22,7 @@ const PROTECTED_PREFIXES = [
   "/imoveis/adicionar",
   "/imoveis/lista",
   "/imovel/",
-  "/proprietarios",
+  "/pessoas",
   "/laudos",
   "/simulador",
   "/visitas",
