@@ -16,9 +16,9 @@ type Pessoa struct {
 	CPF      *string `gorm:"column:cpf" json:"cpf,omitempty"`
 	Email    *string `gorm:"column:email" json:"email,omitempty"`
 	Telefone *string `gorm:"column:telefone" json:"telefone,omitempty"`
-	// VARCHAR/date "YYYY-MM-DD" — mantido como string por coerência com
-	// Cliente.DataNascimento, que já é string nesse formato.
-	DataNascimento *string `gorm:"column:data_nascimento" json:"data_nascimento,omitempty"`
+	// Coluna real de DATE — diferente de Cliente.DataNascimento que é VARCHAR(10)
+	// por razões legadas. Segue o padrão usado em ClienteAluguel, CobrancaAluguel, etc.
+	DataNascimento *time.Time `gorm:"column:data_nascimento;type:date" json:"data_nascimento,omitempty"`
 
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
