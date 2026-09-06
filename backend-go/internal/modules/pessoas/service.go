@@ -57,9 +57,9 @@ func parseDatePtr(s string) *time.Time {
 	return &t
 }
 
-// formatDatePtr é o inverso de parseDatePtr: formata um *time.Time de volta
-// para "YYYY-MM-DD", que é o formato armazenado em models.Cliente.DataNascimento
-// (VARCHAR(10) legado). nil entra, nil sai.
+// formatDatePtr é o inverso de parseDatePtr: formata um *time.Time como
+// "YYYY-MM-DD" (time.Time.Format, não string), que é o formato armazenado em
+// models.Cliente.DataNascimento (VARCHAR(10) legado). nil entra, nil sai.
 func formatDatePtr(t *time.Time) *string {
 	if t == nil {
 		return nil
