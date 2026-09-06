@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,8 +42,8 @@ import (
 	"crmimob/internal/modules/notas"
 	"crmimob/internal/modules/pagamentos"
 	"crmimob/internal/modules/portalinquilino"
-	"crmimob/internal/modules/proprietarios"
 	"crmimob/internal/modules/propostas"
+	"crmimob/internal/modules/proprietarios"
 	"crmimob/internal/modules/reguacobranca"
 	"crmimob/internal/modules/relatorios"
 	"crmimob/internal/modules/simulacoes"
@@ -74,8 +75,20 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	}
 
 	r := gin.New()
+	// Não confiar em X-Forwarded-For enviado diretamente pelo visitante.
+	// Em produção, informar apenas os IPs/CIDRs do proxy da infraestrutura.
+	proxies := []string{}
+	for _, proxy := range strings.Split(os.Getenv("TRUSTED_PROXIES"), ",") {
+		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			proxies = append(proxies, proxy)
+		}
+	}
+	if err := r.SetTrustedProxies(proxies); err != nil {
+		panic("TRUSTED_PROXIES contém um IP ou CIDR inválido")
+	}
 	r.Use(middleware.Recovery())
 	r.Use(middleware.RequestLogger())
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(cfg.FrontendURLs, cfg.IsProduction()))
 
 	// ---- Fundação: auth ----
@@ -105,8 +118,8 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	api.Static("/uploads/tenants", filepath.Join(uploadsBase, "tenants"))
 
 	authGroup := api.Group("/auth")
-	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), authHandler.Login)
-	authGroup.POST("/refresh-token", authHandler.Refresh)
+	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<20), authHandler.Login)
+	authGroup.POST("/refresh-token", middleware.BodyLimit(1<<20), authHandler.Refresh)
 	authGroup.POST("/logout", authHandler.Required(), authHandler.Logout)
 	authGroup.POST("/validate-token", authHandler.Required(), authHandler.Validate)
 	authGroup.GET("/me", authHandler.Required(), authHandler.Me)
@@ -142,6 +155,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	superadminHandler := superadmin.NewHandler(superadmin.NewService(superadmin.NewRepository(db)))
 
 	tenantGroup := api.Group("/tenant")
+	tenantGroup.Use(middleware.BodyLimit(1 << 20))
 	tenantsHandler.RegisterPublic(tenantGroup)
 
 	tenantGroupAuth := api.Group("/tenant")
@@ -185,13 +199,10 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	locations.NewHandler(db).RegisterRoutes(api)
 
 	acessosHandler := acessos.NewHandler(acessos.NewService(acessos.NewRepository(db)))
-	acessosHandler.RegisterRoutes(api)
 
 	lembretesHandler := lembretes.NewHandler(lembretes.NewService(lembretes.NewRepository(db)))
-	lembretesHandler.RegisterRoutes(api)
 
 	notasHandler := notas.NewHandler(notas.NewService(notas.NewRepository(db)))
-	notasHandler.RegisterRoutes(api)
 
 	imoveisHandler := imoveis.NewHandler(imoveis.NewService(imoveis.NewRepository(db)))
 
@@ -210,6 +221,9 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	cluster02 := api.Group("")
 	cluster02.Use(authed(), tenantScoped)
 	{
+		acessosHandler.RegisterRoutes(cluster02)
+		lembretesHandler.RegisterRoutes(cluster02)
+		notasHandler.RegisterRoutes(cluster02)
 		imoveisHandler.RegisterRoutes(cluster02)
 
 		clientesRepo := clientes.NewRepository(db)
@@ -229,7 +243,10 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	pagamentosGroup := api.Group("/pagamentos")
 	pagamentosHandler.Register(pagamentosGroup, tenantScoped)
 
-	financeiroAuth := []gin.HandlerFunc{authed(), tenantScoped}
+	// Receitas, despesas, fluxo de caixa, comissões e repasses expõem o resultado
+	// financeiro da empresa inteira, então o grupo é restrito a administrador —
+	// autenticado + mesmo tenant não basta aqui.
+	financeiroAuth := []gin.HandlerFunc{authed(), tenantScoped, middleware.RequireAdministrador()}
 
 	receitasHandler := receitas.NewHandler(receitas.NewRepository(db))
 	receitasHandler.Register(api.Group("/receitas", financeiroAuth...))
@@ -282,6 +299,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	reguaHandler := reguacobranca.NewHandler(reguaSvc)
 
 	portalHandler.Register(api) // topo — JWT próprio, sem auth+tenant global
+	chamadosHandler.RegisterPortal(api)
 
 	cluster04 := api.Group("")
 	cluster04.Use(authed(), tenantScoped)
@@ -290,7 +308,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 		contratosHandler.Register(cluster04)
 		proprietariosHandler.Register(cluster04)
 		vistoriasHandler.Register(cluster04)
-		chamadosHandler.Register(cluster04) // rotas /portal/chamados usam portalAuth internamente
+		chamadosHandler.RegisterAdmin(cluster04)
 		reguaHandler.Register(cluster04)
 	}
 

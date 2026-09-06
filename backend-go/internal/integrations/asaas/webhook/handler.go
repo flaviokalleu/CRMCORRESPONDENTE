@@ -6,16 +6,17 @@ package webhook
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"crmimob/internal/integrations/asaas"
+	"crmimob/internal/middleware"
 	"crmimob/internal/models"
 )
 
@@ -30,13 +31,18 @@ func NewHandler(db *gorm.DB) *Handler { return &Handler{db: db} }
 // Register monta as rotas no grupo raiz da API (mount `/api`, público —
 // espelha `app.use('/api', asaasWebhookRoutes)` do Node).
 func (h *Handler) Register(rg *gin.RouterGroup) {
-	rg.POST("/asaas/webhook/:tenantSlug", h.handleTenant)
-	rg.POST("/asaas/webhook", h.handleLegacy)
-	rg.GET("/asaas/teste", h.testConnection)
+	rg.POST("/asaas/webhook/:tenantSlug", middleware.BodyLimit(1<<20), h.handleTenant)
+	rg.POST("/asaas/webhook", middleware.BodyLimit(1<<20), h.handleLegacy)
 }
 
 func isProduction() bool {
-	return os.Getenv("NODE_ENV") == "production"
+	return strings.EqualFold(os.Getenv("NODE_ENV"), "production")
+}
+
+// Webhooks ficam fechados por padrão. O bypass serve apenas para uma sandbox
+// local explicitamente opt-in e nunca pode ser ativado em produção.
+func allowInsecureWebhooks() bool {
+	return !isProduction() && strings.EqualFold(os.Getenv("ALLOW_INSECURE_WEBHOOKS"), "true")
 }
 
 // handleTenant resolve o tenant pelo slug, valida `asaas-access-token` contra
@@ -53,12 +59,12 @@ func (h *Handler) handleTenant(c *gin.Context) {
 
 	token := c.GetHeader("asaas-access-token")
 	if t.AsaasWebhookToken == nil || *t.AsaasWebhookToken == "" {
-		if isProduction() {
-			log.Printf("asaas webhook: tenant %s sem asaas_webhook_token configurado — rejeitado em produção", slug)
+		if !allowInsecureWebhooks() {
+			log.Printf("asaas webhook: tenant %s sem asaas_webhook_token configurado — rejeitado", slug)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Webhook não configurado"})
 			return
 		}
-		log.Printf("asaas webhook: tenant %s sem asaas_webhook_token — aceitando (ambiente não-produção)", slug)
+		log.Printf("asaas webhook: tenant %s sem token — aceitando apenas por ALLOW_INSECURE_WEBHOOKS", slug)
 	} else if token != *t.AsaasWebhookToken {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token inválido"})
 		return
@@ -74,11 +80,11 @@ func (h *Handler) handleLegacy(c *gin.Context) {
 	token := c.GetHeader("asaas-access-token")
 
 	if expected == "" {
-		if isProduction() {
+		if !allowInsecureWebhooks() {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Webhook não configurado"})
 			return
 		}
-		log.Printf("asaas webhook (legado): ASAAS_WEBHOOK_TOKEN não configurado — aceitando (ambiente não-produção)")
+		log.Printf("asaas webhook (legado): aceitando apenas por ALLOW_INSECURE_WEBHOOKS")
 	} else if token != expected {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token inválido"})
 		return
@@ -138,30 +144,4 @@ func (h *Handler) process(c *gin.Context, tenantID *uint) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"received": true})
-}
-
-// testConnection — GET /api/asaas/teste. Testa a chave global (equivalente a
-// `testarConexao` do Node).
-func (h *Handler) testConnection(c *gin.Context) {
-	apiKey := asaas.ResolveAPIKey(nil)
-	if apiKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "ASAAS_API_KEY não configurada"})
-		return
-	}
-	client := asaas.NewClient(apiKey)
-	balance, err := client.GetBalance(c.Request.Context())
-	if err != nil {
-		var asaasErr *asaas.ErrAsaas
-		if errors.As(err, &asaasErr) {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": asaasErr.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success":     true,
-		"environment": asaas.ResolveEnvironment(),
-		"balance":     balance.Balance,
-	})
 }

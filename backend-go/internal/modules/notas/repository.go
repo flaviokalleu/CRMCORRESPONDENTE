@@ -37,7 +37,7 @@ func (r *Repository) Delete(ctx context.Context, id uint) error {
 // vazio (não erro) se nenhuma existir.
 func (r *Repository) ByCliente(ctx context.Context, clienteID uint) ([]models.Nota, error) {
 	var list []models.Nota
-	err := r.db.WithContext(ctx).Where("cliente_id = ?", clienteID).Order("data_criacao DESC").Find(&list).Error
+	err := r.db.WithContext(ctx).Preload("Criador").Where("cliente_id = ?", clienteID).Order("data_criacao DESC").Find(&list).Error
 	return list, err
 }
 

@@ -10,12 +10,13 @@ import "time"
 // Timestamps: createdAt está mapeado para a coluna `data_criacao` (nome custom
 // do Sequelize), updatedAt para `updated_at`.
 type Nota struct {
-	ID          uint    `gorm:"primaryKey" json:"id"`
-	ClienteID   uint    `gorm:"column:cliente_id;not null;index" json:"cliente_id"`
-	ProcessoID  *uint   `gorm:"column:processo_id" json:"processo_id"`
-	Texto       string  `gorm:"column:texto;not null" json:"texto"`
-	CriadoPorID *uint   `gorm:"column:criado_por_id" json:"criado_por_id"`
-	Nova        *bool   `gorm:"column:nova;default:true" json:"nova"`
+	ID           uint    `gorm:"primaryKey" json:"id"`
+	TenantID     *uint   `gorm:"column:tenant_id;index" json:"tenant_id,omitempty"`
+	ClienteID    uint    `gorm:"column:cliente_id;not null;index" json:"cliente_id"`
+	ProcessoID   *uint   `gorm:"column:processo_id" json:"processo_id"`
+	Texto        string  `gorm:"column:texto;not null" json:"texto"`
+	CriadoPorID  *uint   `gorm:"column:criado_por_id" json:"criado_por_id"`
+	Nova         *bool   `gorm:"column:nova;default:true" json:"nova"`
 	Destinatario *string `gorm:"column:destinatario" json:"destinatario"`
 
 	DataCriacao time.Time `gorm:"column:data_criacao" json:"data_criacao"`

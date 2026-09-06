@@ -28,13 +28,24 @@ func NewHandler(svc *Service, portalAuth *portalinquilino.AuthService) *Handler 
 // wiring doc). As rotas `/portal/*` exigem SEMPRE o AuthInquilino deste
 // handler (não é opcional).
 func (h *Handler) Register(r *gin.RouterGroup) {
+	h.RegisterPortal(r)
+	h.RegisterAdmin(r)
+}
+
+// RegisterPortal monta somente as rotas do inquilino. Ela deve ser chamada no
+// grupo raiz da API, sem o middleware de autenticação do CRM.
+func (h *Handler) RegisterPortal(r *gin.RouterGroup) {
 	portal := r.Group("/portal")
 	portal.Use(h.auth.Required())
 	{
 		portal.POST("/chamados", h.Abrir)
 		portal.GET("/chamados", h.ListMeusChamados)
 	}
+}
 
+// RegisterAdmin monta as rotas internas, que exigem auth+tenant no grupo
+// recebido pelo router principal.
+func (h *Handler) RegisterAdmin(r *gin.RouterGroup) {
 	r.GET("/chamados", h.ListAdmin)
 	r.PUT("/chamados/:id", h.Atualizar)
 	r.GET("/chamados/resumo", h.ResumoHandler)

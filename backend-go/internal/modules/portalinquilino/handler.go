@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"crmimob/internal/middleware"
 )
 
 type Handler struct {
@@ -23,7 +26,9 @@ func NewHandler(svc *Service, auth *AuthService) *Handler {
 // doc do pacote). Deve ser montado no TOPO do router (04-spec §Ordem de
 // montagem, item 1) para não colidir com rotas dinâmicas de outros módulos.
 func (h *Handler) Register(r *gin.RouterGroup) {
-	r.POST("/portal/login", h.Login)
+	// CPF é um identificador de baixa entropia; limitar tentativas reduz
+	// enumeração e brute force contra o portal público.
+	r.POST("/portal/login", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(256<<10), portalAuthenticationUnavailable)
 
 	protected := r.Group("")
 	protected.Use(h.auth.Required())

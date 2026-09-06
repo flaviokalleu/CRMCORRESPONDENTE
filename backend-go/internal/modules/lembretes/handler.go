@@ -13,8 +13,8 @@ type Handler struct{ svc *Service }
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
-// RegisterRoutes monta /api/lembretes (sem auth no mount hoje — §2.5/§6.6,
-// divergência de segurança documentada; decisão de proteção fica no router).
+// RegisterRoutes monta /api/lembretes. O grupo deve ser protegido por auth e
+// tenant scope no router principal.
 func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	g := rg.Group("/lembretes")
 	{

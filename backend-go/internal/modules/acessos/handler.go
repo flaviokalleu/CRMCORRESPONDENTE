@@ -12,8 +12,8 @@ type Handler struct{ svc *Service }
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
-// RegisterRoutes monta /api/acessos (sem auth no mount hoje — §2.6/§6.6,
-// divergência de segurança documentada).
+// RegisterRoutes monta /api/acessos. O grupo deve ser protegido por auth e
+// tenant scope no router principal para evitar exposição de telemetria.
 func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	g := rg.Group("/acessos")
 	{

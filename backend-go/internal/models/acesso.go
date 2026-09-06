@@ -7,6 +7,7 @@ import "time"
 // acessos ao sistema. Ver spec §4.4.
 type Acesso struct {
 	ID             uint      `gorm:"primaryKey" json:"id"`
+	TenantID       *uint     `gorm:"column:tenant_id;index" json:"tenant_id,omitempty"`
 	IP             string    `gorm:"column:ip;not null" json:"ip"`
 	Referer        *string   `gorm:"column:referer" json:"referer"`
 	UserAgent      *string   `gorm:"column:user_agent" json:"user_agent"`

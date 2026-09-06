@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronRight, LogOut, Settings, LayoutDashboard, UserPlus, UserCog,
-  ShieldCheck, Building2, Users, ClipboardList, Banknote,
-  QrCode, PanelLeftClose, X, Crown, Building, FileText,
+  ChevronRight, LogOut, Settings, UserPlus, UserCog, Activity,
+  ShieldCheck, Building2, Users, ClipboardList, Banknote, FileBarChart2,
+  QrCode, PanelLeftClose, X, Crown, Building, FileText, CreditCard,
   Handshake, KeyRound, Calculator, ChartNoAxesColumn, CalendarCheck, House,
+  Wallet, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,38 +37,46 @@ function NavItem({ href, icon: Icon, label, isActive, nested = false }) {
   );
 }
 
-function NavGroup({ groupKey, icon: Icon, label, isOpen, onToggle, items, pathname }) {
-  const hasActiveChild = items.some((i) => i.href === pathname);
+// Uma seção do menu. `collapsible: false` rende só um rótulo de leitura com os
+// itens sempre à vista (as áreas de uso diário); `true` rende um cabeçalho que
+// abre e fecha, para as áreas que a pessoa visita de vez em quando.
+function NavSection({ section, pathname, isOpen, onToggle }) {
+  const { key, label, items, collapsible } = section;
+
+  const list = (
+    <div className="space-y-0.5">
+      {items.map((item) => (
+        <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={pathname === item.href} />
+      ))}
+    </div>
+  );
+
+  if (!collapsible) {
+    return (
+      <div className="ref-nav-section">
+        <p className="ref-nav-section-label">{label}</p>
+        {list}
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <button
-        onClick={onToggle}
-        className={cn(
-          "group flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-          isOpen || hasActiveChild ? "bg-white/[0.04] text-white/90" : "text-white/80 hover:bg-white/[0.05] hover:text-white/90"
-        )}
-      >
-        <span className="flex items-center gap-3">
-          <Icon className={cn("h-4 w-4", hasActiveChild ? "text-white" : "text-white/80 group-hover:text-white/80")} strokeWidth={1.75} />
-          {label}
-        </span>
-        <ChevronRight className={cn("h-3.5 w-3.5 text-white/70 transition-transform duration-200", isOpen && "rotate-90")} />
+    <div className="ref-nav-section">
+      <button type="button" onClick={onToggle} aria-expanded={isOpen} className="ref-nav-section-label">
+        <span>{label}</span>
+        <ChevronRight className={cn("transition-transform duration-200", isOpen && "rotate-90")} strokeWidth={2} />
       </button>
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
-            key={groupKey}
+            key={key}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.18, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="ml-[18px] mt-1 space-y-0.5 border-l border-white/10 pl-3 py-0.5">
-              {items.map((item) => (
-                <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={pathname === item.href} nested />
-              ))}
-            </div>
+            {list}
           </motion.div>
         )}
       </AnimatePresence>
@@ -80,8 +89,10 @@ export function Sidebar({ onClose, onToggleVisibility }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [openGroups, setOpenGroups] = useState({});
-  const toggleGroup = useCallback((key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] })), []);
+  // Só guarda a seção que a pessoa abriu ou fechou na mão. Enquanto não mexer,
+  // a seção da página atual nasce aberta e as outras fechadas.
+  const [openSections, setOpenSections] = useState({});
+  const toggleSection = useCallback((key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] })), []);
 
   const nomeSistema = process.env.NEXT_PUBLIC_NOME_SISTEMA || "CRM IMOB";
 
@@ -98,64 +109,91 @@ export function Sidebar({ onClose, onToggleVisibility }) {
 
   const fullName = useMemo(() => `${user?.first_name || "Usuário"} ${user?.last_name || ""}`.trim(), [user]);
 
-  const { top, groups, bottomExtra } = useMemo(() => {
-    const top = [{ href: "/dashboard", icon: House, label: "Dashboard" }];
-    const groups = [];
-    const bottomExtra = [];
-
-    const isStaff = hasRole("administrador") || hasRole("correspondente");
+  // Menu organizado pela etapa do negócio: captação -> negociação -> fechamento
+  // -> dinheiro -> cadastros -> sistema. `pinned` fica solto no topo por ser o
+  // que se abre todo dia. Seção sem item visível para o papel atual some.
+  const { pinned, sections } = useMemo(() => {
+    const isAdmin = hasRole("administrador");
+    const isStaff = isAdmin || hasRole("correspondente");
     const isCorretor = hasRole("corretor");
-    if (isCorretor || isStaff) top.push(
-      { href: "/clientes/lista?view=kanban", icon: UserPlus, label: "Leads" },
-      { href: "/clientes/lista", icon: Users, label: "Clientes" },
-      { href: "/imoveis/lista", icon: House, label: "Imóveis" },
-      { href: "/simulador", icon: Calculator, label: "Simulações" },
-    );
-    top.push({ href: "/propostas", icon: FileText, label: "Propostas" });
-    if (isStaff) top.push({ href: "/contratos/lista", icon: ClipboardList, label: "Contratos" });
-    if (isCorretor || isStaff) top.push({ href: "/visitas", icon: Handshake, label: "Atendimentos" });
-    if (isStaff) top.push({ href: "/lembretes", icon: CalendarCheck, label: "Tarefas" });
-    if (hasRole("administrador")) top.push({ href: "/relatorio", icon: ChartNoAxesColumn, label: "Relatórios" });
+    const operacional = isCorretor || isStaff;
 
-    // Só entra em "Mais ferramentas" o que o menu principal acima já não cobre.
-    // Listar Clientes, Listar Imóveis, Propostas e Contratos saíram daqui porque
-    // apontavam para as mesmas rotas dos itens do topo.
-    if (isCorretor || isStaff) bottomExtra.push({ href: "/clientes/adicionar", icon: UserPlus, label: "Adicionar Cliente" });
-    if (isStaff) bottomExtra.push({ href: "/imoveis/adicionar", icon: Building2, label: "Adicionar Imóvel" });
+    const pinned = [{ href: "/dashboard", icon: House, label: "Dashboard" }];
+    if (isStaff) pinned.push({ href: "/lembretes", icon: CalendarCheck, label: "Tarefas" });
 
-    if (isStaff) {
-      groups.push({
-        key: "pessoas",
-        icon: UserCog,
-        label: "Equipe",
+    const sections = [
+      {
+        key: "captacao",
+        label: "Captação",
+        collapsible: false,
+        items: operacional ? [
+          { href: "/clientes/lista?view=kanban", icon: UserPlus, label: "Leads" },
+          { href: "/clientes/lista", icon: Users, label: "Clientes" },
+          { href: "/imoveis/lista", icon: Building2, label: "Imóveis" },
+        ] : [],
+      },
+      {
+        key: "negociacao",
+        label: "Negociação",
+        collapsible: false,
         items: [
-          { href: "/corretores/adicionar", icon: UserPlus, label: "Adicionar Corretor" },
+          ...(operacional ? [{ href: "/simulador", icon: Calculator, label: "Simulações" }] : []),
+          { href: "/propostas", icon: FileText, label: "Propostas" },
+          ...(operacional ? [{ href: "/visitas", icon: Handshake, label: "Atendimentos" }] : []),
+          ...(isStaff ? [{ href: "/laudos", icon: FileBarChart2, label: "Laudos" }] : []),
+        ],
+      },
+      {
+        key: "fechamento",
+        label: "Fechamento",
+        collapsible: true,
+        items: isStaff ? [
+          { href: "/contratos/lista", icon: ClipboardList, label: "Contratos" },
+          { href: "/alugueis", icon: KeyRound, label: "Imóveis em Locação" },
+          { href: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
+        ] : [],
+      },
+      {
+        key: "financeiro",
+        label: "Financeiro",
+        collapsible: true,
+        items: [
+          ...(isAdmin ? [
+            { href: "/financeiro/dashboard", icon: Wallet, label: "Painel" },
+            { href: "/financeiro/receitas", icon: TrendingUp, label: "Receitas" },
+            { href: "/financeiro/despesas", icon: TrendingDown, label: "Despesas" },
+          ] : []),
+          ...(isStaff ? [{ href: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" }] : []),
+        ],
+      },
+      {
+        key: "cadastros",
+        label: "Cadastros",
+        collapsible: true,
+        items: isStaff ? [
           { href: "/corretores/lista", icon: UserCog, label: "Corretores" },
-          { href: "/correspondentes/adicionar", icon: UserPlus, label: "Adicionar Correspondente" },
           { href: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
           { href: "/proprietarios/lista", icon: Users, label: "Proprietários" },
-        ],
-      });
-
-      groups.push({
-        key: "alugueis",
-        icon: KeyRound,
-        label: "Aluguéis",
+        ] : [],
+      },
+      {
+        key: "sistema",
+        label: "Sistema",
+        collapsible: true,
         items: [
-          { href: "/alugueis/adicionar", icon: Building2, label: "Adicionar Imóvel p/ Locação" },
-          { href: "/alugueis", icon: Building2, label: "Imóveis em Locação" },
-          { href: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
+          ...(isAdmin ? [{ href: "/relatorio", icon: ChartNoAxesColumn, label: "Relatórios" }] : []),
+          ...(isStaff ? [{ href: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" }] : []),
+          ...(isAdmin ? [
+            { href: "/acessos", icon: Activity, label: "Acessos" },
+            { href: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" },
+            { href: "/minha-assinatura", icon: CreditCard, label: "Minha Assinatura" },
+          ] : []),
+          ...(isSuperAdmin ? [{ href: "/super-admin", icon: Crown, label: "Super Admin" }] : []),
         ],
-      });
+      },
+    ];
 
-      bottomExtra.push({ href: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" });
-      bottomExtra.push({ href: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" });
-    }
-
-    if (isSuperAdmin) bottomExtra.push({ href: "/super-admin", icon: Crown, label: "Super Admin" });
-    if (hasRole("administrador")) bottomExtra.push({ href: "/configuracoes-empresa", icon: Building, label: "Minha Empresa" });
-
-    return { top, groups, bottomExtra };
+    return { pinned, sections: sections.filter((section) => section.items.length > 0) };
   }, [hasRole, isSuperAdmin]);
 
   return (
@@ -179,27 +217,21 @@ export function Sidebar({ onClose, onToggleVisibility }) {
 
       <nav className="flex-1 overflow-y-auto px-2.5 py-3">
         <div className="space-y-0.5">
-          {top.map((item) => (
+          {pinned.map((item) => (
             <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={pathname === item.href} />
           ))}
         </div>
 
-        <details className="ref-more-menu"><summary>Mais ferramentas</summary>
-        <div className="space-y-0.5">
-          {groups.map((g) => (
-            <NavGroup key={g.key} groupKey={g.key} icon={g.icon} label={g.label} isOpen={!!openGroups[g.key]} onToggle={() => toggleGroup(g.key)} items={g.items} pathname={pathname} />
-          ))}
-        </div>
+        {sections.map((section) => (
+          <NavSection
+            key={section.key}
+            section={section}
+            pathname={pathname}
+            isOpen={openSections[section.key] ?? section.items.some((item) => item.href === pathname)}
+            onToggle={() => toggleSection(section.key)}
+          />
+        ))}
 
-        {bottomExtra.length > 0 && (
-          <div className="mt-4 space-y-0.5">
-            {bottomExtra.map((item) => (
-              <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={pathname === item.href} />
-            ))}
-          </div>
-        )}
-
-        </details>
         <Separator className="my-3 bg-white/10" />
 
         <div className="space-y-0.5">

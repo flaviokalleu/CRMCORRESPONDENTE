@@ -25,6 +25,17 @@ func (r *Repository) List(ctx context.Context) ([]models.Comissao, error) {
 	return rows, nil
 }
 
+// ListByCorretor devolve só as comissões de um corretor. O filtro de tenant
+// continua vindo do callback global do GORM (tenant.RegisterCallbacks), então
+// aqui só entra o recorte por dono.
+func (r *Repository) ListByCorretor(ctx context.Context, corretorID uint) ([]models.Comissao, error) {
+	var rows []models.Comissao
+	if err := r.db.WithContext(ctx).Where("\"corretorId\" = ?", corretorID).Order("data DESC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *Repository) FindByID(ctx context.Context, id uint) (*models.Comissao, error) {
 	var m models.Comissao
 	if err := r.db.WithContext(ctx).First(&m, id).Error; err != nil {

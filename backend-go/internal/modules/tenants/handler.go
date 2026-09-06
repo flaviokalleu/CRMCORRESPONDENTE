@@ -3,11 +3,13 @@ package tenants
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"crmimob/internal/auth"
+	"crmimob/internal/middleware"
 	"crmimob/internal/modules/users"
 )
 
@@ -19,7 +21,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
 // RegisterPublic monta as rotas sem autenticação de /api/tenant.
 func (h *Handler) RegisterPublic(r *gin.RouterGroup) {
-	r.POST("/register", h.Register)
+	r.POST("/register", middleware.RateLimit(5, 15*time.Minute), h.Register)
 	r.GET("/plans", h.Plans)
 	r.GET("/check-slug/:slug", h.CheckSlug)
 }

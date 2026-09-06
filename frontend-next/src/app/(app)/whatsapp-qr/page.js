@@ -123,24 +123,31 @@ export default function WhatsAppQRPage() {
     };
 
     connect();
-    checkStatus();
+    const statusTimer = setTimeout(checkStatus, 0);
 
     return () => {
       closedByEffect = true;
+      clearTimeout(statusTimer);
       clearTimeout(reconnectTimer);
       wsRef.current?.close();
       wsRef.current = null;
     };
   }, [user?.tenant_id, handleEvent, checkStatus]);
 
-  // Gera a imagem do QR a partir do código recebido, via serviço externo de
-  // renderização (evita depender da lib `qrcode` no bundle client).
+  // O QR permite vincular uma conta: renderizar localmente, sem enviar a terceiros.
   useEffect(() => {
-    if (qrCode) {
-      setQrImage(`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(qrCode)}`);
-    } else {
-      setQrImage("");
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const image = qrCode
+          ? await (await import('qrcode')).toDataURL(qrCode, { width: 280, margin: 2 })
+          : '';
+        if (!cancelled) setQrImage(image);
+      } catch {
+        if (!cancelled) setError('Não foi possível gerar o QR Code. Tente novamente.');
+      }
+    })();
+    return () => { cancelled = true; };
   }, [qrCode]);
 
   const handleConnect = async () => {

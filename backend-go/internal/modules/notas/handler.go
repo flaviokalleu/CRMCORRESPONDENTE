@@ -12,9 +12,8 @@ type Handler struct{ svc *Service }
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
-// RegisterRoutes monta /api/notas. Divergência de segurança documentada
-// (§2.4/§6.6): o Node não aplica auth no mount destas rotas — aqui o router
-// principal decide se protege ou não (ver docs/migration/wiring).
+// RegisterRoutes monta /api/notas. O grupo deve ser protegido por auth e
+// tenant scope no router principal.
 func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 	g := rg.Group("/notas")
 	{

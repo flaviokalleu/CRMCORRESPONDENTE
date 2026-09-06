@@ -84,6 +84,18 @@ const ctxKey = "inquilino_claims"
 // JWT, exige `tipo:"inquilino"` e injeta as claims no contexto Gin. NÃO
 // aplica tenant scope (ver doc do pacote).
 func (s *AuthService) Required() gin.HandlerFunc {
+	// Tokens legados foram emitidos apenas com CPF, que não prova identidade.
+	// Bloquear também esses tokens até disponibilizar senha ou código verificado.
+	return portalAuthenticationUnavailable
+}
+
+func portalAuthenticationUnavailable(c *gin.Context) {
+	c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+		"error": "O acesso ao portal está temporariamente indisponível. Entre em contato com a administradora.",
+	})
+}
+
+func (s *AuthService) requiredVerifiedToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		h := c.GetHeader("Authorization")
 		parts := strings.SplitN(h, " ", 2)

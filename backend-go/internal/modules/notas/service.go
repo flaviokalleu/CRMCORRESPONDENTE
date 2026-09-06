@@ -92,10 +92,8 @@ func (s *Service) ByCliente(ctx context.Context, clienteID uint) ([]ClienteNotaR
 	out := make([]ClienteNotaResponse, 0, len(list))
 	for _, n := range list {
 		nome := ""
-		if n.CriadoPorID != nil {
-			if u, err := s.repo.FindUser(ctx, *n.CriadoPorID); err == nil {
-				nome = u.FirstName + " " + u.LastName
-			}
+		if n.Criador != nil {
+			nome = n.Criador.FirstName + " " + n.Criador.LastName
 		}
 		out = append(out, ClienteNotaResponse{
 			ID: n.ID, ClienteID: n.ClienteID, ProcessoID: n.ProcessoID, Texto: n.Texto,

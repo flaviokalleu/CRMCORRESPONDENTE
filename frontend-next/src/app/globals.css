@@ -688,6 +688,14 @@ select optgroup {
 .ref-sidebar nav .ref-nav-active { background: #0070cd; color: white; box-shadow: inset 0 0 0 1px #ffffff08; }
 .ref-sidebar nav .ref-nav-active svg { color: white; }
 .ref-sidebar nav .ref-nav-active > span.absolute { display: none; }
+/* Rotulo de secao: e um divisor de leitura, nao um destino. Fica menor e mais
+   apagado que os itens de menu para nao competir com eles. Precisa sobrescrever
+   o min-height/font-size/cor que a regra generica de `nav :is(a,button)` aplica. */
+.ref-sidebar nav .ref-nav-section { margin-top: 14px; }
+.ref-sidebar nav .ref-nav-section-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-bottom: 3px; padding: 4px 12px; font-size: 10.5px; font-weight: 600; letter-spacing: .9px; text-transform: uppercase; color: #6faede; }
+.ref-sidebar nav button.ref-nav-section-label { min-height: 0; font-size: 10.5px; font-weight: 600; color: #6faede; border-radius: 9px; transition: color .2s ease, background-color .2s ease; }
+.ref-sidebar nav button.ref-nav-section-label:hover { color: #ffffff; background-color: #ffffff0f; }
+.ref-sidebar nav button.ref-nav-section-label svg { width: 13px; height: 13px; color: inherit; }
 /* Rolagem do menu: a barra nativa cortava o azul da sidebar. Fica invisivel em
    repouso e so aparece — fina e translucida — quando o mouse esta sobre o menu
    ou o foco entra nele via teclado. A rolagem continua funcionando em telas
@@ -787,7 +795,6 @@ select optgroup {
 @media(max-width:767px) { .ref-header > div:last-child { padding: 0 12px; height: 64px; } .ref-search kbd { display: none; } .ref-dashboard { padding: 0 12px 12px; } .ref-welcome { padding: 20px 3px; } .ref-welcome p { font-size: 13px; } }
 @media(max-width:560px) { .ref-kpis { grid-template-columns: 1fr 1fr; } .ref-kpis > :last-child { grid-column: 1 / -1; } .ref-charts,.ref-lists { grid-template-columns: 1fr; } .ref-status { flex-direction: row; } .ref-donut { width: 52%; height: 185px; } .ref-legend > div { margin: 20px 0; } .ref-banner { flex-wrap: wrap; gap: 16px; } .ref-banner h2 { flex: 1; min-width: 180px; } .ref-banner a { width: 100%; justify-content: space-between; } .ref-search { padding: 8px; gap: 7px; } .ref-search input { font-size: 11px; } .ref-header > div:last-child { gap: 4px; } }
 @media print { .ref-header,.ref-sidebar { display: none; } .ref-panel,.ref-kpi { break-inside: avoid; } .ref-management { border: 0; } }
-.ref-more-menu { margin-top: 9px; } .ref-more-menu > summary { padding: 10px 12px; color: #c0ddf6; font-size: 12px; cursor: pointer; }
 
 /* Landing institucional e autenticação */
 .marketing-page { min-height: 100vh; overflow: hidden; background: #f6faff; color: #0a2147; }

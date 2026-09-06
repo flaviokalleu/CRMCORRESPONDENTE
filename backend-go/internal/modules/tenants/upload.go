@@ -13,6 +13,13 @@ import (
 // saveLogo grava o logo em uploads/tenants/{tenantId}/logo_{timestamp}{ext},
 // removendo o antigo se existir (equivalente ao Node — ver 01-spec §2.4).
 func saveLogo(tenantID uint, fh *multipart.FileHeader) (string, error) {
+	if fh == nil || fh.Size <= 0 || fh.Size > 5*1024*1024 {
+		return "", fmt.Errorf("logo inválido ou excede 5MB")
+	}
+	ext := strings.ToLower(filepath.Ext(fh.Filename))
+	if !map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}[ext] {
+		return "", fmt.Errorf("formato de logo não permitido")
+	}
 	dir := filepath.Join("uploads", "tenants", fmt.Sprintf("%d", tenantID))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -27,10 +34,6 @@ func saveLogo(tenantID uint, fh *multipart.FileHeader) (string, error) {
 		}
 	}
 
-	ext := strings.ToLower(filepath.Ext(fh.Filename))
-	if ext == "" {
-		ext = ".png"
-	}
 	filename := fmt.Sprintf("logo_%d%s", time.Now().UnixMilli(), ext)
 	dst := filepath.Join(dir, filename)
 
@@ -46,8 +49,12 @@ func saveLogo(tenantID uint, fh *multipart.FileHeader) (string, error) {
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, src); err != nil {
+	if _, err := io.Copy(out, io.LimitReader(src, 5*1024*1024+1)); err != nil {
 		return "", err
+	}
+	if info, err := out.Stat(); err != nil || info.Size() > 5*1024*1024 {
+		_ = os.Remove(dst)
+		return "", fmt.Errorf("logo excede 5MB")
 	}
 	return "/uploads/tenants/" + fmt.Sprintf("%d", tenantID) + "/" + filename, nil
 }

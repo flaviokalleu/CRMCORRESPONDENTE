@@ -3,12 +3,16 @@ package imoveis
 import (
 	"archive/zip"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -256,10 +260,20 @@ func (h *Handler) processImages(c *gin.Context, imovelID uint) {
 }
 
 func saveFile(fh *multipart.FileHeader, dir string) (relPath string, ok bool) {
+	if fh == nil || fh.Size <= 0 || fh.Size > maxPropertyUploadBytes {
+		return "", false
+	}
+	name := safeUploadName(fh.Filename)
+	ext := strings.ToLower(filepath.Ext(name))
+	if !allowedPropertyUploadExt[ext] {
+		return "", false
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", false
 	}
-	dest := filepath.Join(dir, fh.Filename)
+	// Nunca usa o nome enviado como caminho. O prefixo único também evita que
+	// dois uploads legítimos sobrescrevam o arquivo anterior.
+	dest := filepath.Join(dir, fmt.Sprintf("%d_%s", time.Now().UnixNano(), name))
 	src, err := fh.Open()
 	if err != nil {
 		return "", false
@@ -270,7 +284,11 @@ func saveFile(fh *multipart.FileHeader, dir string) (relPath string, ok bool) {
 		return "", false
 	}
 	defer dst.Close()
-	if _, err := io.Copy(dst, src); err != nil {
+	if _, err := io.Copy(dst, io.LimitReader(src, maxPropertyUploadBytes+1)); err != nil {
+		return "", false
+	}
+	if info, err := os.Stat(dest); err != nil || info.Size() > maxPropertyUploadBytes {
+		_ = os.Remove(dest)
 		return "", false
 	}
 	rel, err := filepath.Rel(uploadsRoot(), dest)
@@ -278,6 +296,32 @@ func saveFile(fh *multipart.FileHeader, dir string) (relPath string, ok bool) {
 		return "", false
 	}
 	return filepath.ToSlash(rel), true
+}
+
+const maxPropertyUploadBytes int64 = 10 << 20
+
+var allowedPropertyUploadExt = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".pdf": true,
+}
+
+func safeUploadName(raw string) string {
+	base := filepath.Base(strings.TrimSpace(raw))
+	if base == "." || base == "" {
+		return "arquivo"
+	}
+	var b strings.Builder
+	for _, r := range base {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '-' || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	name := strings.Trim(b.String(), "._")
+	if name == "" {
+		return "arquivo"
+	}
+	return name
 }
 
 func readImovelInput(c *gin.Context) ImovelInput {
