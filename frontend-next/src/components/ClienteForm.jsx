@@ -118,7 +118,7 @@ const fieldCls =
 
 function Label({ children, icon: Icon }) {
   return (
-    <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cx-muted">
+    <span className="crm-field-label mb-2 flex items-center gap-2">
       {Icon && <Icon className="h-3 w-3" />}
       {children}
     </span>
@@ -147,7 +147,7 @@ function Money({ label, icon, value, onChange, placeholder }) {
   return (
     <label className="block">
       <Label icon={icon}>{label}</Label>
-      <div className="flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface transition-colors focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
+      <div className="crm-money flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface transition-colors focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
         <span className="flex items-center border-r border-cx-border bg-cx-surface px-3 text-xs font-semibold text-cx-muted">R$</span>
         <input
           value={value}
@@ -217,7 +217,7 @@ function Dropzone({ label, icon: Icon, files, onChange, onClear }) {
 
 function Section({ id, refCb, icon: Icon, title, subtitle, done, children }) {
   return (
-    <section ref={refCb} id={id} className="scroll-mt-6 rounded-2xl border border-cx-border bg-cx-surface p-5 sm:p-6">
+    <section ref={refCb} id={id} className="crm-form-section scroll-mt-6 rounded-2xl border border-cx-border bg-cx-surface p-5 sm:p-6">
       <header className="mb-5 flex items-center gap-3 border-b border-cx-border/[0.15] pb-4">
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${done ? "border-cx-orange/40 bg-orange-50 text-cx-orange-text" : "border-cx-border bg-cx-surface text-cx-muted"}`}>
           <Icon className="h-4 w-4" />
@@ -422,7 +422,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+    <form onSubmit={handleSubmit} className="crm-form crm-form-composed grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
       {/* ══ Coluna esquerda: DOSSIÊ AO VIVO ══ */}
       <aside className="lg:sticky lg:top-2 lg:self-start">
         <div className="space-y-4">

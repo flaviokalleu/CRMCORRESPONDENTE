@@ -120,7 +120,7 @@ export function CriarPagamentoForm() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-cx-border bg-cx-surface p-4">
+      <form onSubmit={handleSubmit} className="crm-form space-y-4 rounded-xl border border-cx-border bg-cx-surface p-4">
         <div>
           <label className="block text-xs text-cx-muted mb-1">Tipo de pagamento *</label>
           <select

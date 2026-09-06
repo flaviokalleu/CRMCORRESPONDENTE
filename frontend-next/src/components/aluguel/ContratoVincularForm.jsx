@@ -65,7 +65,7 @@ export function ContratoVincularForm({ opcoes }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="crm-form grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm text-cx-muted mb-1">Inquilino</label>
         <select

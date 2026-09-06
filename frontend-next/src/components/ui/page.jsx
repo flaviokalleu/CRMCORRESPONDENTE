@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Children, cloneElement, isValidElement } from "react";
 import { Plus } from "lucide-react";
 
 // Primitivos de UI presentacionais (sem hooks — seguros em Server Components)
@@ -9,7 +10,7 @@ import { Plus } from "lucide-react";
 
 export function PageHeader({ title, subtitle, actionHref, actionLabel, actionIcon: Icon = Plus }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="crm-page-header">
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-cx-text">{title}</h1>
         {subtitle && <p className="text-sm text-cx-muted">{subtitle}</p>}
@@ -17,7 +18,7 @@ export function PageHeader({ title, subtitle, actionHref, actionLabel, actionIco
       {actionHref && (
         <Link
           href={actionHref}
-          className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-orange-900/25 transition-colors hover:bg-cx-orange-dark"
+          className="crm-primary-action"
         >
           <Icon className="h-4 w-4" /> {actionLabel}
         </Link>
@@ -33,7 +34,7 @@ export function initialsOf(name) {
 
 export function Avatar({ name, className = "" }) {
   return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cx-border bg-cx-surface text-xs font-semibold text-cx-text ${className}`}>
+    <div className={`crm-avatar flex h-10 w-10 shrink-0 items-center justify-center text-sm font-semibold ${className}`}>
       {initialsOf(name)}
     </div>
   );
@@ -41,7 +42,7 @@ export function Avatar({ name, className = "" }) {
 
 export function EmptyState({ icon: Icon, title, hint, children }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-cx-border bg-cx-surface py-16 text-center backdrop-blur-md">
+    <div className="crm-empty crm-card flex flex-col items-center justify-center gap-3 text-center">
       {Icon && (
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cx-border bg-cx-surface text-cx-muted">
           <Icon className="h-6 w-6" />
@@ -58,10 +59,22 @@ export function EmptyState({ icon: Icon, title, hint, children }) {
 
 // Tabela — wrappers finos que aplicam o estilo padrão.
 export function Table({ children, className = "" }) {
+  const sections = Children.toArray(children);
+  const head = sections.find((child) => isValidElement(child) && child.type === Thead);
+  const labels = head ? Children.toArray(head.props.children).map((cell) => cell.props?.children) : [];
+  const content = sections.map((section) => {
+    if (!isValidElement(section) || section.type !== 'tbody') return section;
+    return cloneElement(section, {}, Children.map(section.props.children, (row) => {
+      if (!isValidElement(row)) return row;
+      return cloneElement(row, {}, Children.map(row.props.children, (cell, index) =>
+        isValidElement(cell) && cell.type === Td ? cloneElement(cell, { label: labels[index] }) : cell
+      ));
+    }));
+  });
   return (
-    <div className="overflow-hidden rounded-2xl border border-cx-border bg-cx-surface backdrop-blur-md">
+    <div className="crm-table">
       <div className="overflow-x-auto">
-        <table className={`w-full text-left text-sm ${className}`}>{children}</table>
+        <table className={`w-full text-left text-sm ${className}`}>{content}</table>
       </div>
     </div>
   );
@@ -85,9 +98,9 @@ export function Row({ children, className = "" }) {
   return <tr className={`border-b border-cx-border/[0.12] last:border-0 hover:bg-cx-surface ${className}`}>{children}</tr>;
 }
 
-export function Td({ children, right, muted, className = "" }) {
+export function Td({ children, right, muted, label, className = "", ...props }) {
   return (
-    <td className={`px-4 py-3 ${right ? "text-right" : ""} ${muted ? "text-cx-muted" : "text-cx-text"} ${className}`}>
+    <td {...props} data-label={typeof label === 'string' ? label : undefined} className={`px-4 py-3 ${right ? "text-right" : ""} ${muted ? "text-cx-muted" : "text-cx-text"} ${className}`}>
       {children}
     </td>
   );
@@ -96,7 +109,7 @@ export function Td({ children, right, muted, className = "" }) {
 // Card genérico (seções, painéis).
 export function Card({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl border border-cx-border bg-cx-surface p-5 backdrop-blur-md ${className}`}>
+    <div className={`crm-card p-6 ${className}`}>
       {children}
     </div>
   );

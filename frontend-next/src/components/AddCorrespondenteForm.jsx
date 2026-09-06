@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -68,9 +70,10 @@ export function AddCorrespondenteForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-4 rounded-xl border border-cx-border bg-cx-surface p-6">
+    <form onSubmit={handleSubmit} className="crm-form max-w-4xl space-y-4 rounded-xl border border-cx-border bg-cx-surface p-6">
+      <FormIntro title="Perfil do correspondente" description="Organize os dados de contato e configure o acesso do profissional." />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Username *">
+        <Field label="Nome de usuário *">
           <input name="username" value={formData.username} onChange={handleChange} required className="input" />
         </Field>
         <Field label="E-mail *">

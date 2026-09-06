@@ -32,7 +32,7 @@ const fieldCls =
 
 function Label({ children, icon: Icon }) {
   return (
-    <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cx-muted">
+    <span className="crm-field-label mb-2 flex items-center gap-2">
       {Icon && <Icon className="h-3 w-3" />}
       {children}
     </span>
@@ -41,7 +41,7 @@ function Label({ children, icon: Icon }) {
 
 function Section({ icon: Icon, title, subtitle, children }) {
   return (
-    <section className="rounded-2xl border border-cx-border bg-cx-surface p-5">
+    <section className="crm-form-section rounded-2xl border border-cx-border bg-cx-surface p-5">
       <header className="mb-4 flex items-center gap-3 border-b border-cx-border/[0.15] pb-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cx-border bg-cx-surface text-cx-muted">
           <Icon className="h-4 w-4" />
@@ -185,7 +185,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-5">
+    <form onSubmit={handleSubmit} className="crm-form crm-form-composed mx-auto max-w-3xl space-y-5">
       {(error || success) && (
         <div className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${success ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
           {success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
@@ -235,14 +235,14 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <Label icon={Coins}>Valor de venda (R$) *</Label>
-            <div className="flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
+            <div className="crm-money flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
               <span className="flex items-center border-r border-cx-border px-3 text-xs font-semibold text-cx-muted">R$</span>
               <input value={formatMilhar(form.vendaDigits)} onChange={(e) => set("vendaDigits", onlyDigits(e.target.value))} inputMode="numeric" className="w-full bg-transparent px-3 py-2.5 text-sm tabular-nums text-cx-text placeholder-[#9aa6b4] outline-none" placeholder="300.000" />
             </div>
           </label>
           <label className="block">
             <Label icon={Coins}>Valor de avaliação (R$)</Label>
-            <div className="flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
+            <div className="crm-money flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
               <span className="flex items-center border-r border-cx-border px-3 text-xs font-semibold text-cx-muted">R$</span>
               <input value={formatMilhar(form.avalDigits)} onChange={(e) => set("avalDigits", onlyDigits(e.target.value))} inputMode="numeric" className="w-full bg-transparent px-3 py-2.5 text-sm tabular-nums text-cx-text placeholder-[#9aa6b4] outline-none" placeholder="320.000" />
             </div>
@@ -344,7 +344,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
         </div>
       </Section>
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="crm-form-actions">
         <button type="button" onClick={() => router.back()} className="rounded-lg border border-cx-border px-4 py-2.5 text-sm font-medium text-cx-muted transition-colors hover:text-cx-text">
           Cancelar
         </button>

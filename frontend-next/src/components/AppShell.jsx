@@ -87,7 +87,7 @@ export function AppShell({ children }) {
             conteúdo — sem ele o usuário precisa tabular por todo o menu a
             cada página. `id` para o link de pular navegação. */}
         <main id="conteudo" className="app-shell-scroll cx-page flex-1 w-full overflow-y-auto">
-          <div className="h-full w-full">{children}</div>
+          <div className="crm-content min-h-full w-full" data-page={pathname}>{children}</div>
         </main>
       </div>
     </div>

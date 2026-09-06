@@ -83,7 +83,7 @@ export default function AddAluguelPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="crm-form space-y-4">
         <div>
           <label className="block text-sm text-cx-muted mb-1">Nome / Endereço *</label>
           <input

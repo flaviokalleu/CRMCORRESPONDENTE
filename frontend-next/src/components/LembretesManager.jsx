@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -66,22 +68,27 @@ export function LembretesManager({ initialLembretes }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
-        <input
+      <form onSubmit={handleCreate} className="crm-form rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
+        <div className="crm-form-heading"><FormIntro title="Novo lembrete" description="Preencha os dados abaixo. Campos com * são obrigatórios." /></div>
+        <label className="block sm:col-span-2"><span className="crm-field-label mb-2 block">Título *</span>
+<input
           type="text"
           placeholder="Título"
           value={form.titulo}
           onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))}
-          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-2"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 "
           required
         />
-        <input
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Data *</span>
+<input
           type="date"
           value={form.data}
           onChange={(e) => setForm((p) => ({ ...p, data: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         />
+</label>
         <button
           type="submit"
           disabled={saving}
@@ -89,13 +96,15 @@ export function LembretesManager({ initialLembretes }) {
         >
           {saving ? "Salvando..." : "Novo lembrete"}
         </button>
-        <input
+        <label className="block sm:col-span-4"><span className="crm-field-label mb-2 block">Descrição</span>
+<input
           type="text"
           placeholder="Descrição"
           value={form.descricao}
           onChange={(e) => setForm((p) => ({ ...p, descricao: e.target.value }))}
-          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-4"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 "
         />
+</label>
       </form>
 
       {error && <p className="text-sm text-red-700">{error}</p>}

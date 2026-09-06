@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 
 // Client Component: form de edição do perfil do usuário logado, via proxy
@@ -59,12 +61,13 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="crm-form crm-form-composed space-y-4">
       {message.text && (
         <p className={`text-sm ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>{message.text}</p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
+      <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
+        <div className="md:col-span-2"><FormIntro title="Informações pessoais" description="Mantenha os dados de identificação e contato atualizados." /></div>
         <Field label="Nome" name="first_name" value={form.first_name} onChange={handleChange} />
         <Field label="Sobrenome" name="last_name" value={form.last_name} onChange={handleChange} />
         <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" />
@@ -73,7 +76,8 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
         <Field label="Endereço" name="address" value={form.address} onChange={handleChange} className="md:col-span-2" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
+      <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
+        <div className="md:col-span-2"><FormIntro title="Segurança da conta" description="Preencha os dois campos somente se quiser alterar a senha." /></div>
         <div>
           <label className="block text-sm text-cx-muted mb-1">Nova senha</label>
           <input
@@ -109,9 +113,10 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 function Field({ label, name, value, onChange, type = "text", className = "" }) {
   return (
     <div className={className}>
-      <label className="block text-sm text-cx-muted mb-1">{label}</label>
+      <label htmlFor={`settings-${name}`} className="block text-sm text-cx-muted mb-2">{label}</label>
       <input
         type={type}
+        id={`settings-${name}`}
         name={name}
         value={value || ""}
         onChange={onChange}

@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 
 const STATUS_MAP = {
@@ -64,8 +66,10 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
-        <select
+      <form onSubmit={handleCreate} className="crm-form rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-4">
+        <div className="crm-form-heading"><FormIntro title="Agendar visita" description="Preencha os dados abaixo. Campos com * são obrigatórios." /></div>
+        <label className="block "><span className="crm-field-label mb-2 block">Cliente *</span>
+<select
           value={form.cliente_id}
           onChange={(e) => setForm((p) => ({ ...p, cliente_id: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
@@ -76,7 +80,9 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
             <option key={c.id} value={c.id}>{c.nome}</option>
           ))}
         </select>
-        <select
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Imóvel *</span>
+<select
           value={form.imovel_id}
           onChange={(e) => setForm((p) => ({ ...p, imovel_id: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
@@ -87,13 +93,16 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
             <option key={i.id} value={i.id}>{i.nome_imovel || i.endereco}</option>
           ))}
         </select>
-        <input
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Data e horário *</span>
+<input
           type="datetime-local"
           value={form.data_visita}
           onChange={(e) => setForm((p) => ({ ...p, data_visita: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           required
         />
+</label>
         <button
           type="submit"
           disabled={saving}
@@ -101,13 +110,15 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
         >
           {saving ? "Salvando..." : "Agendar visita"}
         </button>
-        <input
+        <label className="block sm:col-span-4"><span className="crm-field-label mb-2 block">Observações</span>
+<input
           type="text"
           placeholder="Observações"
           value={form.observacoes}
           onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
-          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-4"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 "
         />
+</label>
       </form>
 
       {error && <p className="text-sm text-red-700">{error}</p>}

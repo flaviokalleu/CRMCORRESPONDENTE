@@ -107,7 +107,7 @@ export function ClienteNotas({ clienteId, onCountChange, embedded = false }) {
       )}
 
       {/* Adicionar */}
-      <form onSubmit={add} className="mb-4">
+      <form onSubmit={add} className="crm-form mb-4">
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

@@ -1,5 +1,6 @@
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./crm-design.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 const plusJakartaSans = Plus_Jakarta_Sans({

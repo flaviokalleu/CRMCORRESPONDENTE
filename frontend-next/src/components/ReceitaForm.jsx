@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -44,9 +46,10 @@ export function ReceitaForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-cx-border bg-cx-surface p-4 space-y-3 mb-6">
-      <h2 className="text-sm font-semibold text-cx-text">Nova receita</h2>
+    <form onSubmit={handleSubmit} className="crm-form rounded-xl border border-cx-border bg-cx-surface p-4 space-y-3 mb-6">
+      <FormIntro title="Nova receita" description="Registre a entrada e acompanhe os resultados da sua empresa." />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <label className="block"><span className="crm-field-label mb-2 block">Tipo *</span>
         <input
           type="text"
           placeholder="Tipo *"
@@ -55,6 +58,9 @@ export function ReceitaForm() {
           required
           className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
         />
+
+        </label>
+        <label className="block"><span className="crm-field-label mb-2 block">Valor *</span>
         <input
           type="text"
           inputMode="decimal"
@@ -64,6 +70,9 @@ export function ReceitaForm() {
           required
           className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
         />
+
+        </label>
+        <label className="block"><span className="crm-field-label mb-2 block">Data *</span>
         <input
           type="date"
           value={form.data}
@@ -71,7 +80,10 @@ export function ReceitaForm() {
           required
           className="rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm"
         />
+
+        </label>
       </div>
+      <label className="block"><span className="crm-field-label mb-2 block">Descrição</span>
       <input
         type="text"
         placeholder="Descrição"
@@ -79,6 +91,8 @@ export function ReceitaForm() {
         onChange={(e) => handleChange("descricao", e.target.value)}
         className="w-full rounded-md bg-cx-surface border border-cx-border text-cx-text px-3 py-2 text-sm placeholder-[#9aa6b4]"
       />
+
+      </label>
       {error && <p className="text-xs text-red-700">{error}</p>}
       <button
         type="submit"

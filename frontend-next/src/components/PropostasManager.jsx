@@ -1,5 +1,7 @@
 "use client";
 
+import { FormIntro } from "@/components/ui/form-intro";
+
 import { useState } from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
@@ -84,8 +86,10 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
         </Link>
       </div>
 
-      <form onSubmit={handleCreate} className="rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-3">
-        <select
+      <form onSubmit={handleCreate} className="crm-form rounded-xl border border-cx-border bg-cx-surface p-4 grid gap-3 sm:grid-cols-3">
+        <div className="crm-form-heading"><FormIntro title="Nova proposta" description="Preencha os dados abaixo. Campos com * são obrigatórios." /></div>
+        <label className="block "><span className="crm-field-label mb-2 block">Cliente *</span>
+<select
           value={form.cliente_id}
           onChange={(e) => setForm((p) => ({ ...p, cliente_id: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
@@ -96,7 +100,9 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
             <option key={c.id} value={c.id}>{c.nome}</option>
           ))}
         </select>
-        <select
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Imóvel *</span>
+<select
           value={form.imovel_id}
           onChange={(e) => setForm((p) => ({ ...p, imovel_id: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
@@ -107,7 +113,9 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
             <option key={i.id} value={i.id}>{i.nome_imovel || i.endereco}</option>
           ))}
         </select>
-        <input
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Valor ofertado (R$) *</span>
+<input
           type="number"
           placeholder="Valor ofertado (R$)"
           value={form.valor_ofertado}
@@ -115,7 +123,9 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
           required
         />
-        <select
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Forma de pagamento</span>
+<select
           value={form.forma_pagamento}
           onChange={(e) => setForm((p) => ({ ...p, forma_pagamento: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
@@ -124,12 +134,15 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <input
+</label>
+        <label className="block "><span className="crm-field-label mb-2 block">Validade</span>
+<input
           type="date"
           value={form.data_validade}
           onChange={(e) => setForm((p) => ({ ...p, data_validade: e.target.value }))}
           className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
         />
+</label>
         <button
           type="submit"
           disabled={saving}
@@ -137,13 +150,15 @@ export function PropostasManager({ initialPropostas, clientes, imoveis }) {
         >
           {saving ? "Salvando..." : "Criar proposta"}
         </button>
-        <input
+        <label className="block sm:col-span-3"><span className="crm-field-label mb-2 block">Observações</span>
+<input
           type="text"
           placeholder="Observações"
           value={form.observacoes}
           onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
-          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 sm:col-span-3"
+          className="rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50 "
         />
+</label>
       </form>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
