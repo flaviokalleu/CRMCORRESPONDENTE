@@ -105,7 +105,7 @@ export function EtapaIdentidade({ dados, onChange, papel, pessoaEncontrada, onPe
             <input
               className={fieldCls}
               value={maskCPF(dados.cpf)}
-              onChange={(e) => onChange({ cpf: onlyDigits(e.target.value) })}
+              onChange={(e) => onChange({ cpf: onlyDigits(e.target.value).slice(0, 11) })}
               onBlur={handleCpfBlur}
               placeholder="000.000.000-00"
               inputMode="numeric"

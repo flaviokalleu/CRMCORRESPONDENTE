@@ -35,29 +35,34 @@ const ETAPAS_POR_PAPEL = {
 
 // Para onde mandar a pessoa depois de salvar, para completar a ficha na tela
 // que já existe hoje para aquele papel:
-//   - comprador    -> lista de clientes (cada linha abre /editar-cliente/[id],
-//     que é o ClienteForm.jsx completo); passamos "search" para achar a
-//     linha recém-criada sem precisar do id da ficha, que a resposta de
-//     POST /pessoas não traz.
+//   - comprador    -> direto em /editar-cliente/<ficha_id> (ClienteForm.jsx
+//     completo, mode="edit"). `ficha_id` vem na resposta de POST /pessoas
+//     (backend-go/internal/modules/pessoas: PessoaComPapeis.FichaID) — o id
+//     da ficha de clientes criada na mesma transação. Se por algum motivo a
+//     resposta não trouxer (ex.: contrato mudar sem o frontend acompanhar),
+//     cai de volta na lista com busca em vez de gerar um link quebrado.
 //   - inquilino    -> /clientes-aluguel: hoje é só uma lista (não existe
 //     formulário de inquilino nesse frontend ainda), então é o melhor
-//     destino disponível.
+//     destino disponível. Gap pré-existente, fora do escopo desta tarefa.
 //   - proprietario -> /proprietarios/lista: tem o cadastro rápido, mas não
-//     tem edição por id nem busca — mesma limitação do inquilino.
+//     tem edição por id nem busca — mesma limitação do inquilino, mesmo gap.
 const DESTINO_POR_PAPEL = {
   comprador: {
-    href: (busca) => `/clientes/lista${busca ? `?search=${encodeURIComponent(busca)}` : ""}`,
-    label: "Ir para a lista de clientes",
+    href: (resultado, busca) =>
+      resultado?.ficha_id
+        ? `/editar-cliente/${resultado.ficha_id}`
+        : `/clientes/lista${busca ? `?search=${encodeURIComponent(busca)}` : ""}`,
+    label: (resultado) => (resultado?.ficha_id ? "Abrir a ficha do cliente" : "Ir para a lista de clientes"),
     resta: "renda e trabalho, cônjuge, fiador e os formulários Caixa",
   },
   inquilino: {
     href: () => "/clientes-aluguel",
-    label: "Ir para clientes de aluguel",
+    label: () => "Ir para clientes de aluguel",
     resta: "contrato e valores, fiador e documentos",
   },
   proprietario: {
     href: () => "/proprietarios/lista",
-    label: "Ir para proprietários",
+    label: () => "Ir para proprietários",
     resta: "os dados de repasse",
   },
 };
@@ -200,10 +205,10 @@ export function PessoaWizard() {
         </p>
         <div className="flex flex-wrap gap-3">
           <Link
-            href={destino.href(buscaQuery)}
+            href={destino.href(resultado, buscaQuery)}
             className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark"
           >
-            {destino.label} <ArrowRight className="h-4 w-4" />
+            {destino.label(resultado)} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href={`/pessoas?busca=${encodeURIComponent(buscaQuery)}`}
