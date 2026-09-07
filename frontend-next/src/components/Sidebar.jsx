@@ -1,6 +1,6 @@
 "use client";
 
-import { CaixaBrand } from "@/components/CaixaBrand";
+import { WebbaBrand } from "@/components/WebbaBrand";
 import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -200,7 +200,7 @@ export function Sidebar({ onClose, onToggleVisibility }) {
     <div className="ref-sidebar flex h-full flex-col text-white">
       <div className="ref-sidebar-brand flex flex-shrink-0 items-center justify-between px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <CaixaBrand subtitle />
+          <WebbaBrand subtitle />
         </Link>
         <div className="flex items-center gap-0.5">
           {onToggleVisibility && (

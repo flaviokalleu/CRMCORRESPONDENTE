@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Users, Funnel, House, Handshake, DollarSign, ArrowRight, ShieldCheck, MapPinned } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { CaixaBrand } from "@/components/CaixaBrand";
+import { WebbaBrand } from "@/components/WebbaBrand";
 import { statusInfo } from "@/lib/cliente-status";
 import { imovelImageUrl, situacaoInfo } from "@/lib/imovel-meta";
 
@@ -69,6 +69,6 @@ export function DashboardReferencia({ user, main, historical, imoveis, tarefas, 
       <Panel title="Tarefas da Equipe" href="/lembretes">{error && <p role="alert" className="ref-negative">{error}</p>}{pending.length ? pending.map((task) => <div className="ref-task-row" key={task.id}><input type="checkbox" aria-label={`Concluir ${task.titulo}`} checked={false} disabled={busy === task.id} onChange={() => complete(task.id)} /><Link href="/lembretes"><strong>{task.titulo}</strong><small>{task.descricao || "Lembrete da operação"}</small></Link><time>{task.data ? new Date(task.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "Sem prazo"}</time></div>) : <p className="ref-empty">{tarefas == null ? "Tarefas indisponíveis para este acesso." : "Tudo em dia! Nenhuma tarefa pendente."}</p>}</Panel>
       <Panel title="Imóveis em Destaque" href="/imoveis/lista">{available.length ? available.map((item) => <Link href={`/imovel/${item.id}`} className="ref-property" key={item.id}><PropertyPhoto path={item.imagem_capa} name={item.nome_imovel} /><div><strong>{item.nome_imovel}</strong><small>{item.localizacao || item.endereco || "Localização não informada"}</small><div><b>{money(item.valor_venda)}</b><span className="ref-badge positive">{situacaoInfo(item.situacao_imovel).label}</span></div></div></Link>) : <p className="ref-empty">{imoveis == null ? "Não foi possível carregar os imóveis." : "Nenhum imóvel disponível no momento."}</p>}</Panel>
     </div>
-    <section className="ref-banner"><CaixaBrand /><h2>O financiamento que aproxima<br />você do seu novo lar.</h2><span><DollarSign />Taxas<br />acessíveis</span><span><MapPinned />Mais<br />oportunidades</span><span><ShieldCheck />Segurança<br />e confiança</span><Link href="/imoveis/lista">Encontre o seu<br />novo lar <ArrowRight size={22} /></Link></section>
+    <section className="ref-banner"><WebbaBrand /><h2>O financiamento que aproxima<br />você do seu novo lar.</h2><span><DollarSign />Taxas<br />acessíveis</span><span><MapPinned />Mais<br />oportunidades</span><span><ShieldCheck />Segurança<br />e confiança</span><a href="https://simuladorhabitacao.caixa.gov.br/simulacao" target="_blank" rel="noopener noreferrer">Faça simulação<br />agora <ArrowRight size={22} /></a></section>
   </div>;
 }

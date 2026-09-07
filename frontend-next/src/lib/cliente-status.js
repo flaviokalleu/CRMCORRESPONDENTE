@@ -48,6 +48,80 @@ export const STATUS_COLOR = {
   cancelado: "#7f1d1d",
 };
 
+// Pílula suave — fundo tingido + nome na cor do status. Substitui a flecha
+// sólida na lista e no Kanban.
+//
+// Estes valores NÃO foram escolhidos a olho: STATUS_COLOR foi calibrado no
+// limite de AA sobre BRANCO PURO (a pior era 4,92:1), então qualquer fundo
+// tingido derruba abaixo de 4,5:1. STATUS_SOFT é o próprio tom a 12% sobre
+// branco, e STATUS_INK é o tom escurecido por cálculo até voltar a passar AA
+// sobre esse fundo. Cinco precisaram escurecer; os outros dezesseis ficaram
+// iguais a STATUS_COLOR. Pior contraste do conjunto: 4,52:1.
+//
+// Se mexer em STATUS_COLOR, recalcule estes dois mapas — não ajuste no olho.
+export const STATUS_SOFT = {
+  aguardando_aprovacao: "#f6eae1",
+  proposta_apresentada: "#e1edf4",
+  documentacao_pendente: "#f8e8e2",
+  visita_efetuada: "#e2eef2",
+  aguardando_cancelamento_qv: "#f4ece1",
+  condicionado: "#ede5fa",
+  cliente_aprovado: "#e1efeb",
+  reprovado: "#f7e4e4",
+  reserva: "#e8e7f9",
+  conferencia_documento: "#e2efee",
+  nao_descondiciona: "#f7e3e8",
+  conformidade: "#eaefe2",
+  concluido: "#e3f0e8",
+  nao_deu_continuidade: "#e9e8e8",
+  aguardando_reserva_orcamentaria: "#f0e4f9",
+  fechamento_proposta: "#e4eafa",
+  processo_em_aberto: "#e7e8eb",
+  aprovado: "#e1ece9",
+  em_andamento: "#e8e8e9",
+  finalizado: "#e3ede7",
+  cancelado: "#f0e4e4",
+};
+
+export const STATUS_INK = {
+  aguardando_aprovacao: "#ad5009",
+  proposta_apresentada: "#0369a1",
+  documentacao_pendente: "#ba3e0c",
+  visita_efetuada: "#0e7490",
+  aguardando_cancelamento_qv: "#975c07",
+  condicionado: "#6d28d9",
+  cliente_aprovado: "#047857",
+  reprovado: "#b91c1c",
+  reserva: "#4338ca",
+  conferencia_documento: "#0f766e",
+  nao_descondiciona: "#be123c",
+  conformidade: "#4a770e",
+  concluido: "#147b3b",
+  nao_deu_continuidade: "#44403c",
+  aguardando_reserva_orcamentaria: "#7e22ce",
+  fechamento_proposta: "#1d4ed8",
+  processo_em_aberto: "#334155",
+  aprovado: "#065f46",
+  em_andamento: "#3f3f46",
+  finalizado: "#166534",
+  cancelado: "#7f1d1d",
+};
+
+// Fundo/tinta de fallback para status fora do enum (lane "Sem status").
+export const TONE_SOFT = {
+  positive: "#e1efeb",
+  negative: "#f7e4e4",
+  attention: "#f6eae1",
+  neutral: "#e7e8eb",
+};
+
+export const TONE_INK = {
+  positive: "#047857",
+  negative: "#b91c1c",
+  attention: "#ad5009",
+  neutral: "#334155",
+};
+
 // Fallback por tom, para status fora do enum (lane "Sem status").
 export const TONE_SOLID = {
   positive: "#047857",
@@ -86,5 +160,11 @@ export const STATUS_LIST = Object.entries(STATUS_MAP).map(([value, meta]) => ({ 
 
 export function statusInfo(value) {
   const meta = STATUS_MAP[value] || { label: value || "—", tone: "neutral" };
-  return { ...meta, dot: TONE_DOT[meta.tone], solid: STATUS_COLOR[value] || TONE_SOLID[meta.tone] };
+  return {
+    ...meta,
+    dot: TONE_DOT[meta.tone],
+    solid: STATUS_COLOR[value] || TONE_SOLID[meta.tone],
+    soft: STATUS_SOFT[value] || TONE_SOFT[meta.tone],
+    ink: STATUS_INK[value] || TONE_INK[meta.tone],
+  };
 }

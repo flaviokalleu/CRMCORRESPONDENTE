@@ -4,10 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
-  Search, Plus, Pencil, ChevronLeft, ChevronRight, Loader2,
-  Phone, SlidersHorizontal, Inbox, RefreshCw, StickyNote, X,
+  Search, Plus, Pencil, ChevronLeft, ChevronRight, ChevronDown, Loader2,
+  Phone, MessageCircle, MoreVertical, Inbox, RefreshCw, StickyNote, X,
   LayoutGrid, Rows3, GripVertical,
+  CheckCircle2, XCircle, Clock3, CircleDot,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
 import { ClienteNotas } from "@/components/ClienteNotas";
 import { ClienteDrawer } from "@/components/ClienteDrawer";
@@ -36,15 +40,111 @@ const maskCPF = (v) =>
     .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
 
-// Status como FLECHA de esteira: forma cheia no tom semântico, com o nome
-// em branco dentro. A cor identifica o estágio de longe; o nome dentro é que
-// informa — a leitura não depende de distinguir matiz.
+// Ícone da lane. Derivado do `tone` que o STATUS_MAP já declara — não é um
+// ícone inventado por status, é a leitura semântica que o sistema já fazia
+// (positive/negative/attention/neutral) ganhando forma visual.
+const ICONE_POR_TOM = {
+  positive: CheckCircle2,
+  negative: XCircle,
+  attention: Clock3,
+  neutral: CircleDot,
+};
+
+// Janela de páginas para a paginação numerada: sempre a 1ª e a última, mais
+// uma faixa de 5 páginas consecutivas ao redor da atual (encostada no começo
+// ou no fim quando a atual está perto de uma das pontas), e reticências no que
+// for pulado. Devolve números e strings "…N", que a UI renderiza como
+// separador inerte — a string precisa ser única por posição para servir de key.
+const JANELA = 5;
+
+function janelaDePaginas(atual, total) {
+  if (total <= JANELA + 2) return Array.from({ length: total }, (_, i) => i + 1);
+  let inicio = Math.max(2, atual - Math.floor(JANELA / 2));
+  let fim = inicio + JANELA - 1;
+  if (fim >= total) {
+    fim = total - 1;
+    inicio = Math.max(2, fim - JANELA + 1);
+  }
+  const paginas = [1];
+  for (let n = inicio; n <= fim; n += 1) paginas.push(n);
+  paginas.push(total);
+  const saida = [];
+  for (let i = 0; i < paginas.length; i += 1) {
+    if (i > 0 && paginas[i] - paginas[i - 1] > 1) saida.push(`…${i}`);
+    saida.push(paginas[i]);
+  }
+  return saida;
+}
+
+// Ações rápidas de um cliente: falar no WhatsApp, ligar e um menu com o resto.
+// Usada na linha da lista e no card do Kanban, para as duas visões terem o
+// mesmo repertório. Todo clique aqui é isolado com stopPropagation — o
+// contêiner ao redor abre o drawer, e essas ações não devem disparar isso.
+function AcoesRapidas({ cliente, onNotas, compacto = false }) {
+  const fone = (cliente.telefone || "").replace(/\D/g, "");
+  const tamanho = compacto ? "h-6 w-6" : "h-7 w-7";
+  const icone = compacto ? "h-3 w-3" : "h-3.5 w-3.5";
+  const base = `inline-flex ${tamanho} items-center justify-center rounded-lg border border-cx-border text-cx-muted transition-colors`;
+  return (
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      {fone ? (
+        <a
+          href={`https://wa.me/55${fone}`}
+          target="_blank"
+          rel="noreferrer"
+          className={`${base} hover:border-emerald-500/60 hover:text-emerald-600`}
+          title="Falar no WhatsApp"
+          aria-label={`Falar com ${cliente.nome || "cliente"} no WhatsApp`}
+        >
+          <MessageCircle className={icone} />
+        </a>
+      ) : null}
+      {fone ? (
+        <a
+          href={`tel:+55${fone}`}
+          className={`${base} hover:border-cx-blue hover:text-cx-blue`}
+          title="Ligar"
+          aria-label={`Ligar para ${cliente.nome || "cliente"}`}
+        >
+          <Phone className={icone} />
+        </a>
+      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={`${base} hover:border-cx-blue hover:text-cx-text data-[state=open]:border-cx-blue`}
+          title="Mais ações"
+          aria-label={`Mais ações para ${cliente.nome || "cliente"}`}
+        >
+          <MoreVertical className={icone} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/editar-cliente/${cliente.id}`}>
+              <Pencil className="h-3.5 w-3.5" /> Editar cliente
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onNotas({ id: cliente.id, nome: cliente.nome })}>
+            <StickyNote className="h-3.5 w-3.5" /> Notas
+            <span className="ml-auto tabular-nums text-cx-muted">{cliente.notasCount ?? 0}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// Status como PÍLULA suave: fundo tingido no tom do estágio e o nome escrito
+// na cor cheia. A largura acompanha o texto — nomes curtos deixam de ocupar a
+// mesma faixa de 190px que os longos, e a coluna respira.
+//
+// O par fundo/tinta vem de statusInfo (soft/ink), calculado para passar AA;
+// não troque por STATUS_COLOR direto, que só passa sobre branco puro.
 function StatusBadge({ status }) {
   const info = statusInfo(status);
   return (
     <span
-      className="cx-chevron inline-flex w-[190px] items-center py-1 pl-2.5 text-[11px] font-semibold whitespace-nowrap text-white"
-      style={{ backgroundColor: info.solid }}
+      className="inline-flex max-w-[190px] items-center rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap"
+      style={{ backgroundColor: info.soft, color: info.ink }}
       title={info.label}
     >
       <span className="truncate">{info.label}</span>
@@ -52,25 +152,21 @@ function StatusBadge({ status }) {
   );
 }
 
-// A mesma flecha, mas clicável: vira <select> para admin/correspondente
-// (PATCH inline). O <select> fica transparente por cima da forma, então o
-// clique em qualquer ponto da flecha abre a lista.
+// A mesma pílula, mas clicável: vira <select> para admin/correspondente
+// (PATCH inline). O <select> fica transparente por cima, então o clique em
+// qualquer ponto da pílula abre a lista.
 function StatusControl({ cliente, onChange, saving }) {
   const info = statusInfo(cliente.status);
-  // Largura fixa para todas as flechas (a coluna lê como uma esteira). O
-  // <select> nativo se dimensionaria pela opção mais longa e ignoraria essa
-  // largura, então quem desenha é o texto visível e o <select> fica invisível
-  // por cima, cobrindo a flecha inteira — clique em qualquer ponto abre a lista.
   return (
     <div
-      className="cx-chevron relative inline-flex w-[190px] items-center py-1 pl-2.5 text-[11px] font-semibold whitespace-nowrap text-white transition-opacity hover:opacity-90"
-      style={{ backgroundColor: info.solid }}
+      className="relative inline-flex max-w-[210px] items-center rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-opacity hover:opacity-80"
+      style={{ backgroundColor: info.soft, color: info.ink }}
       title={info.label}
     >
       <span className="flex-1 truncate">{info.label}</span>
       {saving
-        ? <Loader2 className="ml-1.5 h-3 w-3 shrink-0 animate-spin text-white" />
-        : <SlidersHorizontal className="ml-1.5 h-3 w-3 shrink-0 text-white/80" />}
+        ? <Loader2 className="ml-1.5 h-3 w-3 shrink-0 animate-spin" />
+        : <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-70" />}
       <select
         value={cliente.status}
         disabled={saving}
@@ -341,7 +437,16 @@ export function ClientesLista({ initialSearch = "",
               </thead>
               <tbody className={loading ? "opacity-50 transition-opacity" : "transition-opacity"}>
                 {clientes.map((c) => (
-                  <tr key={c.id} className="border-b border-cx-border/[0.12] last:border-0 hover:bg-cx-surface">
+                  <tr
+                    key={c.id}
+                    onClick={() => setEditingId(c.id)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
+                    }}
+                    aria-label={`Abrir ${c.nome || "cliente"}`}
+                    className="cursor-pointer border-b border-cx-border/[0.12] last:border-0 hover:bg-cx-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cx-blue"
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cx-border bg-cx-surface text-xs font-semibold text-cx-muted">
@@ -356,36 +461,21 @@ export function ClientesLista({ initialSearch = "",
                     <td className="px-4 py-3 tabular-nums text-cx-muted">{c.cpf ? maskCPF(c.cpf) : "—"}</td>
                     <td className="px-4 py-3 text-cx-muted">
                       {c.telefone ? (
-                        <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-cx-text">
+                        <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 hover:text-cx-text">
                           <Phone className="h-3.5 w-3.5" /> {c.telefone}
                         </a>
                       ) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-cx-muted">{formatRenda(c) ? `R$ ${formatRenda(c)}` : "—"}</td>
                     <td className="px-4 py-3 text-cx-muted">{c.user?.first_name || "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {canChangeStatus
                         ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
                         : <StatusBadge status={c.status} />}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setNotesFor({ id: c.id, nome: c.nome })}
-                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                            (c.notasCount ?? 0) > 0
-                              ? "border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-500/60"
-                              : "border-cx-border text-cx-muted hover:border-cx-border hover:text-cx-text"
-                          }`}
-                          title={(c.notasCount ?? 0) > 0 ? "Ver e adicionar notas" : "Adicionar nota"}
-                        >
-                          <StickyNote className="h-3.5 w-3.5" />
-                          <span className="tabular-nums">{c.notasCount ?? 0}</span>
-                        </button>
-                        <Link href={`/editar-cliente/${c.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-cx-border px-2.5 py-1.5 text-xs font-semibold text-cx-muted transition-colors hover:border-cx-border hover:text-cx-text">
-                          <Pencil className="h-3.5 w-3.5" /> Editar
-                        </Link>
+                      <div className="flex items-center justify-end">
+                        <AcoesRapidas cliente={c} onNotas={setNotesFor} />
                       </div>
                     </td>
                   </tr>
@@ -412,18 +502,32 @@ export function ClientesLista({ initialSearch = "",
                 onDrop={(e) => { e.preventDefault(); onDropLane(lane.value); }}
               >
                 <div
-                  className={`${i === 0 ? "cx-chevron" : "cx-chevron cx-chevron-linked"} flex items-center gap-2 py-2.5 text-[11px] font-semibold text-white`}
-                  style={{ backgroundColor: lane.solid }}
+                  className="mr-2 overflow-hidden rounded-t-xl border border-b-0 border-cx-border bg-cx-surface"
                   title={`${lane.label} — ${lane.cards.length}`}
                 >
-                  <span className="flex-1 truncate">{lane.label}</span>
-                  <span className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] tabular-nums">
-                    {lane.cards.length}
-                  </span>
+                  <div className="h-1" style={{ backgroundColor: lane.solid }} />
+                  <div className="flex items-center gap-2 px-2.5 py-2">
+                    <span
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: lane.soft, color: lane.ink }}
+                    >
+                      {(() => {
+                        const Icone = ICONE_POR_TOM[lane.tone] || CircleDot;
+                        return <Icone className="h-3.5 w-3.5" />;
+                      })()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[11px] font-semibold text-cx-text">{lane.label}</span>
+                      {lane.hint ? <span className="block truncate text-[10px] text-cx-muted">{lane.hint}</span> : null}
+                    </span>
+                    <span className="rounded-full bg-cx-bg px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-cx-muted">
+                      {lane.cards.length}
+                    </span>
+                  </div>
                 </div>
 
                 <div
-                  className={`mr-2 mt-2 flex min-h-[120px] flex-1 flex-col gap-2 rounded-xl border p-2 transition-colors ${
+                  className={`mr-2 flex min-h-[120px] flex-1 flex-col gap-2 rounded-b-xl border border-t-0 p-2 transition-colors ${
                     overLane === lane.value && dragId
                       ? "border-cx-blue bg-cx-blue-soft"
                       : "border-cx-border bg-cx-bg"
@@ -474,34 +578,24 @@ export function ClientesLista({ initialSearch = "",
                         </dl>
 
                         <div className="mt-2 flex items-center justify-between gap-2 border-t border-cx-border pt-2">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setNotesFor({ id: c.id, nome: c.nome }); }}
-                            className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors ${
-                              (c.notasCount ?? 0) > 0
-                                ? "border-orange-200 bg-orange-50 text-orange-700"
-                                : "border-cx-border text-cx-muted hover:text-cx-text"
-                            }`}
-                            title="Notas"
-                          >
+                          <span className="inline-flex items-center gap-1 text-[10px] text-cx-muted" title="Notas">
                             <StickyNote className="h-3 w-3" />
                             <span className="tabular-nums">{c.notasCount ?? 0}</span>
-                          </button>
-                          {savingId === c.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-cx-muted" />
-                          ) : (
-                            <Link
-                              href={`/editar-cliente/${c.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 rounded-md border border-cx-border px-1.5 py-1 text-[10px] font-semibold text-cx-muted transition-colors hover:text-cx-text"
-                            >
-                              <Pencil className="h-3 w-3" /> Editar
-                            </Link>
-                          )}
+                          </span>
+                          {savingId === c.id
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin text-cx-muted" />
+                            : <AcoesRapidas cliente={c} onNotas={setNotesFor} compacto />}
                         </div>
                       </article>
                     ))
                   )}
+
+                  <Link
+                    href="/clientes/adicionar"
+                    className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-cx-blue transition-colors hover:bg-cx-blue-soft"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar cliente
+                  </Link>
                 </div>
               </div>
             ))}
@@ -512,26 +606,46 @@ export function ClientesLista({ initialSearch = "",
       {/* Paginação — só na lista; o Kanban carrega a carteira inteira */}
       {view === "lista" && total > 0 && (
         <div className="flex items-center justify-between text-xs text-cx-muted">
-          <span className="tabular-nums">{from}–{to} de {total}</span>
-          <div className="flex items-center gap-1">
+          <span className="tabular-nums">Mostrando {from} a {to} de {total} {total === 1 ? "cliente" : "clientes"}</span>
+          <nav className="flex items-center gap-1" aria-label="Paginação">
             <button
               type="button"
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-cx-border px-2.5 py-1.5 font-medium text-cx-muted transition-colors hover:text-cx-text disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cx-border text-cx-muted transition-colors hover:text-cx-text disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Página anterior"
             >
-              <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+              <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="px-2 tabular-nums">{page} / {pages}</span>
+            {janelaDePaginas(page, pages).map((n) =>
+              typeof n === "string" ? (
+                <span key={n} className="px-1 text-cx-muted" aria-hidden="true">…</span>
+              ) : (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setPage(n)}
+                  aria-current={n === page ? "page" : undefined}
+                  className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-semibold tabular-nums transition-colors disabled:cursor-not-allowed ${
+                    n === page
+                      ? "border-cx-blue bg-cx-blue text-white"
+                      : "border-cx-border text-cx-muted hover:text-cx-text"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
             <button
               type="button"
               disabled={page >= pages || loading}
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              className="inline-flex items-center gap-1 rounded-lg border border-cx-border px-2.5 py-1.5 font-medium text-cx-muted transition-colors hover:text-cx-text disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cx-border text-cx-muted transition-colors hover:text-cx-text disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Próxima página"
             >
-              Próximo <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
-          </div>
+          </nav>
         </div>
       )}
 
