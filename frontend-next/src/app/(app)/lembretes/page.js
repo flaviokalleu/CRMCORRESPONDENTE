@@ -1,6 +1,5 @@
 import { apiGet } from "@/lib/api-server";
 import { LembretesManager } from "@/components/LembretesManager";
-import { PageHeader } from "@/components/ui/page";
 
 export const metadata = { title: "Lembretes" };
 
@@ -11,9 +10,6 @@ export default async function LembretesPage() {
   const initialLembretes = Array.isArray(data) ? data : [];
 
   return (
-    <div className="space-y-4 p-6">
-      <PageHeader title="Lembretes" subtitle="Gerencie lembretes e tarefas do CRM." />
-      <LembretesManager initialLembretes={initialLembretes} />
-    </div>
+    <LembretesManager initialLembretes={initialLembretes} initialNow={new Date().toISOString()} loadError={data === null} />
   );
 }
