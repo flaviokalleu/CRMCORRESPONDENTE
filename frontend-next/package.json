@@ -15,6 +15,7 @@
     "@remotion/player": "^4.0.496",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cn": "^0.2.6",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.25.0",
     "next": "16.3.4",
@@ -24,7 +25,6 @@
     "react-dom": "19.2.4",
     "recharts": "^3.10.0",
     "remotion": "^4.0.496",
-    "shadcn": "^4.14.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "three": "^0.185.1",
@@ -34,6 +34,7 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "shadcn": "^4.21.0",
     "tailwindcss": "^4"
   }
 }

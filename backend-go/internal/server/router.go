@@ -112,10 +112,21 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 
 	// Fotos de imóveis são conteúdo PÚBLICO da vitrine — servidas estaticamente
 	// (sem auth). NÃO servir /uploads inteiro: documentos de cliente ficam sob
-	// rotas autenticadas (ver clientes.VerifyDocument). Só imoveis/ e tenants/.
+	// rotas autenticadas (ver clientes.VerifyDocument). Só imoveis/, tenants/ e
+	// usuario/.
+	//
+	// usuario/ guarda a foto de perfil (users.photo, gravada por
+	// users.savePhoto como usuario_{id}.{ext}). Entra aqui pelo mesmo motivo que
+	// tenants/: é identidade visual que aparece em toda tela, e buscá-la por
+	// rota autenticada exigiria um fetch por avatar em cada linha da lista.
+	// Consequência aceita: o nome do arquivo é previsível, então quem souber um
+	// id consegue a foto daquele usuário sem estar logado. Se isso passar a ser
+	// um problema, o caminho é servir por rota autenticada com nome opaco — não
+	// remover esta linha e deixar o avatar quebrado.
 	uploadsBase := clientes.UploadsRoot()
 	api.Static("/uploads/imoveis", filepath.Join(uploadsBase, "imoveis"))
 	api.Static("/uploads/tenants", filepath.Join(uploadsBase, "tenants"))
+	api.Static("/uploads/usuario", filepath.Join(uploadsBase, "usuario"))
 
 	authGroup := api.Group("/auth")
 	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<20), authHandler.Login)

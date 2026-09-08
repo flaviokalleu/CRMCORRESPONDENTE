@@ -1,8 +1,9 @@
 "use client";
 
 import { FormIntro } from "@/components/ui/form-intro";
+import { AVATAR_PLACEHOLDER, userPhotoUrl } from "@/lib/user-avatar";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Client Component: form de edição do perfil do usuário logado, via proxy
 // `/api/backend/user/:id`.
@@ -16,10 +17,43 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
     address: initialUser?.address || "",
     pix_account: initialUser?.pix_account || "",
   });
+  // Foto: `arquivo` só existe enquanto o usuário acabou de escolher um; a
+  // prévia mostra esse arquivo local, ou a foto já salva, ou o placeholder.
+  const [arquivo, setArquivo] = useState(null);
+  const [previa, setPrevia] = useState(userPhotoUrl(initialUser?.photo));
+  const inputFoto = useRef(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
+
+  // A prévia local é uma object URL criada na hora da escolha. Guardamos a
+  // última em um ref para revogar antes de criar a próxima — sem isso, cada
+  // troca de arquivo vaza um blob na memória da aba. O efeito só cuida da
+  // limpeza ao desmontar; criar a URL aqui evitaria um setState dentro de
+  // efeito, que é o que a regra react-hooks/set-state-in-effect proíbe.
+  const blobAtual = useRef(null);
+  useEffect(() => () => {
+    if (blobAtual.current) URL.revokeObjectURL(blobAtual.current);
+  }, []);
+
+  const escolherFoto = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "Selecione um arquivo de imagem." });
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setMessage({ type: "error", text: "A foto deve ter no máximo 5 MB." });
+      return;
+    }
+    setMessage({ type: "", text: "" });
+    if (blobAtual.current) URL.revokeObjectURL(blobAtual.current);
+    blobAtual.current = URL.createObjectURL(f);
+    setPrevia(blobAtual.current);
+    setArquivo(f);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -41,15 +75,33 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 
     setSaving(true);
     try {
-      const payload = { ...form };
-      if (password) payload.password = password;
-
-      const res = await fetch(`/api/backend/user/${form.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // Com foto o envio precisa ser multipart (o Go lê o arquivo em
+      // c.FormFile("photo")); sem foto, segue o JSON de sempre.
+      let res;
+      if (arquivo) {
+        const fd = new FormData();
+        Object.entries(form).forEach(([k, v]) => { if (k !== "id") fd.append(k, v ?? ""); });
+        if (password) fd.append("password", password);
+        fd.append("photo", arquivo);
+        res = await fetch(`/api/backend/user/${form.id}`, { method: "PUT", body: fd });
+      } else {
+        const payload = { ...form };
+        if (password) payload.password = password;
+        res = await fetch(`/api/backend/user/${form.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
       if (!res.ok) throw new Error("Erro ao salvar informações");
+      const salvo = await res.json().catch(() => null);
+      if (salvo?.user?.photo) {
+        // Nome do arquivo é fixo por usuário (usuario_{id}.ext), então o
+        // navegador serviria a foto antiga do cache. O sufixo força a releitura.
+        setPrevia(`${userPhotoUrl(salvo.user.photo)}?v=${Date.now()}`);
+      }
+      setArquivo(null);
+      if (inputFoto.current) inputFoto.current.value = "";
       setMessage({ type: "success", text: "Informações atualizadas com sucesso!" });
       setPassword("");
       setConfirmPassword("");
@@ -68,6 +120,33 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div className="md:col-span-2"><FormIntro title="Informações pessoais" description="Mantenha os dados de identificação e contato atualizados." /></div>
+
+        <div className="md:col-span-2 flex items-center gap-4">
+          <span className="inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full border border-cx-border bg-cx-bg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previa || AVATAR_PLACEHOLDER}
+              alt="Sua foto de perfil"
+              width={64}
+              height={64}
+              className="h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.src = AVATAR_PLACEHOLDER; }}
+            />
+          </span>
+          <div>
+            <label htmlFor="settings-photo" className="block text-sm text-cx-muted mb-2">Foto de perfil</label>
+            <input
+              ref={inputFoto}
+              id="settings-photo"
+              name="photo"
+              type="file"
+              accept="image/*"
+              onChange={escolherFoto}
+              className="block w-full text-sm text-cx-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cx-blue-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-cx-blue hover:file:bg-cx-border"
+            />
+            <p className="mt-1 text-xs text-cx-muted">JPG ou PNG, até 5 MB. A foto aparece na lista de clientes e no Kanban.</p>
+          </div>
+        </div>
         <Field label="Nome" name="first_name" value={form.first_name} onChange={handleChange} />
         <Field label="Sobrenome" name="last_name" value={form.last_name} onChange={handleChange} />
         <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" />
