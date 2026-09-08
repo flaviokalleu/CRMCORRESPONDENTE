@@ -35,6 +35,7 @@ import { corDoAvatar, iniciaisDe, origemVisual, tempoRelativo, dataCurta } from 
 import { userPhotoUrl } from "@/lib/user-avatar";
 import { ClienteNotas } from "@/components/ClienteNotas";
 import { ClienteDrawer } from "@/components/ClienteDrawer";
+import { TelaAprovacaoModal, pedeTelaAprovacao } from "@/components/TelaAprovacaoModal";
 
 const LIMIT = 12;
 // No Kanban a paginação não faz sentido — uma lane com "12 de 15" mente sobre o
@@ -490,6 +491,8 @@ export function ClientesLista({ initialSearch = "",
     return () => clearTimeout(t);
   }, [q, status, grupo, corretor, inicio, fim, page, view, fetchList, fetchContagens]);
 
+  const [telaDe, setTelaDe] = useState(null);
+
   const changeStatus = async (id, newStatus) => {
     const prev = clientes;
     setSavingId(id);
@@ -503,6 +506,12 @@ export function ClientesLista({ initialSearch = "",
       if (!res.ok) throw new Error();
       // A troca move o cliente de grupo; sem recontar, a aba fica mentindo.
       fetchContagens({ q, status, grupo, corretor, inicio, fim, page, limit: LIMIT });
+      // Aprovado, condicionado e reprovado vêm de uma tela que a Caixa devolveu;
+      // é o momento em que o corretor tem o print à mão.
+      if (pedeTelaAprovacao(newStatus)) {
+        const atual = prev.find((c) => c.id === id);
+        setTelaDe({ id, status: newStatus, nome: atual?.nome });
+      }
     } catch {
       setClientes(prev); // reverte
     } finally {
@@ -1143,6 +1152,14 @@ export function ClientesLista({ initialSearch = "",
           </div>
         </DialogContent>
       </Dialog>
+
+      <TelaAprovacaoModal
+        clienteId={telaDe?.id}
+        clienteNome={telaDe?.nome}
+        status={telaDe?.status}
+        aberto={!!telaDe}
+        onFechar={() => setTelaDe(null)}
+      />
     </div>
   );
 }

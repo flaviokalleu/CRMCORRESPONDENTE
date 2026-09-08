@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
 import { ClienteDocumentos } from "@/components/ClienteDocumentos";
+import { TelaAprovacaoModal, pedeTelaAprovacao } from "@/components/TelaAprovacaoModal";
 
 // Painel lateral de edição do cliente.
 //
@@ -159,6 +160,7 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   // null enquanto o painel de documentos não foi montado — assim o contador só
   // aparece depois de existir número de verdade para mostrar.
   const [totalDocs, setTotalDocs] = useState(null);
+  const [telaDe, setTelaDe] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && !saving) onClose(); };
@@ -228,7 +230,14 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
         status: form.status,
         valor_renda_formatado: centavosToBRL(form.valor_renda),
       });
-      onClose();
+      // Só pergunta pela tela quando o status ACABOU de virar uma decisão do
+      // banco; salvar outra edição num cliente já aprovado não repergunta nada.
+      // `original` ainda guarda o status anterior neste render.
+      if (pedeTelaAprovacao(form.status) && form.status !== original?.status) {
+        setTelaDe({ status: form.status, nome: form.nome });
+      } else {
+        onClose();
+      }
     } catch (e) {
       setErro(e.message || "Erro ao salvar");
     } finally {
@@ -386,6 +395,14 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
           </div>
         </footer>
       </aside>
+
+      <TelaAprovacaoModal
+        clienteId={clienteId}
+        clienteNome={telaDe?.nome}
+        status={telaDe?.status}
+        aberto={!!telaDe}
+        onFechar={() => { setTelaDe(null); onClose(); }}
+      />
     </div>
   );
 }
