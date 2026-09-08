@@ -30,6 +30,40 @@ const rendaCadastroEmCentavos = (valorRenda) => {
 
 const TIPOS_DINHEIRO = new Set(["dinheiro"]);
 
+// resposta_siric é a única prop "datahora": o servidor guarda e devolve um
+// instante em UTC (ISO com "Z"), mas o <input type="datetime-local"> não
+// carrega fuso nenhum — o texto que ele mostra e aceita é sempre hora de
+// PAREDE local, nunca UTC. Por isso não dá para simplesmente cortar a string
+// ISO com slice(0, 16): isso exibiria a hora UTC como se já fosse local, e ao
+// salvar de volta esse mesmo texto seria reinterpretado como local e
+// deslocado pelo fuso outra vez — cada ciclo de edição empurraria o horário
+// adiante pelo offset do navegador (e viraria a data perto da meia-noite).
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// UTC (ISO devolvido pelo servidor) -> hora local no formato do datetime-local.
+const utcIsoParaDatetimeLocal = (isoUtc) => {
+  if (!isoUtc) return "";
+  const d = new Date(isoUtc);
+  if (Number.isNaN(d.getTime())) return "";
+  // getFullYear/getMonth/getDate/getHours/getMinutes leem os componentes na
+  // hora LOCAL do ambiente (navegador do corretor), que é exatamente o que o
+  // datetime-local espera.
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+// Hora local do datetime-local -> instante UTC (ISO) para enviar ao servidor.
+const datetimeLocalParaUtcIso = (local) => {
+  if (!local) return null;
+  const [dataParte, horaParte] = local.split("T");
+  const [ano, mes, dia] = dataParte.split("-").map(Number);
+  const [hora, minuto] = (horaParte || "00:00").split(":").map(Number);
+  // Construindo o Date a partir dos componentes separados (em vez de parsear
+  // a string), os valores são sempre interpretados como hora LOCAL — a mesma
+  // convenção do input — e o Date resultante já carrega o instante UTC
+  // correto por dentro; toISOString() só formata para o que o servidor espera.
+  return new Date(ano, mes - 1, dia, hora, minuto).toISOString();
+};
+
 export default function AvaliacaoModal({
   clienteId, clienteNome, valorRenda, resultado, avaliacao, aberto, onFechar, onSalvo,
 }) {
@@ -55,7 +89,7 @@ export default function AvaliacaoModal({
       if (bruto === null || bruto === undefined) { inicial[campo.nome] = ""; continue; }
       if (TIPOS_DINHEIRO.has(campo.tipo)) inicial[campo.nome] = numeroParaCentavos(bruto);
       else if (campo.tipo === "data") inicial[campo.nome] = String(bruto).slice(0, 10);
-      else if (campo.tipo === "datahora") inicial[campo.nome] = String(bruto).slice(0, 16);
+      else if (campo.tipo === "datahora") inicial[campo.nome] = utcIsoParaDatetimeLocal(bruto);
       else inicial[campo.nome] = String(bruto);
     }
     setForm(inicial);
@@ -88,7 +122,7 @@ export default function AvaliacaoModal({
       if (TIPOS_DINHEIRO.has(campo.tipo)) corpo[campo.nome] = paraNumero(v);
       else if (campo.tipo === "inteiro") corpo[campo.nome] = Number(v);
       else if (campo.tipo === "data") corpo[campo.nome] = new Date(`${v}T00:00:00`).toISOString();
-      else if (campo.tipo === "datahora") corpo[campo.nome] = new Date(v).toISOString();
+      else if (campo.tipo === "datahora") corpo[campo.nome] = datetimeLocalParaUtcIso(v);
       else corpo[campo.nome] = v;
     }
     // Obrigatórios sempre viajam como string, mesmo vazios: quem recusa é o
