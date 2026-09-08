@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -242,6 +243,110 @@ func TestPerfilLogoPreservaAlfa(t *testing.T) {
 	}
 }
 
+// logoGrandeComBordaSemitransparente desenha um círculo vermelho opaco cercado
+// por um anel de antialiasing (alfa caindo de 255 a 0 mantendo o matiz
+// vermelho) sobre fundo totalmente transparente com cor "zero" (preto) — o
+// jeito como qualquer ferramenta de design exporta um logo em PNG, e
+// exatamente o cenário em que resize ingênuo (que ignora o alfa ao interpolar
+// R/G/B) mistura o preto do fundo transparente na borda e escurece o traço.
+func logoGrandeComBordaSemitransparente(t *testing.T, lado int) []byte {
+	t.Helper()
+	img := image.NewNRGBA(image.Rect(0, 0, lado, lado))
+	centro := float64(lado) / 2
+	raio := float64(lado) / 3
+	faixa := float64(lado) / 24 // anel de antialiasing ao redor do círculo
+	for y := 0; y < lado; y++ {
+		for x := 0; x < lado; x++ {
+			dx, dy := float64(x)-centro, float64(y)-centro
+			d := math.Sqrt(dx*dx + dy*dy)
+			switch {
+			case d <= raio:
+				img.Set(x, y, color.NRGBA{220, 30, 30, 255})
+			case d <= raio+faixa:
+				t := (d - raio) / faixa
+				a := uint8((1 - t) * 255)
+				img.Set(x, y, color.NRGBA{220, 30, 30, a})
+			}
+			// fora do anel: fica no zero-value do NRGBA, ou seja
+			// color.NRGBA{0,0,0,0} — transparente com "preto" na cor, o pior
+			// caso para vazamento de cor no resize.
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+// TestPerfilLogoRedimensionaSemFranjaNaBordaSemitransparente cobre o caso que
+// TestPerfilLogoPreservaAlfa não cobre: uma logo MAIOR que PerfilLogo.LadoMaior
+// (1024), que por isso passa pelo imaging.Resize (Lanczos) antes de virar PNG.
+//
+// A dúvida era se o resize, rodando sobre NRGBA não pré-multiplicado, vaza a
+// cor "preta" do fundo transparente para dentro da borda semitransparente
+// vermelha (a franja clássica de resize que ignora alfa). Medido pixel a
+// pixel: não vaza. O pacote disintegration/imaging pesa cada amostra pelo
+// próprio alfa dela antes de somar R/G/B e só divide pelo alfa acumulado no
+// fim (ver resizeHorizontal/resizeVertical em resize.go) — isso é
+// matematicamente equivalente a pré-multiplicar, interpolar e depois
+// des-premultiplicar, então um pixel 100% transparente contribui peso zero
+// para a cor do vizinho, não a cor "preta" que ele carrega no campo RGB.
+// Por isso este teste fica como prova de comportamento (green a mostrar que
+// não há franja), não como correção — se a biblioteca mudar esse detalhe de
+// implementação, este teste é quem avisa.
+func TestPerfilLogoRedimensionaSemFranjaNaBordaSemitransparente(t *testing.T) {
+	const ladoOriginal = 2048 // maior que PerfilLogo.LadoMaior (1024): força o resize
+	entrada := logoGrandeComBordaSemitransparente(t, ladoOriginal)
+
+	res, err := Otimizar(entrada, "logo-grande.png", PerfilLogo)
+	if err != nil {
+		t.Fatalf("Otimizar: %v", err)
+	}
+	if res.Mime != "image/png" || res.Extensao != ".png" {
+		t.Fatalf("esperava png, veio %s %s", res.Mime, res.Extensao)
+	}
+
+	saida, _, err := image.Decode(bytes.NewReader(res.Bytes))
+	if err != nil {
+		t.Fatalf("decodificar saida: %v", err)
+	}
+	b := saida.Bounds()
+	if b.Dx() != 1024 || b.Dy() != 1024 {
+		t.Fatalf("esperava resize para 1024x1024, veio %dx%d", b.Dx(), b.Dy())
+	}
+
+	achouSemitransparente := false
+	achouTransparente := false
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			c := color.NRGBAModel.Convert(saida.At(x, y)).(color.NRGBA)
+			switch c.A {
+			case 0:
+				achouTransparente = true
+			case 255:
+				// pixel opaco dentro do círculo: nada a medir aqui.
+			default:
+				achouSemitransparente = true
+				// franja = a cor deixa de ser vermelho-dominante e escurece
+				// rumo ao cinza/preto do fundo transparente vazando.
+				if c.R <= c.G || c.R <= c.B {
+					t.Fatalf(
+						"franja na borda semitransparente: pixel (%d,%d) alfa=%d cor=%v (deveria continuar vermelho-dominante)",
+						x, y, c.A, c,
+					)
+				}
+			}
+		}
+	}
+	if !achouSemitransparente {
+		t.Fatal("teste nao encontrou pixel semitransparente na saida - fixture nao exercita o caso")
+	}
+	if !achouTransparente {
+		t.Fatal("teste nao encontrou pixel totalmente transparente na saida - fixture nao exercita o caso")
+	}
+}
+
 func TestOtimizarNaoInchaArquivoJaPequeno(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
 	var buf bytes.Buffer
@@ -395,4 +500,96 @@ func TestOtimizarPDFRecomprimeImagemEmbutida(t *testing.T) {
 
 	t.Logf("%d bytes -> %d bytes (-%.1f%%), %d pagina(s)",
 		len(original), len(res.Bytes), res.Economia(), paginasDepois)
+}
+
+// pdfComImagemMinima monta um PDF de 1 página cuja imagem embutida é 8x8
+// preto — já praticamente incompressível (igual ao caso já coberto para
+// imagem solta em TestOtimizarNaoInchaArquivoJaPequeno) e pequena o bastante
+// para o overhead fixo de cabeçalho/tabela Huffman do JPEG garantir que
+// recomprimi-la fica maior que o stream original. Serve de fixture para as
+// duas guardas de "não encolheu, devolve a entrada".
+func pdfComImagemMinima(t *testing.T) []byte {
+	t.Helper()
+	dir := t.TempDir()
+
+	imgPath := filepath.Join(dir, "mini.png")
+	mini := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, mini); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(imgPath, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	pdfPath := filepath.Join(dir, "mini.pdf")
+	if _, _, err := ConstruirPDF([]string{imgPath}, pdfPath); err != nil {
+		t.Fatalf("montar pdf: %v", err)
+	}
+	entrada, err := os.ReadFile(pdfPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return entrada
+}
+
+// TestRecomprimirImagensPDFSemGanhoDevolveEntradaIntacta prova a guarda de
+// recomprimirImagensPDF (optimize.go): quando a recompressão de nenhuma
+// imagem embutida ganha nada, a função devolve a entrada byte a byte, não uma
+// reescrita "equivalente" do pdfcpu.
+func TestRecomprimirImagensPDFSemGanhoDevolveEntradaIntacta(t *testing.T) {
+	entrada := pdfComImagemMinima(t)
+
+	saida := recomprimirImagensPDF(entrada)
+	if !bytes.Equal(saida, entrada) {
+		t.Fatalf(
+			"recomprimirImagensPDF deveria devolver a entrada intacta quando nao ha ganho: %d bytes -> %d bytes, e sao diferentes",
+			len(entrada), len(saida),
+		)
+	}
+}
+
+// TestOtimizarPDFSemGanhoDevolveEntradaIntacta prova a guarda de otimizarPDF
+// (optimize.go:292-322) isolada de recomprimirImagensPDF: mesmo quando
+// api.Optimize sozinho não encolhe o PDF — medido diretamente, esse PDF
+// mínimo de 1197 bytes vira 1198 depois de api.Optimize, ou seja, CRESCE — e
+// a recompressão da imagem embutida também não ajuda (ver teste acima), o
+// resultado final tem que ser exatamente a entrada, não a versão levemente
+// maior que api.Optimize produziu.
+func TestOtimizarPDFSemGanhoDevolveEntradaIntacta(t *testing.T) {
+	entrada := pdfComImagemMinima(t)
+
+	saida, _, err := otimizarPDF(entrada)
+	if err != nil {
+		t.Fatalf("otimizarPDF nao deveria falhar: %v", err)
+	}
+	if !bytes.Equal(saida, entrada) {
+		t.Fatalf(
+			"otimizarPDF deveria devolver a entrada intacta quando nada encolhe: %d bytes -> %d bytes, e sao diferentes",
+			len(entrada), len(saida),
+		)
+	}
+}
+
+// TestOtimizarPDFMalformadoDevolveOriginalIntacto prova a outra metade da
+// mesma guarda: um "PDF" com assinatura válida mas corpo malformado o
+// bastante para api.Optimize e recomprimirImagensPDF falharem os dois. O
+// envio não pode ser rejeitado nem os bytes alterados — um PDF que não deu
+// para otimizar ainda é um PDF válido para guardar.
+func TestOtimizarPDFMalformadoDevolveOriginalIntacto(t *testing.T) {
+	entrada := []byte("%PDF-1.7\nisto tem a assinatura de PDF mas nao eh um PDF valido, so lixo\n%%EOF")
+
+	res, err := Otimizar(entrada, "malformado.pdf", PerfilDocumento)
+	if err != nil {
+		t.Fatalf("Otimizar nao deveria falhar, deveria devolver o original: %v", err)
+	}
+	if res.Mime != "application/pdf" || res.Extensao != ".pdf" {
+		t.Fatalf("esperava pdf, veio %s %s", res.Mime, res.Extensao)
+	}
+	if !bytes.Equal(res.Bytes, entrada) {
+		t.Fatalf(
+			"esperava os bytes originais intactos, veio %d bytes diferentes (entrada tinha %d)",
+			len(res.Bytes), len(entrada),
+		)
+	}
 }

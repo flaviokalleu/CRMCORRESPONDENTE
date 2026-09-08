@@ -196,6 +196,16 @@ func otimizarImagem(dados []byte, p Perfil) ([]byte, error) {
 	if b.Dy() > maior {
 		maior = b.Dy()
 	}
+	// Logo grande (PerfilLogo) passa por aqui com canal alfa. Resize ingênuo
+	// sobre RGBA não pré-multiplicado vazaria a cor do fundo transparente para
+	// dentro de uma borda semitransparente (franja escura/acinzentada). Não é
+	// o caso aqui: o disintegration/imaging pesa cada amostra pelo próprio
+	// alfa antes de somar R/G/B e só divide pelo alfa acumulado no fim — o
+	// que equivale a pré-multiplicar, interpolar e des-premultiplicar depois
+	// — então um pixel 100% transparente contribui peso zero, não a cor que
+	// carrega. Medido pixel a pixel em
+	// TestPerfilLogoRedimensionaSemFranjaNaBordaSemitransparente; se a
+	// biblioteca mudar esse detalhe de implementação, é esse teste que avisa.
 	if p.LadoMaior > 0 && maior > p.LadoMaior {
 		if b.Dx() >= b.Dy() {
 			img = imaging.Resize(img, p.LadoMaior, 0, imaging.Lanczos)
