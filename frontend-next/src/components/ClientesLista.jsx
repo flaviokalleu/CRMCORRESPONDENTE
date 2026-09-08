@@ -35,8 +35,6 @@ import { corDoAvatar, iniciaisDe, origemVisual, tempoRelativo, dataCurta } from 
 import { userPhotoUrl } from "@/lib/user-avatar";
 import { ClienteNotas } from "@/components/ClienteNotas";
 import { ClienteDrawer } from "@/components/ClienteDrawer";
-import AvaliacaoModal from "@/components/AvaliacaoModal";
-import { resultadoPorStatus } from "@/lib/avaliacao";
 
 const LIMIT = 12;
 // No Kanban a paginação não faz sentido — uma lane com "12 de 15" mente sobre o
@@ -417,7 +415,6 @@ export function ClientesLista({ initialSearch = "",
   const [overLane, setOverLane] = useState(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [selecionados, setSelecionados] = useState(() => new Set());
-  const [avaliacaoDe, setAvaliacaoDe] = useState(null);
 
   // Preferência de visão sobrevive ao reload (só conveniência local, por isso
   // localStorage e não servidor). Em janela anônima o acesso pode lançar.
@@ -506,13 +503,6 @@ export function ClientesLista({ initialSearch = "",
       if (!res.ok) throw new Error();
       // A troca move o cliente de grupo; sem recontar, a aba fica mentindo.
       fetchContagens({ q, status, grupo, corretor, inicio, fim, page, limit: LIMIT });
-      // Aprovação, condicionamento e reprovação vêm de uma tela do SIOPI cujos
-      // números o CRM só conhece perguntando.
-      const resultado = resultadoPorStatus(newStatus);
-      if (resultado) {
-        const atual = clientes.find((c) => c.id === id);
-        setAvaliacaoDe({ id, resultado, nome: atual?.nome, valor_renda: atual?.valor_renda });
-      }
     } catch {
       setClientes(prev); // reverte
     } finally {
@@ -1153,17 +1143,6 @@ export function ClientesLista({ initialSearch = "",
           </div>
         </DialogContent>
       </Dialog>
-
-      <AvaliacaoModal
-        clienteId={avaliacaoDe?.id}
-        clienteNome={avaliacaoDe?.nome}
-        valorRenda={avaliacaoDe?.valor_renda}
-        resultado={avaliacaoDe?.resultado}
-        avaliacao={null}
-        aberto={!!avaliacaoDe}
-        onFechar={() => setAvaliacaoDe(null)}
-        onSalvo={() => setAvaliacaoDe(null)}
-      />
     </div>
   );
 }

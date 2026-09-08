@@ -8,8 +8,6 @@ import {
 } from "lucide-react";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
 import { ClienteDocumentos } from "@/components/ClienteDocumentos";
-import AvaliacaoModal from "@/components/AvaliacaoModal";
-import { resultadoPorStatus } from "@/lib/avaliacao";
 
 // Painel lateral de edição do cliente.
 //
@@ -158,7 +156,6 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [aberta, setAberta] = useState({ identificacao: true, renda: true, situacao: true });
-  const [avaliacaoDe, setAvaliacaoDe] = useState(null);
   // null enquanto o painel de documentos não foi montado — assim o contador só
   // aparece depois de existir número de verdade para mostrar.
   const [totalDocs, setTotalDocs] = useState(null);
@@ -231,14 +228,7 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
         status: form.status,
         valor_renda_formatado: centavosToBRL(form.valor_renda),
       });
-      // Só pergunta quando o status ACABOU de mudar — reabrir o drawer num
-      // cliente já aprovado não deve reperguntar nada.
-      const resultado = resultadoPorStatus(form.status);
-      if (resultado && form.status !== original?.status) {
-        setAvaliacaoDe({ resultado, nome: form.nome, valor_renda: centavosToBRL(form.valor_renda) });
-      } else {
-        onClose();
-      }
+      onClose();
     } catch (e) {
       setErro(e.message || "Erro ao salvar");
     } finally {
@@ -396,17 +386,6 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
           </div>
         </footer>
       </aside>
-
-      <AvaliacaoModal
-        clienteId={clienteId}
-        clienteNome={avaliacaoDe?.nome}
-        valorRenda={avaliacaoDe?.valor_renda}
-        resultado={avaliacaoDe?.resultado}
-        avaliacao={null}
-        aberto={!!avaliacaoDe}
-        onFechar={() => { setAvaliacaoDe(null); onClose(); }}
-        onSalvo={() => setAvaliacaoDe(null)}
-      />
     </div>
   );
 }
