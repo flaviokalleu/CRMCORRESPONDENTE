@@ -2,8 +2,6 @@ package clientes
 
 import (
 	"errors"
-	"io"
-	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,52 +27,6 @@ func UploadsRoot() string { return uploads.Root() }
 // clienteDocDir devolve o diretório uploads/clientes/<cpf>/<dbField>/.
 func clienteDocDir(cpf, dbField string) string {
 	return filepath.Join(UploadsRoot(), "clientes", cpf, dbField)
-}
-
-// SaveDocumentFile grava o(s) arquivo(s) recebidos no diretório do cliente.
-//
-// NOTA DE ESCOPO: o pipeline completo do Node (pdfService.processFiles) faz
-// merge incremental de páginas num único documento.pdf (imagem→PDF, PDF
-// tolerante, conversão CTPS/RG/CPF via rasterização). Essa parte fica isolada
-// em internal/integrations/pdf (stub por enquanto — ver ErrNotImplemented).
-// Aqui salvamos o arquivo bruto recebido com um nome estável, para que o
-// upload funcione end-to-end já nesta fase; o merge real substitui este
-// comportamento quando o pacote pdf for implementado, sem mudar a assinatura.
-func SaveDocumentFile(fh *multipart.FileHeader, cpf, dbField string) (relPath string, size int64, err error) {
-	if fh == nil {
-		return "", 0, ErrArquivoAusente
-	}
-	dir := clienteDocDir(cpf, dbField)
-	if err = os.MkdirAll(dir, 0o755); err != nil {
-		return "", 0, err
-	}
-
-	ext := filepath.Ext(fh.Filename)
-	destName := "documento" + ext
-	destPath := filepath.Join(dir, destName)
-
-	src, err := fh.Open()
-	if err != nil {
-		return "", 0, err
-	}
-	defer src.Close()
-
-	dst, err := os.Create(destPath)
-	if err != nil {
-		return "", 0, err
-	}
-	defer dst.Close()
-
-	written, err := io.Copy(dst, src)
-	if err != nil {
-		return "", 0, err
-	}
-
-	rel, err := filepath.Rel(UploadsRoot(), destPath)
-	if err != nil {
-		return "", 0, err
-	}
-	return filepath.ToSlash(rel), written, nil
 }
 
 // ValidateDocumentPath confere que um caminho de documento pertence mesmo a

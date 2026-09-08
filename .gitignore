@@ -1,28 +1,16 @@
+# Arquivos enviados pelos usuários: documentos de cliente, fotos de imóvel,
+# avatares. São dado de aplicação, não código. Em produção aponte UPLOADS_DIR
+# para fora do repositório.
+/uploads/
+
+# Saídas da revisão visual (scripts/review-design.py) e logs de execução.
+# Eram listadas arquivo a arquivo; cada captura nova exigia mais uma linha.
+frontend-next/artifacts/
+*.log
+
+# Relatório de segurança gerado localmente.
+SECURITY-REVIEW.md
+
+# Mídia pesada que não é versionada.
 frontend-next/public/videos/hero.mp4
 image.png
-frontend-next/artifacts/design-review/alugueis-390.png
-frontend-next/artifacts/design-review/alugueis-1440.png
-frontend-next/artifacts/design-review/clientes-adicionar-390.png
-frontend-next/artifacts/design-review/clientes-adicionar-1440.png
-frontend-next/artifacts/design-review/configuracoes-390.png
-frontend-next/artifacts/design-review/configuracoes-1440.png
-frontend-next/artifacts/design-review/corretores-adicionar-390.png
-frontend-next/artifacts/design-review/corretores-adicionar-1440.png
-frontend-next/artifacts/design-review/financeiro-receitas-390.png
-frontend-next/artifacts/design-review/financeiro-receitas-1440.png
-frontend-next/artifacts/design-review/imoveis-adicionar-390.png
-frontend-next/artifacts/design-review/imoveis-adicionar-1440.png
-frontend-next/artifacts/design-review/propostas-390.png
-frontend-next/artifacts/design-review/propostas-1440.png
-backend-go/security-api.err.log
-backend-go/security-api.out.log
-frontend-next/security-web.err.log
-frontend-next/security-web.out.log
-frontend-next/artifacts/design-review/server.log
-SECURITY-REVIEW.md
-uploads/clientes/05030988335/documentos_pessoais/001_documento.jpg
-uploads/clientes/05030988335/documentos_pessoais/002_rg-frente.png
-uploads/clientes/05030988335/documentos_pessoais/003_rg-verso.png
-uploads/clientes/05030988335/extrato_bancario/001_documento.jpg
-uploads/clientes/05030988335/extrato_bancario/002_contracheque-01.jpg
-uploads/clientes/05030988335/extrato_bancario/003_contracheque-02.jpg

@@ -14,7 +14,6 @@ import (
 	"crmimob/internal/auth"
 	"crmimob/internal/config"
 	"crmimob/internal/integrations/asaas/webhook"
-	"crmimob/internal/integrations/pdf"
 	"crmimob/internal/integrations/storage"
 	"crmimob/internal/integrations/whatsapp"
 	"crmimob/internal/jobs"
@@ -205,7 +204,6 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	// ================= Cluster 02 — Clientes/Imóveis/Uploads =================
 
 	storageSvc := storage.NewService(db)
-	pdfSvc := pdf.NewClient()
 
 	locations.NewHandler(db).RegisterRoutes(api)
 
@@ -240,7 +238,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 		clientesRepo := clientes.NewRepository(db)
 		clientesSvc := clientes.NewService(clientesRepo)
 		clientesDocsSvc := clientes.NewDocumentosService(db, storageSvc)
-		clientesHandler := clientes.NewHandler(clientesSvc, storageSvc, pdfSvc, clientesDocsSvc)
+		clientesHandler := clientes.NewHandler(clientesSvc, storageSvc, clientesDocsSvc)
 		clientesHandler.RegisterListaClientesRoutes(cluster02)
 		clientesHandler.RegisterRoutes(cluster02) // catch-all — por último
 	}

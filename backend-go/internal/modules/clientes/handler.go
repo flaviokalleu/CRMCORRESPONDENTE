@@ -13,7 +13,6 @@ import (
 
 	"crmimob/internal/auth"
 	"crmimob/internal/integrations/media"
-	"crmimob/internal/integrations/pdf"
 	"crmimob/internal/integrations/storage"
 	"crmimob/internal/models"
 )
@@ -29,12 +28,11 @@ var documentFields = []string{
 type Handler struct {
 	svc        *Service
 	storageSvc *storage.Service
-	pdfSvc     pdf.Service
 	docsSvc    *DocumentosService
 }
 
-func NewHandler(svc *Service, storageSvc *storage.Service, pdfSvc pdf.Service, docsSvc *DocumentosService) *Handler {
-	return &Handler{svc: svc, storageSvc: storageSvc, pdfSvc: pdfSvc, docsSvc: docsSvc}
+func NewHandler(svc *Service, storageSvc *storage.Service, docsSvc *DocumentosService) *Handler {
+	return &Handler{svc: svc, storageSvc: storageSvc, docsSvc: docsSvc}
 }
 
 func tenantIDFrom(c *gin.Context) (uint, bool) {
@@ -406,23 +404,29 @@ func (h *Handler) TelaAprovacaoUpload(c *gin.Context) {
 		return
 	}
 
+	// Passa pelo mesmo caminho dos demais documentos: cada arquivo vira um
+	// registro próprio e é otimizado. Antes isto gravava todos com o mesmo nome
+	// fixo, então enviar duas telas deixava só a última.
+	criados, falhas, err := h.docsSvc.Salvar(c.Request.Context(), cliente, "tela_aprovacao", form.File["tela_aprovacao"])
+	if err != nil && len(criados) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar arquivos"})
+		return
+	}
+
+	// O shape da resposta é o que o front já consome; mantido.
 	type savedFile struct {
 		FilePath string `json:"filePath"`
 		FileName string `json:"fileName"`
 	}
-	var saved []savedFile
-	for _, fh := range form.File["tela_aprovacao"] {
-		rel, _, err := SaveDocumentFile(fh, safeCPF(cliente), "tela_aprovacao")
-		if err != nil {
-			continue
-		}
-		saved = append(saved, savedFile{FilePath: rel, FileName: fh.Filename})
+	saved := make([]savedFile, 0, len(criados))
+	for _, d := range criados {
+		saved = append(saved, savedFile{FilePath: d.Caminho, FileName: d.NomeOriginal})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Upload realizado com sucesso", "files": saved})
+	c.JSON(http.StatusOK, gin.H{"message": "Upload realizado com sucesso", "files": saved, "falhas": falhas})
 }
 
-// DocumentInfo — GET /clientes/:id/documentos/:tipo/info (usa pdf.Service — stub por ora).
+// DocumentInfo — GET /clientes/:id/documentos/:tipo/info.
 func (h *Handler) DocumentInfo(c *gin.Context) {
 	actor, ok := auth.UserFrom(c)
 	if !ok {
