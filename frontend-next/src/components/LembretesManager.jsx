@@ -757,8 +757,10 @@ function CalendarPanel() {
       <CardContent className="pt-0">
         <div className="text-cx-muted text-sm mb-3">{monthName}</div>
         <div className="grid grid-cols-7 gap-1 text-center text-sm">
+          {/* A inicial repete — "Q" é quarta e quinta, "S" é segunda, sexta e
+              sábado — então a chave é a posição na semana, não a letra. */}
           {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
-            <div key={d} className="text-cx-muted text-xs font-medium py-1">{d}</div>
+            <div key={i} className="text-cx-muted text-xs font-medium py-1">{d}</div>
           ))}
           {Array.from({ length: firstDayOfMonth }, (_, i) => (
             <div key={`empty-${i}`} className="p-2" />
