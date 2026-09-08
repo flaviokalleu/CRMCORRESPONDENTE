@@ -6,10 +6,10 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronRight, LogOut, Settings, UserPlus, UserCog, Activity,
-  ShieldCheck, Building2, Users, ClipboardList, Banknote, FileBarChart2,
+  ChevronRight, LogOut, Settings, UserCog, Activity,
+  ShieldCheck, Building2, Users, Banknote,
   QrCode, PanelLeftClose, X, Crown, Building, FileText, CreditCard,
-  Handshake, KeyRound, Calculator, ChartNoAxesColumn, CalendarCheck, House,
+  ChartNoAxesColumn, CalendarCheck, House,
   Wallet, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -126,8 +126,10 @@ export function Sidebar({ onClose, onToggleVisibility }) {
         key: "captacao",
         label: "Captação",
         collapsible: false,
+        // "Leads" apontava para a MESMA página de Clientes, só que abrindo no
+        // kanban — duas entradas para um destino só. Ficou Clientes; quem quer
+        // o kanban troca pelo alternador de visão dentro da própria página.
         items: operacional ? [
-          { href: "/clientes/lista?view=kanban", icon: UserPlus, label: "Leads" },
           { href: "/clientes/lista", icon: Users, label: "Clientes" },
           { href: "/imoveis/lista", icon: Building2, label: "Imóveis" },
         ] : [],
@@ -136,22 +138,12 @@ export function Sidebar({ onClose, onToggleVisibility }) {
         key: "negociacao",
         label: "Negociação",
         collapsible: false,
+        // Simulações, Atendimentos e Laudos saíram do menu a pedido do usuário.
+        // As páginas continuam existindo e acessíveis por URL direta — só
+        // deixaram de ocupar espaço na navegação.
         items: [
-          ...(operacional ? [{ href: "/simulador", icon: Calculator, label: "Simulações" }] : []),
           { href: "/propostas", icon: FileText, label: "Propostas" },
-          ...(operacional ? [{ href: "/visitas", icon: Handshake, label: "Atendimentos" }] : []),
-          ...(isStaff ? [{ href: "/laudos", icon: FileBarChart2, label: "Laudos" }] : []),
         ],
-      },
-      {
-        key: "fechamento",
-        label: "Fechamento",
-        collapsible: true,
-        items: isStaff ? [
-          { href: "/contratos/lista", icon: ClipboardList, label: "Contratos" },
-          { href: "/alugueis", icon: KeyRound, label: "Imóveis em Locação" },
-          { href: "/clientes-aluguel", icon: Users, label: "Inquilinos" },
-        ] : [],
       },
       {
         key: "financeiro",
