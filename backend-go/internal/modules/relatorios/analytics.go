@@ -26,6 +26,15 @@ type Analytics struct {
 	Documentos    DocumentosAnalysis    `json:"documentos"`
 	FGTS          FGTSAnalysis          `json:"fgts"`
 	Recomendacoes []string              `json:"recomendacoes"`
+	// Origens é a distribuição de clientes por canal de aquisição (coluna
+	// `origem`, texto livre) — alimenta o gráfico de rosca "de onde vêm os
+	// clientes" da tela de Relatórios.
+	Origens map[string]int `json:"origens"`
+	// TiposImovel é a distribuição de imóveis por `tipo` — alimenta o gráfico
+	// de rosca "distribuição da carteira por tipo de imóvel". Vem de uma
+	// consulta separada (repository.ListImovelTipos), pois imóveis não fazem
+	// parte da lista de clientes que o resto de Build() percorre.
+	TiposImovel map[string]int `json:"tiposImovel"`
 }
 
 // GeralAnalysis é o bloco `geral`: totais, taxas e renda média (via ParseRenda,
@@ -89,14 +98,21 @@ func statusBucket(status string) string {
 }
 
 // Build computa todos os blocos de Analytics a partir da lista de clientes já
-// filtrada por tenant (ver repository.go).
-func Build(clientes []models.Cliente) Analytics {
+// filtrada por tenant (ver repository.go). tiposImovel já vem pronto de
+// repository.ListImovelTipos (mesma escopagem de tenant, mas consulta à
+// parte por ser outra tabela); pode vir nil quando o tenant não tem imóveis.
+func Build(clientes []models.Cliente, tiposImovel map[string]int) Analytics {
+	if tiposImovel == nil {
+		tiposImovel = map[string]int{}
+	}
 	a := Analytics{
 		Perfil: PerfilAnalysis{
 			EstadoCivil: map[string]int{}, Profissao: map[string]int{}, Naturalidade: map[string]int{},
 			RendaTipo: map[string]int{}, FaixaEtaria: map[string]int{}, TempoEmprego: map[string]int{},
 		},
-		MCMV: MCMVAnalysis{PorFaixa: map[string]int{}},
+		MCMV:        MCMVAnalysis{PorFaixa: map[string]int{}},
+		Origens:     map[string]int{},
+		TiposImovel: tiposImovel,
 	}
 
 	a.Geral.Total = len(clientes)
@@ -138,6 +154,15 @@ func Build(clientes []models.Cliente) Analytics {
 		if c.RendaTipo != nil && *c.RendaTipo != "" {
 			a.Perfil.RendaTipo[*c.RendaTipo]++
 		}
+		// Origem é texto livre; cliente sem valor preenchido (NULL ou "")
+		// entra em "Sem origem" em vez de sumir do gráfico — quantos
+		// clientes chegaram sem canal registrado também é informação útil.
+		origem := "Sem origem"
+		if c.Origem != nil && strings.TrimSpace(*c.Origem) != "" {
+			origem = strings.TrimSpace(*c.Origem)
+		}
+		a.Origens[origem]++
+
 		if faixa := faixaEtaria(c.DataNascimento, now); faixa != "" {
 			a.Perfil.FaixaEtaria[faixa]++
 		}

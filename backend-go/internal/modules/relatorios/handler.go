@@ -29,7 +29,11 @@ func (h *Handler) build(c *gin.Context) (Analytics, error) {
 	if err != nil {
 		return Analytics{}, err
 	}
-	return Build(clientes), nil
+	tiposImovel, err := h.repo.ListImovelTipos(c.Request.Context())
+	if err != nil {
+		return Analytics{}, err
+	}
+	return Build(clientes, tiposImovel), nil
 }
 
 // RelatorioHTML: GET /api/report/relatorio.
