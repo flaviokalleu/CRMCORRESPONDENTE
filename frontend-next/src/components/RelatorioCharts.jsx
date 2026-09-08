@@ -60,19 +60,29 @@ export function SerieTemporalChart({ tendencias }) {
   const marcados = new Set([0, Math.floor((n - 1) / 2), n - 1]);
   const gradeY = [0, 0.5, 1];
 
-  const ativo = hover !== null ? pontos[hover] : pontos[pontos.length - 1];
+  // O ponto em destaque só existe enquanto há hover ou foco. Fixar o último
+  // mês como padrão deixava um balão de tooltip preso em cima do gráfico o
+  // tempo todo, tapando a própria curva.
+  const ativo = hover !== null ? pontos[hover] : null;
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-48 w-full" role="img" aria-label="Evolução de clientes por mês">
+      {/* Sem `preserveAspectRatio="none"`: esticar o viewBox para caber na
+          largura deforma junto a espessura da linha e o texto do eixo, que
+          saem achatados. O `viewBox` largo já dá a proporção desejada. */}
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label="Evolução de clientes por mês">
         {gradeY.map((f) => (
           <line key={f} x1={padX} x2={W - padX} y1={padTop + plotH * (1 - f)} y2={padTop + plotH * (1 - f)} stroke={CHART_CHROME.gridline} strokeWidth="1" />
         ))}
         <path d={area} fill={CATEGORICAL[0]} fillOpacity="0.12" stroke="none" />
         <path d={linha} fill="none" stroke={CATEGORICAL[0]} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        {/* Linha-guia + marcador do ponto em foco/hover. */}
-        <line x1={ativo.x} x2={ativo.x} y1={padTop} y2={base} stroke={CHART_CHROME.axis} strokeWidth="1" strokeDasharray="2 2" />
-        <circle cx={ativo.x} cy={ativo.y} r="4" fill="#ffffff" stroke={CATEGORICAL[0]} strokeWidth="2" />
+        {/* Linha-guia + marcador, só quando há ponto em foco/hover. */}
+        {ativo && (
+          <>
+            <line x1={ativo.x} x2={ativo.x} y1={padTop} y2={base} stroke={CHART_CHROME.axis} strokeWidth="1" strokeDasharray="2 2" />
+            <circle cx={ativo.x} cy={ativo.y} r="4" fill={CHART_CHROME.surface} stroke={CATEGORICAL[0]} strokeWidth="2" />
+          </>
+        )}
         {pontos.map((p, i) => marcados.has(i) && (
           <text key={i} x={p.x} y={H - 6} textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} fontSize="10" fill={CHART_CHROME.textMuted}>
             {mesLabel(p.mes)}
@@ -94,13 +104,14 @@ export function SerieTemporalChart({ tendencias }) {
           />
         ))}
       </div>
-      <div
-        className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] rounded-lg border border-cx-border bg-cx-surface px-2.5 py-1.5 text-xs whitespace-nowrap text-cx-text shadow-sm"
-        style={{ left: `${(ativo.x / W) * 100}%`, top: `${(ativo.y / H) * 100}%` }}
-      >
-        <span className="block font-semibold capitalize">{mesLabel(ativo.mes)}</span>
-        <span className="text-cx-muted">{numeroPt.format(ativo.total)} {ativo.total === 1 ? "cliente" : "clientes"}</span>
-      </div>
+      {/* Balão fixo no topo do gráfico, não colado ao ponto: seguir o ponto
+          fazia o balão vazar da borda do cartão nos meses das pontas. */}
+      {ativo && (
+        <div className="pointer-events-none absolute top-0 right-0 rounded-lg border border-cx-border bg-cx-surface px-2.5 py-1.5 text-xs whitespace-nowrap text-cx-text shadow-sm">
+          <span className="font-semibold capitalize">{mesLabel(ativo.mes)}</span>
+          <span className="ml-2 text-cx-muted">{numeroPt.format(ativo.total)} {ativo.total === 1 ? "cliente" : "clientes"}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -125,7 +136,10 @@ export function RoscaChart({ dados, totalLabel, vazioMsg }) {
   const CX = 60;
   const CY = 60;
   const circunferencia = 2 * Math.PI * R;
-  const gap = 2.5; // folga entre fatias (regra "2px de folga" da skill dataviz)
+  // Folga entre fatias. Sem `strokeLinecap="round"`: a ponta arredondada se
+  // estende meia espessura (8px) para fora de cada extremo do traço, o que
+  // comia a folga e fazia as fatias se sobreporem — o anel saía embaralhado.
+  const gap = 2.5;
 
   // `reduce` acumulando no próprio retorno (em vez de mutar uma variável de
   // fora do map): a regra react-hooks/immutability do compilador do React
@@ -149,7 +163,7 @@ export function RoscaChart({ dados, totalLabel, vazioMsg }) {
             <circle
               key={gapId + f.label}
               cx={CX} cy={CY} r={R} fill="none"
-              stroke={f.cor} strokeWidth="16" strokeLinecap="round"
+              stroke={f.cor} strokeWidth="16"
               strokeDasharray={`${f.comprimento} ${circunferencia - f.comprimento}`}
               strokeDashoffset={f.offset}
             />
