@@ -14,6 +14,10 @@ export const metadata = { title: "Relatórios" };
 // DIFERENTE de uma carteira sem clientes de verdade (`geral.total === 0`), e
 // RelatoriosDashboard distingue os dois casos.
 export default async function RelatorioPage() {
-  const dados = await apiGet("/report/relatorio/dados");
-  return <RelatoriosDashboard dados={dados} loadError={dados === null} />;
+  const resposta = await apiGet("/report/relatorio/dados");
+  // A rota devolve a análise embrulhada em `{ "data": { ... } }` — ler
+  // `resposta.geral` direto dava sempre `undefined`, e a tela caía no estado
+  // "nenhum cliente cadastrado" mesmo com a carteira cheia.
+  const dados = resposta?.data ?? resposta;
+  return <RelatoriosDashboard dados={dados} loadError={resposta === null} />;
 }
