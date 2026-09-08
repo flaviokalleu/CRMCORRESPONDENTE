@@ -20,6 +20,13 @@ func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 		g.PATCH("/:id/status", h.UpdateStatus)
 		g.DELETE("/:id", h.Delete)
 
+		// Avaliações do SIOPI. Registradas antes das rotas de documento porque
+		// o Gin casa na ordem e "/:id/documentos/:tipo" tem curinga no segundo
+		// segmento.
+		g.GET("/:id/avaliacoes", h.ListarAvaliacoes)
+		g.POST("/:id/avaliacoes", h.CriarAvaliacao)
+		g.PUT("/:id/avaliacoes/:avaliacaoId", h.AtualizarAvaliacao)
+
 		// Documentos. As rotas mais específicas vêm antes das que têm :tipo
 		// livre — o Gin casa na ordem de registro.
 		g.GET("/:id/documentos", h.ListarDocumentos)
