@@ -100,6 +100,8 @@ func applyInput(c *models.Cliente, in ClienteInput, partial bool) {
 	set(&c.EstadoCivil, in.EstadoCivil, nil)
 	set(&c.Naturalidade, in.Naturalidade, trim)
 	set(&c.Profissao, in.Profissao, trim)
+	set(&c.Origem, in.Origem, trim)
+	set(&c.Interesse, in.Interesse, trim)
 	set(&c.DataNascimento, in.DataNascimento, formatDateOnly)
 	set(&c.DataAdmissao, in.DataAdmissao, formatDateOnly)
 
@@ -306,16 +308,30 @@ func (s *Service) Get(ctx context.Context, id uint, actor *models.User) (*models
 }
 
 func (s *Service) List(ctx context.Context, actor *models.User, q ListQuery) ([]models.Cliente, int64, error) {
+	return s.repo.List(ctx, s.filtrosDe(actor, q))
+}
+
+// Contagens alimenta as abas da lista: total por status, já reduzido aos
+// clientes que o ator pode ver. Passa pelo mesmo filtrosDe da listagem para que
+// um corretor conte apenas a própria carteira.
+func (s *Service) Contagens(ctx context.Context, actor *models.User, q ListQuery) ([]ContagemPorStatus, error) {
+	return s.repo.Contagens(ctx, s.filtrosDe(actor, q))
+}
+
+// filtrosDe traduz a query em filtros de repositório aplicando a regra de
+// visibilidade: corretor puro só enxerga os próprios clientes e não pode
+// escolher outro corretor no filtro.
+func (s *Service) filtrosDe(actor *models.User, q ListQuery) ListFilters {
 	f := ListFilters{
 		Recentes: q.Recentes,
 		Page:     q.Page, Limit: q.Limit, Search: q.Search, Status: q.Status,
-		Corretor: q.Corretor, Inicio: q.Inicio, Fim: q.Fim,
+		Grupo: q.Grupo, Corretor: q.Corretor, Inicio: q.Inicio, Fim: q.Fim,
 	}
 	if actor.IsCorretor && !actor.IsAdministrador && !actor.IsCorrespondente {
 		f.OnlyUserID = &actor.ID
-		f.Corretor = "" // corretor não pode filtrar por outro corretor
+		f.Corretor = ""
 	}
-	return s.repo.List(ctx, f)
+	return f
 }
 
 // CanAccessClient replica a checagem "Admin/Correspondente/Corretor(dono)"

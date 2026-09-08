@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
-  Search, Plus, Pencil, ChevronLeft, ChevronRight, ChevronDown, Loader2,
+  Search, Plus, Pencil, ChevronLeft, ChevronRight, Loader2, Download,
   Phone, MessageCircle, MoreVertical, Inbox, RefreshCw, StickyNote,
   LayoutGrid, Rows3, GripVertical, SlidersHorizontal, X,
   CheckCircle2, XCircle, Clock3, CircleDot,
@@ -27,21 +27,58 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
+import { corDoAvatar, iniciaisDe, origemVisual, tempoRelativo, dataCurta } from "@/lib/cliente-visual";
+import { userPhotoUrl } from "@/lib/user-avatar";
 import { ClienteNotas } from "@/components/ClienteNotas";
 import { ClienteDrawer } from "@/components/ClienteDrawer";
 
 const LIMIT = 12;
-// No Kanban a paginação não faz sentido — uma lane com "12 de 15" mente sobre
-// o tamanho da coluna. Buscamos a carteira inteira de uma vez.
-const KANBAN_LIMIT = 300;
+// No Kanban a paginação não faz sentido — uma lane com "12 de 15" mente sobre o
+// tamanho da coluna, então buscamos a carteira inteira. O backend capa o limit
+// em 100 (repository.go), logo carteiras maiores ficam truncadas nessa visão.
+const KANBAN_LIMIT = 100;
 
-// Altura única de todo controle da toolbar. Um só valor evita a régua irregular
-// que aparece quando input, select e botão vêm cada um com a altura padrão do
-// seu componente; 44px também é alvo de toque confortável no celular.
+// Altura única de todo controle da barra superior. Um só valor evita a régua
+// irregular que aparece quando input, select e botão vêm cada um com a altura
+// padrão do seu componente; 44px também é alvo de toque confortável no celular.
 const CONTROLE = "h-11";
+
+// Abas do topo. Os grupos e seus nomes são definidos pelo backend em
+// `models.GrupoStatus` — aqui só damos rótulo e ordem. `valor: ""` é a aba
+// "Todos", que não manda recorte nenhum.
+const ABAS = [
+  { valor: "", label: "Todos", chaveContagem: "total" },
+  { valor: "atendimento", label: "Em atendimento", chaveContagem: "atendimento" },
+  { valor: "aprovados", label: "Aprovados", chaveContagem: "aprovados" },
+  { valor: "perdidos", label: "Perdidos", chaveContagem: "perdidos" },
+];
+
+// Colunas da tabela, com largura declarada. A tabela é `table-fixed`: sem isso
+// o navegador dá ~290px ao Status (a pílula é `w-fit` e não quebra) e a linha
+// estoura a área útil, empurrando Responsável e Ações para fora da tela.
+//
+// Interesse e Responsável são as duas colunas que aparecem por último, e o
+// gatilho é a largura do CONTAINER, não da viewport: a barra lateral come 240px
+// fixos, então uma janela de 1440px dá 1128px de tabela e uma de 1280 dá 976 —
+// um breakpoint de viewport erraria os dois casos. Daí o `@container` no cartão
+// e as variantes `@[...]` aqui.
+//
+// Responsável vai por último por ser a informação menos consultada da linha:
+// continua no cartão do celular e no painel de edição.
+const COLUNAS = [
+  { titulo: "Nome", largura: "w-auto" },
+  { titulo: "Contato", largura: "w-[175px]" },
+  { titulo: "Origem", largura: "w-[120px]" },
+  { titulo: "Status", largura: "w-[230px]" },
+  { titulo: "Interesse", largura: "w-[130px]", classe: "hidden @[1000px]:table-cell" },
+  { titulo: "Último contato", largura: "w-[100px]" },
+  { titulo: "Responsável", largura: "w-[128px]", classe: "hidden @[1180px]:table-cell" },
+  { titulo: "Ações", largura: "w-[116px]" },
+];
 
 // Formata a renda (VARCHAR pt-BR "7000,00" ou numérico) com separador de milhar.
 const formatRenda = (c) => {
@@ -52,18 +89,22 @@ const formatRenda = (c) => {
   if (Number.isNaN(n)) return raw;
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
-const initialsOf = (nome) => {
-  const p = (nome || "").trim().split(/\s+/).filter(Boolean);
-  return p.length ? (p[0][0] + (p[1]?.[0] || "")).toUpperCase() : "?";
-};
 const maskCPF = (v) =>
   (v || "").replace(/\D/g, "").slice(0, 11)
     .replace(/^(\d{3})(\d)/, "$1.$2")
     .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
+// O telefone é gravado como texto livre; só reformatamos quando os dígitos
+// batem com um número brasileiro, para não estragar o que já veio formatado.
+const maskTelefone = (v) => {
+  const d = (v || "").replace(/\D/g, "");
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return v || "";
+};
 
-// Ícone da lane. Derivado do `tone` que o STATUS_MAP já declara — não é um
-// ícone inventado por status, é a leitura semântica que o sistema já fazia
+// Ícone da lane do Kanban. Derivado do `tone` que o STATUS_MAP já declara — não
+// é um ícone inventado por status, é a leitura semântica que o sistema já fazia
 // (positive/negative/attention/neutral) ganhando forma visual.
 const ICONE_POR_TOM = {
   positive: CheckCircle2,
@@ -72,11 +113,11 @@ const ICONE_POR_TOM = {
   neutral: CircleDot,
 };
 
-// Janela de páginas para a paginação numerada: sempre a 1ª e a última, mais
-// uma faixa de 5 páginas consecutivas ao redor da atual (encostada no começo
-// ou no fim quando a atual está perto de uma das pontas), e reticências no que
-// for pulado. Devolve números e strings "…N", que a UI renderiza como
-// separador inerte — a string precisa ser única por posição para servir de key.
+// Janela de páginas para a paginação numerada: sempre a 1ª e a última, mais uma
+// faixa de 5 páginas consecutivas ao redor da atual (encostada no começo ou no
+// fim quando a atual está perto de uma das pontas), e reticências no que for
+// pulado. Devolve números e strings "…N", que a UI renderiza como separador
+// inerte — a string precisa ser única por posição para servir de key.
 const JANELA = 5;
 
 function janelaDePaginas(atual, total) {
@@ -98,11 +139,41 @@ function janelaDePaginas(atual, total) {
   return saida;
 }
 
+// Exporta os clientes recebidos como CSV. Separador `;` e BOM UTF-8 porque o
+// destino real é o Excel em português, que lê vírgula como separador decimal e
+// quebra os acentos sem o BOM.
+function baixarCSV(clientes, nomeArquivo) {
+  const colunas = [
+    ["Nome", (c) => c.nome || ""],
+    ["CPF", (c) => (c.cpf ? maskCPF(c.cpf) : "")],
+    ["E-mail", (c) => c.email || ""],
+    ["Telefone", (c) => maskTelefone(c.telefone)],
+    ["Origem", (c) => c.origem || ""],
+    ["Interesse", (c) => c.interesse || ""],
+    ["Status", (c) => statusInfo(c.status).label],
+    ["Renda", (c) => formatRenda(c)],
+    ["Responsável", (c) => c.user?.first_name || ""],
+    ["Última alteração", (c) => dataCurta(c.updated_at) || ""],
+  ];
+  const escapa = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const linhas = [
+    colunas.map(([titulo]) => escapa(titulo)).join(";"),
+    ...clientes.map((c) => colunas.map(([, ler]) => escapa(ler(c))).join(";")),
+  ];
+  const blob = new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nomeArquivo;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // Ações rápidas de um cliente: falar no WhatsApp, ligar e um menu com o resto.
-// Usada na linha da tabela, no card do celular e no card do Kanban, para as três
-// visões terem o mesmo repertório. Todo clique aqui é isolado com
-// stopPropagation — o contêiner ao redor abre o drawer, e essas ações não devem
-// disparar isso.
+// Usada na linha da tabela, no cartão do celular e no cartão do Kanban, para as
+// três visões terem o mesmo repertório. Todo clique aqui é isolado com
+// stopPropagation — o contêiner ao redor abre o painel de edição, e essas ações
+// não devem disparar isso.
 function AcoesRapidas({ cliente, onNotas, compacto = false }) {
   const fone = (cliente.telefone || "").replace(/\D/g, "");
   const tamanho = compacto ? "icon-xs" : "icon-sm";
@@ -114,7 +185,7 @@ function AcoesRapidas({ cliente, onNotas, compacto = false }) {
           size={tamanho}
           nativeButton={false}
           render={<a href={`https://wa.me/55${fone}`} target="_blank" rel="noreferrer" />}
-          className="text-cx-muted hover:text-emerald-700"
+          className="bg-wb-good/10 text-wb-good hover:bg-wb-good/20"
           title="Falar no WhatsApp"
           aria-label={`Falar com ${cliente.nome || "cliente"} no WhatsApp`}
         >
@@ -142,6 +213,8 @@ function AcoesRapidas({ cliente, onNotas, compacto = false }) {
         >
           <MoreVertical />
         </DropdownMenuTrigger>
+        {/* globals.css aplica `body * { min-width: 0 }`, que anula o min-w do
+            popup: sem o `!` o menu abre com ~20px e o texto sai na vertical. */}
         <DropdownMenuContent align="end" className="min-w-48!">
           <DropdownMenuItem render={<Link href={`/editar-cliente/${cliente.id}`} />}>
             <Pencil /> Editar cliente
@@ -156,29 +229,80 @@ function AcoesRapidas({ cliente, onNotas, compacto = false }) {
   );
 }
 
-// Status como PÍLULA suave: fundo tingido no tom do estágio e o nome escrito
-// na cor cheia. A largura acompanha o texto — nomes curtos deixam de ocupar a
-// mesma faixa que os longos, e a coluna respira.
-//
-// O par fundo/tinta vem de statusInfo (soft/ink), calculado para passar AA;
-// não troque por STATUS_COLOR direto, que só passa sobre branco puro.
-function StatusBadge({ status, className }) {
-  const info = statusInfo(status);
+// Avatar do cliente: iniciais sobre um fundo tingido, sorteado pelo nome. A cor
+// aqui é só para o olho separar as linhas numa lista longa — quem carrega
+// significado é a pílula de status, que tem coluna própria.
+function AvatarCliente({ nome, className }) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn("h-auto max-w-[190px] py-1 text-[11px] font-semibold", className)}
-      style={{ backgroundColor: info.soft, color: info.ink }}
-      title={info.label}
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+        corDoAvatar(nome), className
+      )}
     >
-      <span className="truncate">{info.label}</span>
-    </Badge>
+      {iniciaisDe(nome)}
+    </span>
   );
 }
 
-// A mesma pílula, mas clicável: vira um Select para admin/correspondente
-// (PATCH inline). O gatilho herda o par soft/ink do status atual, então a
-// leitura de cor continua idêntica à do badge somente-leitura.
+// Responsável: foto quando o usuário tem uma gravada, iniciais quando não tem.
+// A imagem é servida pelo Go através do proxy do Next (ver lib/user-avatar).
+function Responsavel({ user }) {
+  const nome = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+  const foto = userPhotoUrl(user?.photo);
+  if (!user || !nome) return <span className="text-cx-muted">—</span>;
+  return (
+    <span className="flex items-center gap-2">
+      {/* O arquivo vem do proxy do backend, fora do otimizador do next/image. */}
+      {foto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={foto} alt="" className="size-6 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", corDoAvatar(nome))}>
+          {iniciaisDe(nome)}
+        </span>
+      )}
+      <span className="truncate">{user.first_name || nome}</span>
+    </span>
+  );
+}
+
+// Status como BARRA + TEXTO: um traço vertical na cor cheia do estágio e o nome
+// escrito na cor de texto padrão da tabela.
+//
+// Vinte e uma linhas de fundo tingido faziam a coluna competir com o resto da
+// tela; aqui a cor volta a ser acento. Como o nome não é mais escrito na cor do
+// status, todos os estágios passam a ler a 13,6:1 (text-cx-text sobre branco),
+// contra os 4,52:1 no limite do par soft/ink.
+//
+// `solid` é STATUS_COLOR — cor cheia, calibrada para o traço se distinguir do
+// fundo do cartão. Não use `ink` aqui: ele foi escurecido para texto sobre o
+// fundo tingido que este desenho não tem mais.
+const BARRA_STATUS = "h-4 w-[3px] shrink-0 rounded-full";
+
+function StatusBadge({ status, className }) {
+  const info = statusInfo(status);
+  return (
+    <span
+      className={cn("flex w-fit items-center gap-2 text-[13px]! font-medium text-cx-text", className)}
+      title={info.label}
+    >
+      <span className={BARRA_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
+      <span className="truncate">{info.label}</span>
+    </span>
+  );
+}
+
+// O mesmo desenho, clicável: vira um Select para admin/correspondente (PATCH
+// inline). Em repouso é indistinguível do badge de leitura; a seta e um leve
+// realce de fundo só aparecem no hover e no foco, então a coluna em repouso não
+// tem vinte e uma setas.
+//
+// A seta é injetada pelo próprio SelectTrigger (não é filha nossa), daí ela ser
+// alcançada por `[&>svg:last-child]`. O espaço dela fica reservado desde o
+// início — é opacidade, não display —, senão o texto salta ao passar o mouse.
+// `aria-expanded` mantém a seta visível enquanto a lista está aberta.
 function StatusControl({ cliente, onChange, saving, className }) {
   const info = statusInfo(cliente.status);
   return (
@@ -190,15 +314,24 @@ function StatusControl({ cliente, onChange, saving, className }) {
       <SelectTrigger
         size="sm"
         className={cn(
-          "h-auto max-w-[210px] gap-1 rounded-full border-transparent py-1 pr-1.5 pl-2.5 text-[11px] font-semibold hover:opacity-80 disabled:cursor-wait [&>svg:last-child]:size-3 [&>svg:last-child]:opacity-70",
+          "h-auto w-fit max-w-full gap-2 rounded-md border-transparent bg-transparent py-1 pr-1.5 pl-2 text-[13px]! font-medium text-cx-text *:data-[slot=select-value]:gap-2",
+          "transition-colors hover:bg-cx-bg aria-expanded:bg-cx-bg disabled:cursor-wait",
+          "[&>svg:last-child]:size-3.5 [&>svg:last-child]:opacity-0 [&>svg:last-child]:transition-opacity",
+          "hover:[&>svg:last-child]:opacity-60 focus-visible:[&>svg:last-child]:opacity-60 aria-expanded:[&>svg:last-child]:opacity-60",
           className
         )}
-        style={{ backgroundColor: info.soft, color: info.ink }}
         title={info.label}
         aria-label={`Status: ${info.label}. Alterar`}
       >
-        <SelectValue>{() => <span className="truncate">{info.label}</span>}</SelectValue>
-        {saving ? <Loader2 className="size-3 shrink-0 animate-spin" /> : null}
+        <SelectValue>
+          {() => (
+            <>
+              <span className={BARRA_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
+              <span className="truncate">{info.label}</span>
+            </>
+          )}
+        </SelectValue>
+        {saving ? <Loader2 className="size-3.5 shrink-0 animate-spin text-cx-muted" /> : null}
       </SelectTrigger>
       <SelectContent className="max-h-72 w-auto! min-w-64!">
         {STATUS_LIST.map((s) => (
@@ -209,13 +342,41 @@ function StatusControl({ cliente, onChange, saving, className }) {
   );
 }
 
+// Canal de captação: ícone + o texto que foi gravado. Traço quando ninguém
+// preencheu — um vazio honesto é melhor que um canal inventado.
+function CelulaOrigem({ origem }) {
+  const visual = origemVisual(origem);
+  if (!visual) return <span className="text-cx-muted">—</span>;
+  const { Icon, cor, label } = visual;
+  return (
+    <span className="flex items-center justify-center gap-2">
+      <Icon className={cn("size-4 shrink-0", cor)} />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+// Último contato. O sistema não registra interações, então a referência é o
+// `updated_at` do cliente: a última vez que alguém mexeu no cadastro. O título
+// do elemento diz isso, para o número não ser lido como "última conversa".
+function CelulaUltimoContato({ cliente }) {
+  const relativo = tempoRelativo(cliente.updated_at);
+  if (!relativo) return <span className="text-cx-muted">—</span>;
+  return (
+    <span className="block" title="Última alteração no cadastro">
+      <span className="block text-cx-text">{relativo}</span>
+      <span className="block text-xs text-cx-muted tabular-nums">{dataCurta(cliente.updated_at)}</span>
+    </span>
+  );
+}
+
 // Placeholder de carregamento com a mesma altura da linha real, para a tabela
 // não pular de tamanho quando os dados chegam.
 function LinhasEsqueleto({ colunas }) {
   return Array.from({ length: 6 }).map((_, i) => (
     <TableRow key={i}>
       {Array.from({ length: colunas }).map((__, j) => (
-        <TableCell key={j} className="px-4 py-3">
+        <TableCell key={j} className="px-3! py-3!">
           <Skeleton className="h-5 w-full" />
         </TableCell>
       ))}
@@ -237,8 +398,10 @@ export function ClientesLista({ initialSearch = "",
 
   const [clientes, setClientes] = useState(initialData?.clientes ?? []);
   const [pagination, setPagination] = useState(initialData?.pagination ?? { total: (initialData?.clientes ?? []).length, page: 1, limit: LIMIT, pages: 1 });
+  const [contagens, setContagens] = useState(null);
   const [q, setQ] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
+  const [grupo, setGrupo] = useState("");
   const [corretor, setCorretor] = useState(initialCorretor);
   const [inicio, setInicio] = useState(initialInicio);
   const [fim, setFim] = useState(initialFim);
@@ -250,7 +413,8 @@ export function ClientesLista({ initialSearch = "",
   const [editingId, setEditingId] = useState(null); // painel lateral de edição
   const [dragId, setDragId] = useState(null);
   const [overLane, setOverLane] = useState(null);
-  const [filtrosAbertos, setFiltrosAbertos] = useState(false); // só no celular
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [selecionados, setSelecionados] = useState(() => new Set());
 
   // Preferência de visão sobrevive ao reload (só conveniência local, por isso
   // localStorage e não servidor). Em janela anônima o acesso pode lançar.
@@ -267,34 +431,64 @@ export function ClientesLista({ initialSearch = "",
     try { window.localStorage.setItem("clientes:view", v); } catch {}
   };
 
-  const fetchList = useCallback(async ({ q, status, corretor, inicio, fim, page, limit = LIMIT }) => {
+  const paramsDe = useCallback(({ q, status, grupo, corretor, inicio, fim, page, limit }) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q) params.set("search", q);
+    if (status) params.set("status", status);
+    if (grupo) params.set("grupo", grupo);
+    if (corretor) params.set("corretor", corretor);
+    if (inicio) params.set("inicio", inicio);
+    if (fim) params.set("fim", fim);
+    return params;
+  }, []);
+
+  const fetchList = useCallback(async (filtros) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-      if (q) params.set("search", q);
-      if (status) params.set("status", status);
-      if (corretor) params.set("corretor", corretor);
-      if (inicio) params.set("inicio", inicio);
-      if (fim) params.set("fim", fim);
+      const params = paramsDe({ limit: LIMIT, ...filtros });
       const res = await fetch(`/api/backend/clientes?${params.toString()}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       setClientes(Array.isArray(data) ? data : data.clientes ?? []);
-      setPagination(data.pagination ?? { total: 0, page: 1, limit, pages: 1 });
+      setPagination(data.pagination ?? { total: 0, page: 1, limit: filtros.limit ?? LIMIT, pages: 1 });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paramsDe]);
+
+  // As contagens das abas vêm de um endpoint próprio (GROUP BY status no Go).
+  // Ele ignora o recorte de status/grupo, mas respeita busca, responsável e
+  // período — as abas contam dentro do mesmo universo que a tabela mostra.
+  const fetchContagens = useCallback(async (filtros) => {
+    const params = paramsDe({ ...filtros, grupo: "", status: "", page: 1, limit: 1 });
+    try {
+      const res = await fetch(`/api/backend/clientes/contagens?${params.toString()}`, { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setContagens({ total: data.total ?? 0, ...(data.por_grupo ?? {}) });
+    } catch {
+      // Abas sem número continuam navegáveis; não vale derrubar a lista por isso.
+    }
+  }, [paramsDe]);
 
   const didMount = useRef(false);
   useEffect(() => {
-    // Alternar para o Kanban precisa refazer a busca mesmo no primeiro efeito:
-    // o initialData do servidor veio paginado em LIMIT.
-    if (!didMount.current && view === "lista") { didMount.current = true; return; }
-    didMount.current = true;
     const limit = view === "kanban" ? KANBAN_LIMIT : LIMIT;
-    const t = setTimeout(() => fetchList({ q, status, corretor, inicio, fim, page: view === "kanban" ? 1 : page, limit }), 300);
+    const filtros = { q, status, grupo, corretor, inicio, fim, page: view === "kanban" ? 1 : page, limit };
+    // A primeira renderização já tem os dados do servidor; só as contagens
+    // faltam. Alternar para o Kanban refaz a busca mesmo assim, porque o
+    // initialData veio paginado em LIMIT.
+    if (!didMount.current && view === "lista") {
+      didMount.current = true;
+      fetchContagens(filtros);
+      return;
+    }
+    didMount.current = true;
+    const t = setTimeout(() => {
+      fetchList(filtros);
+      fetchContagens(filtros);
+    }, 300);
     return () => clearTimeout(t);
-  }, [q, status, corretor, inicio, fim, page, view, fetchList]);
+  }, [q, status, grupo, corretor, inicio, fim, page, view, fetchList, fetchContagens]);
 
   const changeStatus = async (id, newStatus) => {
     const prev = clientes;
@@ -307,6 +501,8 @@ export function ClientesLista({ initialSearch = "",
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
+      // A troca move o cliente de grupo; sem recontar, a aba fica mentindo.
+      fetchContagens({ q, status, grupo, corretor, inicio, fim, page, limit: LIMIT });
     } catch {
       setClientes(prev); // reverte
     } finally {
@@ -314,9 +510,9 @@ export function ClientesLista({ initialSearch = "",
     }
   };
 
-  // Uma lane por status do enum, na ordem do STATUS_LIST (que já reflete a
-  // ordem do atendimento). Todo cliente cai em alguma lane — se o status vier
-  // fora do enum, entra na lane "Sem status".
+  // Uma lane por status do enum, na ordem do STATUS_LIST (que já reflete a ordem
+  // do atendimento). Todo cliente cai em alguma lane — se o status vier fora do
+  // enum, entra na lane "Sem status".
   const lanes = useMemo(() => {
     const porStatus = new Map(STATUS_LIST.map((s) => [s.value, []]));
     const orfaos = [];
@@ -345,55 +541,119 @@ export function ClientesLista({ initialSearch = "",
   const from = total === 0 ? 0 : (page - 1) * LIMIT + 1;
   const to = Math.min(page * LIMIT, total);
 
-  const temFiltro = !!(q || status || corretor || inicio || fim);
+  const temFiltro = !!(q || status || grupo || corretor || inicio || fim);
   const filtrosAtivos = [status, corretor, inicio, fim].filter(Boolean).length;
   const limparFiltros = () => {
     setStatus(""); setCorretor(""); setInicio(""); setFim(""); setPage(1);
   };
   const recarregar = () =>
-    fetchList({ q, status, corretor, inicio, fim, page, limit: view === "kanban" ? KANBAN_LIMIT : LIMIT });
+    fetchList({ q, status, grupo, corretor, inicio, fim, page, limit: view === "kanban" ? KANBAN_LIMIT : LIMIT });
+
+  const trocarAba = (valor) => {
+    setGrupo(valor);
+    setStatus(""); // aba e filtro de status recortam a mesma coisa
+    setPage(1);
+    setSelecionados(new Set());
+  };
+
+  // Seleção: vive só na página visível. Guardar ids de páginas que já saíram da
+  // tela criaria uma seleção invisível, que o usuário não tem como conferir
+  // antes de exportar.
+  const idsVisiveis = clientes.map((c) => c.id);
+  const selecionadosVisiveis = idsVisiveis.filter((id) => selecionados.has(id));
+  const todosSelecionados = idsVisiveis.length > 0 && selecionadosVisiveis.length === idsVisiveis.length;
+  const alternarTodos = () => setSelecionados(todosSelecionados ? new Set() : new Set(idsVisiveis));
+  const alternarUm = (id) => {
+    setSelecionados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(id)) proximo.delete(id); else proximo.add(id);
+      return proximo;
+    });
+  };
+
+  const exportar = () => {
+    const alvo = selecionadosVisiveis.length
+      ? clientes.filter((c) => selecionados.has(c.id))
+      : clientes;
+    if (!alvo.length) return;
+    baixarCSV(alvo, `clientes-${new Date().toISOString().slice(0, 10)}.csv`);
+  };
 
   const vazio = clientes.length === 0 && !loading;
+  const contagemDaAba = (aba) => contagens?.[aba.chaveContagem];
 
   return (
     <div className="space-y-4">
-      {/* Cabeçalho — em telas estreitas o botão desce e ocupa a largura toda,
-          em vez de espremer o título contra ele. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-cx-text sm:text-2xl">Clientes</h1>
-          <p className="text-sm text-cx-muted">
-            {loading ? "Carregando…" : `${total} cliente${total === 1 ? "" : "s"}${temFiltro ? " no filtro" : ""}`}
-          </p>
+          <p className="text-sm text-cx-muted">Gerencie seus clientes e acompanhe todo o relacionamento.</p>
         </div>
-        {/* `bg-cx-orange` e reescrito para o azul institucional por
-            crm-design.css; a classe fica porque e a do botao primario em todas
-            as outras telas — trocar so aqui faria esta pagina destoar. */}
-        <Button
-          nativeButton={false}
-          render={<Link href="/clientes/adicionar" />}
-          className={cn(CONTROLE, "w-full gap-2 bg-cx-orange px-4 text-sm font-semibold text-white hover:bg-cx-orange-dark sm:w-auto")}
-        >
-          <Plus /> Adicionar cliente
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={exportar}
+            disabled={clientes.length === 0}
+            className={cn(CONTROLE, "flex-1 gap-2 border-cx-border text-cx-text sm:flex-none")}
+            title={selecionadosVisiveis.length ? `Exportar ${selecionadosVisiveis.length} selecionado(s)` : "Exportar a página atual"}
+          >
+            <Download /> Exportar
+            {selecionadosVisiveis.length ? (
+              <span className="tabular-nums">({selecionadosVisiveis.length})</span>
+            ) : null}
+          </Button>
+          {/* `bg-cx-orange` é reescrito para o azul institucional por
+              crm-design.css; a classe fica porque é a do botão primário em todas
+              as outras telas — trocar só aqui faria esta página destoar. */}
+          <Button
+            nativeButton={false}
+            render={<Link href="/clientes/adicionar" />}
+            className={cn(CONTROLE, "flex-1 gap-2 bg-cx-orange px-4 text-sm font-semibold text-white hover:bg-cx-orange-dark sm:flex-none")}
+          >
+            <Plus /> Novo cliente
+          </Button>
+        </div>
       </div>
 
-      {/* Toolbar. Busca e visão ficam sempre visíveis; os filtros secundários
-          são uma linha própria a partir de lg e um painel dobrável abaixo
-          disso, para não virar uma parede de controles no celular. */}
-      <Card className="gap-0 ring-cx-border bg-cx-surface p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative order-first basis-full sm:order-none sm:min-w-[200px] sm:flex-1 sm:basis-auto">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cx-muted" />
-            <Input
-              value={q}
-              onChange={(e) => { setQ(e.target.value); setPage(1); }}
-              placeholder="Buscar por nome, e-mail ou CPF…"
-              aria-label="Buscar clientes"
-              className={cn(CONTROLE, "border-cx-border pl-10! text-sm")}
-            />
-          </div>
+      {/* Abas por grupo + visão + filtros. As abas rolam na horizontal no
+          celular, em vez de quebrar em duas fileiras. */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {ABAS.map((aba) => {
+            const ativa = grupo === aba.valor;
+            const n = contagemDaAba(aba);
+            return (
+              <button
+                key={aba.valor || "todos"}
+                type="button"
+                onClick={() => trocarAba(aba.valor)}
+                aria-pressed={ativa}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-colors",
+                  CONTROLE,
+                  ativa
+                    ? "bg-cx-blue text-white"
+                    : "bg-cx-surface text-cx-muted ring-1 ring-cx-border hover:text-cx-text"
+                )}
+              >
+                {aba.label}
+                {typeof n === "number" ? (
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums",
+                      ativa ? "bg-white/20" : "bg-cx-bg text-cx-muted"
+                    )}
+                  >
+                    {n}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
 
+        <div className="flex items-center gap-2">
           <ToggleGroup
             value={[view]}
             onValueChange={(v) => changeView(v[0])}
@@ -409,7 +669,19 @@ export function ClientesLista({ initialSearch = "",
               <LayoutGrid /> <span className="hidden sm:inline">Kanban</span>
             </ToggleGroupItem>
           </ToggleGroup>
-
+          <Button
+            variant="outline"
+            onClick={() => setFiltrosAbertos((v) => !v)}
+            aria-expanded={filtrosAbertos}
+            className={cn(CONTROLE, "shrink-0 gap-2 border-cx-border text-cx-text")}
+          >
+            <SlidersHorizontal /> Filtros
+            {filtrosAtivos > 0 ? (
+              <span className="inline-flex size-5 items-center justify-center rounded-full bg-cx-blue text-[10px] font-bold text-white tabular-nums">
+                {filtrosAtivos}
+              </span>
+            ) : null}
+          </Button>
           <Button
             variant="outline"
             onClick={recarregar}
@@ -419,26 +691,26 @@ export function ClientesLista({ initialSearch = "",
           >
             <RefreshCw className={loading ? "animate-spin" : undefined} />
           </Button>
-
-          {/* Só no celular/tablet: abre a linha de filtros. */}
-          <Button
-            variant="outline"
-            onClick={() => setFiltrosAbertos((v) => !v)}
-            aria-expanded={filtrosAbertos}
-            className={cn(CONTROLE, "shrink-0 gap-2 border-cx-border text-cx-muted lg:hidden")}
-          >
-            <SlidersHorizontal /> Filtros
-            {filtrosAtivos > 0 ? (
-              <span className="inline-flex size-5 items-center justify-center rounded-full bg-cx-blue text-[10px] font-bold text-white tabular-nums">
-                {filtrosAtivos}
-              </span>
-            ) : null}
-          </Button>
         </div>
+      </div>
 
-        {/* Linha de filtros: sempre aberta em lg+, dobrável abaixo disso. */}
+      {/* Busca sempre visível; o resto dos filtros abre no botão Filtros. */}
+      <Card className="gap-0 ring-cx-border bg-cx-surface p-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cx-muted" />
+          {/* crm-design.css impõe `padding: 11px 14px` em todo input dentro de
+              .crm-content, com especificidade maior que a utilitária: sem o `!`
+              o ícone fica em cima do texto. */}
+          <Input
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            placeholder="Buscar por nome, e-mail ou CPF…"
+            aria-label="Buscar clientes"
+            className={cn(CONTROLE, "border-cx-border pl-10! text-sm")}
+          />
+        </div>
         <Collapsible open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
-          <CollapsibleContent className="lg:hidden">
+          <CollapsibleContent>
             <FiltrosSecundarios
               status={status} setStatus={setStatus}
               corretor={corretor} setCorretor={setCorretor}
@@ -448,21 +720,9 @@ export function ClientesLista({ initialSearch = "",
               setPage={setPage}
               filtrosAtivos={filtrosAtivos}
               onLimpar={limparFiltros}
-              className="pt-3"
             />
           </CollapsibleContent>
         </Collapsible>
-        <FiltrosSecundarios
-          status={status} setStatus={setStatus}
-          corretor={corretor} setCorretor={setCorretor}
-          inicio={inicio} setInicio={setInicio}
-          fim={fim} setFim={setFim}
-          responsaveis={responsaveis}
-          setPage={setPage}
-          filtrosAtivos={filtrosAtivos}
-          onLimpar={limparFiltros}
-          className="hidden pt-3 lg:flex"
-        />
       </Card>
 
       {/* Vazio — um só componente para as duas visões. */}
@@ -478,7 +738,7 @@ export function ClientesLista({ initialSearch = "",
             </p>
           </div>
           {temFiltro ? (
-            <Button variant="outline" onClick={() => { setQ(""); limparFiltros(); }} className="border-cx-border">
+            <Button variant="outline" onClick={() => { setQ(""); setGrupo(""); limparFiltros(); }} className="border-cx-border">
               <X /> Limpar filtros
             </Button>
           ) : (
@@ -487,38 +747,45 @@ export function ClientesLista({ initialSearch = "",
               render={<Link href="/clientes/adicionar" />}
               className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark"
             >
-              <Plus /> Adicionar cliente
+              <Plus /> Novo cliente
             </Button>
           )}
         </Card>
       )}
 
-      {/* LISTA — tabela a partir de md; abaixo disso, cartões, porque uma
-          tabela de 7 colunas em 360px só existe como rolagem lateral. */}
+      {/* LISTA — tabela a partir de lg; abaixo disso, cartões, porque uma tabela
+          de nove colunas em 390px só existe como rolagem lateral. */}
       {view === "lista" && !vazio && (
         <>
-          <Card className="hidden overflow-hidden ring-cx-border bg-cx-surface p-0 lg:block">
-            <Table className="min-w-[680px]">
+          <Card className="@container hidden overflow-hidden ring-cx-border bg-cx-surface p-0 lg:block">
+            <Table className="min-w-[820px] table-fixed">
               <TableHeader>
                 <TableRow className="border-cx-border/[0.15] hover:bg-transparent">
-                  {["Cliente", "CPF", "Contato", "Renda", "Responsável", "Status", "Ações"].map((h, i) => (
+                  <TableHead className="w-10 px-3! py-3! text-center">
+                    <Checkbox
+                      className="mx-auto"
+                      checked={todosSelecionados}
+                      indeterminate={selecionadosVisiveis.length > 0 && !todosSelecionados}
+                      onCheckedChange={alternarTodos}
+                      aria-label="Selecionar todos os clientes da página"
+                    />
+                  </TableHead>
+                  {COLUNAS.map(({ titulo, largura, classe }) => (
                     <TableHead
-                      key={h}
+                      key={titulo}
                       className={cn(
-                        "px-3! py-3! text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase",
-                        (i === 3 || i === 6) && "text-right",
-                        i === 1 && "hidden xl:table-cell",
-                        i === 4 && "hidden xl:table-cell"
+                        "px-3! py-3! text-center text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase",
+                        largura, classe
                       )}
                     >
-                      {h}
+                      {titulo}
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && clientes.length === 0 ? (
-                  <LinhasEsqueleto colunas={7} />
+                  <LinhasEsqueleto colunas={9} />
                 ) : (
                   clientes.map((c) => (
                     <TableRow
@@ -529,51 +796,62 @@ export function ClientesLista({ initialSearch = "",
                         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
                       }}
                       aria-label={`Abrir ${c.nome || "cliente"}`}
+                      data-state={selecionados.has(c.id) ? "selected" : undefined}
                       className={cn(
                         "cursor-pointer border-cx-border/[0.12] hover:bg-cx-bg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cx-blue",
                         loading && "opacity-50 transition-opacity"
                       )}
                     >
-                      <TableCell className="px-3! py-3!">
-                        <div className="flex items-center gap-3">
-                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-cx-border text-xs font-semibold text-cx-muted">
-                            {initialsOf(c.nome)}
-                          </span>
-                          <span className="block min-w-0">
-                            <span className="block truncate font-medium text-cx-text">{c.nome || "—"}</span>
-                            <span className="block truncate text-xs text-cx-muted">{c.email || "sem e-mail"}</span>
+                      <TableCell className="px-3! py-3! text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          className="mx-auto"
+                          checked={selecionados.has(c.id)}
+                          onCheckedChange={() => alternarUm(c.id)}
+                          aria-label={`Selecionar ${c.nome || "cliente"}`}
+                        />
+                      </TableCell>
+                      <TableCell className="px-3! py-3! text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <AvatarCliente nome={c.nome} />
+                          <span className="block min-w-0 text-left">
+                            <span className="block truncate font-medium text-cx-text" title={c.nome || undefined}>{c.nome || "—"}</span>
+                            <span className="block truncate text-xs text-cx-muted" title={c.email || undefined}>{c.email || "sem e-mail"}</span>
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden px-3! py-3! text-cx-muted tabular-nums xl:table-cell">
-                        {c.cpf ? maskCPF(c.cpf) : "—"}
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-cx-muted">
+                      <TableCell className="px-3! py-3! text-center text-cx-muted">
                         {c.telefone ? (
                           <a
                             href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`}
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 hover:text-cx-text"
+                            className="flex items-center justify-center gap-1.5 hover:text-cx-text"
                           >
-                            <Phone className="size-3.5" /> {c.telefone}
+                            <MessageCircle className="size-3.5 shrink-0 text-wb-good" />
+                            <span className="truncate tabular-nums">{maskTelefone(c.telefone)}</span>
                           </a>
                         ) : "—"}
                       </TableCell>
-                      <TableCell className="px-3! py-3! text-right text-cx-muted tabular-nums">
-                        {formatRenda(c) ? `R$ ${formatRenda(c)}` : "—"}
+                      <TableCell className="px-3! py-3! text-center text-cx-text">
+                        <CelulaOrigem origem={c.origem} />
                       </TableCell>
-                      <TableCell className="hidden px-3! py-3! text-cx-muted xl:table-cell">
-                        {c.user?.first_name || "—"}
-                      </TableCell>
-                      <TableCell className="px-3! py-3!" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="px-3! py-3! text-center" onClick={(e) => e.stopPropagation()}>
                         {canChangeStatus
-                          ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
-                          : <StatusBadge status={c.status} />}
+                          ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} className="mx-auto" />
+                          : <StatusBadge status={c.status} className="mx-auto" />}
+                      </TableCell>
+                      <TableCell className="hidden px-3! py-3! text-center text-cx-text @[1000px]:table-cell">
+                        <span className="block truncate" title={c.interesse || undefined}>{c.interesse || <span className="text-cx-muted">—</span>}</span>
+                      </TableCell>
+                      <TableCell className="px-3! py-3! text-center text-cx-muted">
+                        <CelulaUltimoContato cliente={c} />
+                      </TableCell>
+                      <TableCell className="hidden px-3! py-3! text-center text-cx-text @[1180px]:table-cell">
+                        <Responsavel user={c.user} />
                       </TableCell>
                       <TableCell className="px-3! py-3!">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-center">
                           <AcoesRapidas cliente={c} onNotas={setNotesFor} />
                         </div>
                       </TableCell>
@@ -587,7 +865,7 @@ export function ClientesLista({ initialSearch = "",
           {/* Mesma lista em cartões, para telas estreitas. */}
           <div className="grid gap-2 lg:hidden">
             {loading && clientes.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[112px] rounded-xl" />)
+              ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[136px] rounded-xl" />)
               : clientes.map((c) => (
                 <Card
                   key={c.id}
@@ -604,13 +882,18 @@ export function ClientesLista({ initialSearch = "",
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-cx-border text-xs font-semibold text-cx-muted">
-                      {initialsOf(c.nome)}
+                    <span onClick={(e) => e.stopPropagation()} className="pt-1">
+                      <Checkbox
+                        checked={selecionados.has(c.id)}
+                        onCheckedChange={() => alternarUm(c.id)}
+                        aria-label={`Selecionar ${c.nome || "cliente"}`}
+                      />
                     </span>
+                    <AvatarCliente nome={c.nome} className="size-10" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-cx-text">{c.nome || "—"}</p>
                       <p className="truncate text-xs text-cx-muted tabular-nums">
-                        {c.cpf ? maskCPF(c.cpf) : "sem CPF"}
+                        {c.telefone ? maskTelefone(c.telefone) : c.email || "sem contato"}
                       </p>
                     </div>
                     <AcoesRapidas cliente={c} onNotas={setNotesFor} />
@@ -618,24 +901,27 @@ export function ClientesLista({ initialSearch = "",
 
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                     <div className="flex min-w-0 gap-1.5">
-                      <dt className="shrink-0 text-cx-muted">Renda</dt>
-                      <dd className="truncate font-medium text-cx-text tabular-nums">
-                        {formatRenda(c) ? `R$ ${formatRenda(c)}` : "—"}
-                      </dd>
+                      <dt className="shrink-0 text-cx-muted">Origem</dt>
+                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.origem || "—"}</dd>
+                    </div>
+                    <div className="flex min-w-0 gap-1.5">
+                      <dt className="shrink-0 text-cx-muted">Interesse</dt>
+                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.interesse || "—"}</dd>
                     </div>
                     <div className="flex min-w-0 gap-1.5">
                       <dt className="shrink-0 text-cx-muted">Resp.</dt>
-                      <dd className="truncate font-medium text-cx-text">{c.user?.first_name || "—"}</dd>
+                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.user?.first_name || "—"}</dd>
+                    </div>
+                    <div className="flex min-w-0 gap-1.5">
+                      <dt className="shrink-0 text-cx-muted">Contato</dt>
+                      <dd className="min-w-0 truncate font-medium text-cx-text">{tempoRelativo(c.updated_at) || "—"}</dd>
                     </div>
                   </dl>
 
-                  <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div onClick={(e) => e.stopPropagation()}>
                     {canChangeStatus
                       ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
                       : <StatusBadge status={c.status} />}
-                    {c.telefone ? (
-                      <span className="truncate text-xs text-cx-muted">{c.telefone}</span>
-                    ) : null}
                   </div>
                 </Card>
               ))}
@@ -643,9 +929,8 @@ export function ClientesLista({ initialSearch = "",
         </>
       )}
 
-      {/* KANBAN — rolagem horizontal com encaixe: no celular a lane ocupa quase
-          a largura da tela e o scroll para uma a uma; no desktop são colunas
-          fixas de 264px. */}
+      {/* KANBAN — rolagem horizontal de colunas fixas. No celular o globals.css
+          converte a faixa em lista vertical (regra `.min-w-max`). */}
       {view === "kanban" && !vazio && (
         <div
           className={cn(
@@ -713,6 +998,7 @@ export function ClientesLista({ initialSearch = "",
                             {canChangeStatus && (
                               <GripVertical className="mt-0.5 size-3.5 shrink-0 text-cx-border group-hover:text-cx-muted" />
                             )}
+                            <AvatarCliente nome={c.nome} className="size-7 text-[10px]" />
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-xs font-semibold text-cx-text">{c.nome || "—"}</p>
                               <p className="truncate text-[11px] text-cx-muted tabular-nums">
@@ -722,6 +1008,10 @@ export function ClientesLista({ initialSearch = "",
                           </div>
 
                           <dl className="space-y-0.5 text-[11px]">
+                            <div className="flex justify-between gap-2">
+                              <dt className="shrink-0 text-cx-muted">Interesse</dt>
+                              <dd className="min-w-0 truncate font-medium text-cx-text">{c.interesse || "—"}</dd>
+                            </div>
                             <div className="flex justify-between gap-2">
                               <dt className="text-cx-muted">Renda</dt>
                               <dd className="font-medium text-cx-text tabular-nums">
@@ -754,7 +1044,7 @@ export function ClientesLista({ initialSearch = "",
                       render={<Link href="/clientes/adicionar" />}
                       className="mt-auto w-full gap-1.5 text-[11px] font-semibold text-cx-blue hover:bg-cx-blue-soft"
                     >
-                      <Plus /> Adicionar cliente
+                      <Plus /> Novo cliente
                     </Button>
                   </div>
                 </section>
@@ -764,9 +1054,8 @@ export function ClientesLista({ initialSearch = "",
         </div>
       )}
 
-      {/* Paginação — só na lista; o Kanban carrega a carteira inteira. Os
-          números somem no celular, onde não cabem: sobram anterior/próxima e a
-          posição escrita. */}
+      {/* Rodapé: contagem à esquerda, paginação à direita. Só na lista — o
+          Kanban carrega a carteira inteira. */}
       {view === "lista" && total > 0 && (
         <div className="flex flex-col-reverse items-center justify-between gap-3 text-xs text-cx-muted sm:flex-row">
           <span className="tabular-nums">
@@ -858,15 +1147,15 @@ export function ClientesLista({ initialSearch = "",
   );
 }
 
-// Bloco de filtros secundários (status, responsável, período). Renderizado duas
-// vezes — dentro do painel dobrável no celular e direto na toolbar em lg+ —
-// para os dois casos não divergirem com o tempo.
+// Filtros secundários (status, responsável, período), abertos pelo botão
+// Filtros. Ficam num componente próprio para o corpo da lista não crescer com
+// oito controles que só aparecem sob demanda.
 function FiltrosSecundarios({
   status, setStatus, corretor, setCorretor, inicio, setInicio, fim, setFim,
-  responsaveis, setPage, filtrosAtivos, onLimpar, className,
+  responsaveis, setPage, filtrosAtivos, onLimpar,
 }) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 border-t border-cx-border", className)}>
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-cx-border pt-3">
       <Select value={status} onValueChange={(v) => { setStatus(v ?? ""); setPage(1); }}>
         <SelectTrigger
           aria-label="Filtrar por status"

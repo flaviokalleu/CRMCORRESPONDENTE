@@ -239,7 +239,8 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 
 		clientesRepo := clientes.NewRepository(db)
 		clientesSvc := clientes.NewService(clientesRepo)
-		clientesHandler := clientes.NewHandler(clientesSvc, storageSvc, pdfSvc)
+		clientesDocsSvc := clientes.NewDocumentosService(db, storageSvc)
+		clientesHandler := clientes.NewHandler(clientesSvc, storageSvc, pdfSvc, clientesDocsSvc)
 		clientesHandler.RegisterListaClientesRoutes(cluster02)
 		clientesHandler.RegisterRoutes(cluster02) // catch-all — por último
 	}

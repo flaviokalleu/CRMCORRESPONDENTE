@@ -9,24 +9,22 @@ import (
 	"strings"
 
 	"crmimob/internal/models"
+	"crmimob/internal/uploads"
 )
 
 var (
 	ErrCaminhoInvalido = errors.New("clientes: caminho de documento fora do padrão de segurança")
 	ErrArquivoAusente  = errors.New("clientes: nenhum arquivo enviado")
+	// ErrTipoDocumentoInvalido cobre um ":tipo" que não está em
+	// models.DocumentTypeMap — chega pela URL, então é entrada do usuário.
+	ErrTipoDocumentoInvalido = errors.New("clientes: tipo de documento inválido")
 )
 
-// UploadsRoot resolve a raiz de uploads compartilhada com o backend Node —
-// MESMA pasta usada hoje (backend/uploads), para não duplicar arquivos entre
-// as duas implementações durante a migração (strangler-fig). Pode ser
-// sobrescrita via env UPLOADS_DIR; por padrão assume backend-go/../backend/uploads
-// (backend-go e backend são pastas irmãs).
-func UploadsRoot() string {
-	if v := os.Getenv("UPLOADS_DIR"); v != "" {
-		return v
-	}
-	return filepath.Join("..", "backend", "uploads")
-}
+// UploadsRoot é a raiz dos arquivos enviados. A definição vive em
+// internal/uploads, compartilhada com os outros módulos que gravam arquivo;
+// esta função continua existindo porque o router monta as rotas estáticas a
+// partir dela.
+func UploadsRoot() string { return uploads.Root() }
 
 // clienteDocDir devolve o diretório uploads/clientes/<cpf>/<dbField>/.
 func clienteDocDir(cpf, dbField string) string {
@@ -79,12 +77,16 @@ func SaveDocumentFile(fh *multipart.FileHeader, cpf, dbField string) (relPath st
 	return filepath.ToSlash(rel), written, nil
 }
 
-// ValidateDocumentPath replica as 3 checagens de segurança do endpoint
-// /verificar e do PUT (§5.3):
+// ValidateDocumentPath confere que um caminho de documento pertence mesmo a
+// este cliente:
 //  1. o caminho deve conter o CPF do cliente (sem máscara);
-//  2. deve conter o nome do campo (exceto tela_aprovacao, que só precisa conter
-//     "tela_aprovacao");
+//  2. deve conter o nome do campo;
 //  3. o diretório resolvido deve estar dentro de uploads/clientes/<cpf>/.
+//
+// `campoDocumento` é o nome da COLUNA (documentos_pessoais), que é o que compõe
+// o caminho no disco — não a chave da rota (documentosPessoais). Passar a chave
+// aqui faz a checagem 2 falhar sempre, e o endpoint responder 403 para um
+// documento perfeitamente válido.
 func ValidateDocumentPath(cliente *models.Cliente, campoDocumento, caminhoDocumento string) error {
 	if cliente.CPF == nil || *cliente.CPF == "" {
 		return ErrCaminhoInvalido

@@ -15,16 +15,12 @@ import (
 	"unicode"
 
 	"github.com/gin-gonic/gin"
+
+	"crmimob/internal/uploads"
 )
 
-// uploadsRoot replica a mesma raiz compartilhada usada pelo módulo clientes
-// (backend-go/../backend/uploads) — ver internal/modules/clientes/documents.go.
-func uploadsRoot() string {
-	if v := os.Getenv("UPLOADS_DIR"); v != "" {
-		return v
-	}
-	return filepath.Join("..", "backend", "uploads")
-}
+// uploadsRoot é a raiz compartilhada — a definição vive em internal/uploads.
+func uploadsRoot() string { return uploads.Root() }
 
 func imovelDir(id uint, sub string) string {
 	return filepath.Join(uploadsRoot(), "imoveis", strconv.FormatUint(uint64(id), 10), sub)

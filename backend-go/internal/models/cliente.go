@@ -32,6 +32,12 @@ type Cliente struct {
 	DataNascimento *string `gorm:"column:data_nascimento" json:"data_nascimento"` // VARCHAR(10) YYYY-MM-DD
 	DataAdmissao   *string `gorm:"column:data_admissao" json:"data_admissao"`     // VARCHAR(10) YYYY-MM-DD
 
+	// Canal por onde o cliente chegou e o que ele procura. Texto livre: os
+	// valores oferecidos no formulário são sugestão da UI, não enum do banco
+	// (ver migration 0008).
+	Origem    *string `gorm:"column:origem" json:"origem"`
+	Interesse *string `gorm:"column:interesse" json:"interesse"`
+
 	// 3.2 Financeiros / trabalhistas
 	ValorRenda                 *string `gorm:"column:valor_renda" json:"valor_renda"` // ⚠️ VARCHAR, formatado pt-BR
 	RendaTipo                  *string `gorm:"column:renda_tipo" json:"renda_tipo"`

@@ -7,7 +7,7 @@ import {
   User, Mail, Phone, IdCard, Briefcase, Calendar, Wallet, Heart, ShieldCheck,
   Landmark, Users, FileText, Upload, MapPin, Save, Loader2, CheckCircle,
   AlertCircle, UserCheck, FolderOpen, Check, ChevronRight, X, Fingerprint,
-  Coins, Contact,
+  Coins, Contact, Radio, Home,
 } from "lucide-react";
 
 // ── Formulário completo de cliente (criação + edição) ──────────────────────────
@@ -33,6 +33,13 @@ const STATUS_OPTIONS = [
   { value: "conformidade", label: "Conformidade", tone: "green" },
   { value: "concluido", label: "Venda concluída", tone: "green" },
   { value: "cancelado", label: "Cancelado", tone: "red" },
+];
+
+// Sugestões de canal de captação para o campo Origem. É uma lista de partida
+// (datalist), não um enum: o campo continua aceitando qualquer texto.
+const ORIGENS_SUGERIDAS = [
+  "Indicação", "Site", "Facebook", "Instagram", "Google", "WhatsApp",
+  "Campanha", "Portal imobiliário", "Placa", "Balcão",
 ];
 
 const RENDA_TIPOS = [
@@ -76,6 +83,8 @@ function buildInitialState(initial) {
     data_criacao: new Date().toISOString().slice(0, 10),
 
     profissao: c.profissao ?? "",
+    origem: c.origem ?? "",
+    interesse: c.interesse ?? "",
     valorRendaDigits: onlyDigits(c.valor_renda),
     renda_tipo: lower(c.renda_tipo),
     data_admissao: formatDateOnly(c.data_admissao),
@@ -368,6 +377,8 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
     if (mode === "create") put("data_criacao", formatDateOnly(form.data_criacao));
 
     put("profissao", form.profissao.toUpperCase());
+    put("origem", form.origem);
+    put("interesse", form.interesse.toUpperCase());
     put("valor_renda", formatRendaFromDigits(form.valorRendaDigits));
     put("renda_tipo", form.renda_tipo);
     if (rendaFormal) put("data_admissao", formatDateOnly(form.data_admissao));
@@ -543,6 +554,23 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
             </Select>
             <Text label="Naturalidade / cidade" icon={MapPin} name="naturalidade" value={form.naturalidade} onChange={onUpper} placeholder="SÃO PAULO - SP" />
             <Text label="Data de nascimento" icon={Calendar} type="date" name="data_nascimento" value={form.data_nascimento} onChange={onText} />
+            {/* Origem e interesse alimentam as colunas de mesmo nome na lista de
+                clientes. A origem tem lista de sugestões mas aceita texto livre
+                (o banco não restringe) — cada imobiliária capta por canais
+                diferentes e a lista fixa envelheceria rápido. */}
+            <Text
+              label="Origem do contato"
+              icon={Radio}
+              name="origem"
+              list="origens-sugeridas"
+              value={form.origem}
+              onChange={onText}
+              placeholder="Indicação, Site, Facebook…"
+            />
+            <datalist id="origens-sugeridas">
+              {ORIGENS_SUGERIDAS.map((item) => <option key={item} value={item} />)}
+            </datalist>
+            <Text label="Interesse" icon={Home} name="interesse" value={form.interesse} onChange={onUpper} placeholder="APARTAMENTO 2 QUARTOS" />
             {mode === "create" && (
               <Text label="Data do cadastro" icon={Calendar} type="date" name="data_criacao" value={form.data_criacao} onChange={onText} />
             )}

@@ -29,21 +29,24 @@ type ListFilters struct {
 	Limit      int
 	Search     string
 	Status     string
+	Grupo      string // recorte por tom semântico (ver models.StatusDoGrupo)
 	Corretor   string // filtra por user_id quando admin/correspondente escolhe um corretor
 	OnlyUserID *uint  // corretor só vê os próprios (userId=self)
 	Inicio     *time.Time
 	Fim        *time.Time // exclusivo
 }
 
-// List devolve os clientes paginados + total, com `user` e `notas(id)` carregados
-// (para NotasCount), ordenados por created_at DESC.
-func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente, int64, error) {
-	q := r.db.WithContext(ctx).Model(&models.Cliente{})
-
+// aplicaFiltros monta os WHERE compartilhados por List e Contagens. Estar num
+// só lugar é o que garante que o número da aba seja o número de linhas que a
+// tabela mostra quando aquela aba é escolhida.
+func (r *Repository) aplicaFiltros(q *gorm.DB, f ListFilters) *gorm.DB {
 	if f.OnlyUserID != nil {
 		q = q.Where("user_id = ?", *f.OnlyUserID)
 	} else if f.Corretor != "" {
 		q = q.Where("user_id = ?", f.Corretor)
+	}
+	if grupo := models.StatusDoGrupo(f.Grupo); grupo != nil {
+		q = q.Where("status IN ?", grupo)
 	}
 	if f.Status != "" {
 		if f.Status == "atencao" {
@@ -67,6 +70,31 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente,
 	if f.Fim != nil {
 		q = q.Where("created_at < ?", *f.Fim)
 	}
+	return q
+}
+
+// ContagemPorStatus é uma linha do GROUP BY status usado pelas abas da lista.
+type ContagemPorStatus struct {
+	Status string `json:"status"`
+	Total  int64  `json:"total"`
+}
+
+// Contagens devolve quantos clientes existem por status, sob os MESMOS filtros
+// da listagem menos o próprio recorte de status/grupo — se as abas aplicassem o
+// filtro que elas próprias oferecem, cada uma mostraria só o seu total.
+func (r *Repository) Contagens(ctx context.Context, f ListFilters) ([]ContagemPorStatus, error) {
+	f.Status = ""
+	f.Grupo = ""
+	var out []ContagemPorStatus
+	err := r.aplicaFiltros(r.db.WithContext(ctx).Model(&models.Cliente{}), f).
+		Select("status, COUNT(*) AS total").Group("status").Scan(&out).Error
+	return out, err
+}
+
+// List devolve os clientes paginados + total, com `user` e `notas(id)` carregados
+// (para NotasCount), ordenados por created_at DESC.
+func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Cliente, int64, error) {
+	q := r.aplicaFiltros(r.db.WithContext(ctx).Model(&models.Cliente{}), f)
 
 	var total int64
 	if err := q.Count(&total).Error; err != nil {

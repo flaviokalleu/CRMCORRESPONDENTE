@@ -3,6 +3,8 @@ package clientes
 import (
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"crmimob/internal/auth"
+	"crmimob/internal/integrations/media"
 	"crmimob/internal/integrations/pdf"
 	"crmimob/internal/integrations/storage"
 	"crmimob/internal/models"
@@ -27,10 +30,11 @@ type Handler struct {
 	svc        *Service
 	storageSvc *storage.Service
 	pdfSvc     pdf.Service
+	docsSvc    *DocumentosService
 }
 
-func NewHandler(svc *Service, storageSvc *storage.Service, pdfSvc pdf.Service) *Handler {
-	return &Handler{svc: svc, storageSvc: storageSvc, pdfSvc: pdfSvc}
+func NewHandler(svc *Service, storageSvc *storage.Service, pdfSvc pdf.Service, docsSvc *DocumentosService) *Handler {
+	return &Handler{svc: svc, storageSvc: storageSvc, pdfSvc: pdfSvc, docsSvc: docsSvc}
 }
 
 func tenantIDFrom(c *gin.Context) (uint, bool) {
@@ -54,32 +58,10 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	q := ListQuery{
-		Recentes: c.Query("sort") == "recentes",
-		Page:     page,
-		Limit:    limit,
-		Search:   c.Query("search"),
-		Status:   c.Query("status"),
-		Corretor: c.Query("corretor"),
-	}
-	if raw := c.Query("inicio"); raw != "" {
-		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "data inicial inválida"})
-			return
-		}
-		q.Inicio = &value
-	}
-	if raw := c.Query("fim"); raw != "" {
-		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "data final inválida"})
-			return
-		}
-		value = value.AddDate(0, 0, 1)
-		q.Fim = &value
+	q, err := listQueryFrom(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	list, total, err := h.svc.List(c.Request.Context(), actor, q)
@@ -113,6 +95,84 @@ func (h *Handler) List(c *gin.Context) {
 			Total: total, Page: pg, Limit: lim, Pages: pages,
 		},
 	})
+}
+
+// Contagens — GET /clientes/contagens. Devolve o total por status e por grupo
+// sob os mesmos filtros da listagem, para as abas da lista de clientes.
+func (h *Handler) Contagens(c *gin.Context) {
+	actor, ok := auth.UserFrom(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Não autorizado"})
+		return
+	}
+	if _, ok := tenantIDFrom(c); !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Tenant não identificado"})
+		return
+	}
+	q, err := listQueryFrom(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	linhas, err := h.svc.Contagens(c.Request.Context(), actor, q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao contar clientes"})
+		return
+	}
+
+	porStatus := make(map[string]int64, len(linhas))
+	porGrupo := map[string]int64{}
+	for nome := range models.GrupoStatus {
+		porGrupo[nome] = 0
+	}
+	var total int64
+	for _, linha := range linhas {
+		porStatus[linha.Status] = linha.Total
+		total += linha.Total
+	}
+	for nome, statuses := range models.GrupoStatus {
+		for _, st := range statuses {
+			porGrupo[nome] += porStatus[st]
+		}
+	}
+
+	c.JSON(http.StatusOK, ContagensResponse{
+		Success: true, Total: total, PorStatus: porStatus, PorGrupo: porGrupo,
+	})
+}
+
+// listQueryFrom lê os filtros de listagem da query string. Compartilhado por
+// List e Contagens: se as abas lessem os filtros por conta própria, bastaria uma
+// divergência de nome de parâmetro para elas contarem outra coisa.
+func listQueryFrom(c *gin.Context) (ListQuery, error) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	q := ListQuery{
+		Recentes: c.Query("sort") == "recentes",
+		Page:     page,
+		Limit:    limit,
+		Search:   c.Query("search"),
+		Status:   c.Query("status"),
+		Grupo:    c.Query("grupo"),
+		Corretor: c.Query("corretor"),
+	}
+	if raw := c.Query("inicio"); raw != "" {
+		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
+		if err != nil {
+			return q, errors.New("data inicial inválida")
+		}
+		q.Inicio = &value
+	}
+	if raw := c.Query("fim"); raw != "" {
+		value, err := time.ParseInLocation("2006-01-02", raw, time.Local)
+		if err != nil {
+			return q, errors.New("data final inválida")
+		}
+		value = value.AddDate(0, 0, 1)
+		q.Fim = &value
+	}
+	return q, nil
 }
 
 // Get — GET /clientes/:id.
@@ -310,7 +370,7 @@ func (h *Handler) VerifyDocument(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"exists": false, "message": "Documento não encontrado"})
 		return
 	}
-	if err := ValidateDocumentPath(cliente, tipo, *caminho); err != nil {
+	if err := ValidateDocumentPath(cliente, column, *caminho); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado ao documento"})
 		return
 	}
@@ -390,26 +450,33 @@ func (h *Handler) DocumentInfo(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Documento não encontrado"})
 		return
 	}
-	if err := ValidateDocumentPath(cliente, tipo, *caminho); err != nil {
+	if err := ValidateDocumentPath(cliente, column, *caminho); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado ao documento"})
 		return
 	}
-	info, err := h.pdfSvc.PageCount(*caminho)
+	// O caminho gravado na coluna aponta para o PDF consolidado do tipo, que é
+	// montado sob demanda — pedir a informação é o gatilho para gerá-lo.
+	arquivo, paginas, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
 	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Processamento de PDF ainda não disponível nesta fase da migração"})
+		responderErroPDF(c, err)
+		return
+	}
+	st, err := os.Stat(arquivo)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Documento não encontrado"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"totalPages":   info.TotalPages,
-		"fileSize":     info.FileSizeByte,
-		"lastModified": info.LastModified,
-		"fileName":     info.FileName,
+		"totalPages":   paginas,
+		"fileSize":     st.Size(),
+		"lastModified": st.ModTime().Format(time.RFC3339),
+		"fileName":     filepath.Base(arquivo),
 		"type":         tipo,
 		"clienteCpf":   safeCPF(cliente),
 	})
 }
 
-// DocumentPage — GET /clientes/:id/documentos/:tipo/pagina/:pageNumber (usa pdf.Service — stub).
+// DocumentPage — GET /clientes/:id/documentos/:tipo/pagina/:pageNumber.
 func (h *Handler) DocumentPage(c *gin.Context) {
 	actor, ok := auth.UserFrom(c)
 	if !ok {
@@ -442,20 +509,23 @@ func (h *Handler) DocumentPage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Documento não encontrado"})
 		return
 	}
-	if err := ValidateDocumentPath(cliente, tipo, *caminho); err != nil {
+	if err := ValidateDocumentPath(cliente, column, *caminho); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado ao documento"})
 		return
 	}
-	buf, err := h.pdfSvc.ExtractPage(*caminho, pageNumber)
+	arquivo, _, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
 	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Processamento de PDF ainda não disponível nesta fase da migração"})
+		responderErroPDF(c, err)
+		return
+	}
+	buf, err := media.ExtrairPagina(arquivo, pageNumber)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Página não encontrada"})
 		return
 	}
 	c.Header("Content-Type", "application/pdf")
 	c.Header("Content-Disposition", "inline")
-	c.Header("Cache-Control", "no-cache, no-store, must-revalidate, private")
-	c.Header("Pragma", "no-cache")
-	c.Header("Expires", "0")
+	c.Header("Cache-Control", "private, no-store")
 	c.Data(http.StatusOK, "application/pdf", buf)
 }
 
@@ -469,26 +539,18 @@ func (h *Handler) processDocuments(c *gin.Context, cliente *models.Cliente) {
 	if err != nil {
 		return // sem arquivos — não é erro (todos os campos são opcionais no update)
 	}
-	cpf := safeCPF(cliente)
-	if cpf == "" {
+	if safeCPF(cliente) == "" || h.docsSvc == nil {
 		return
 	}
-	var totalBytes int64
 	for _, field := range documentFields {
-		files := form.File[field]
-		if len(files) == 0 {
+		arquivos := form.File[field]
+		if len(arquivos) == 0 {
 			continue
 		}
-		column := models.DocumentTypeMap[field]
-		rel, size, err := SaveDocumentFile(files[0], cpf, column)
-		if err != nil {
-			continue
-		}
-		totalBytes += size
-		_ = h.svc.repo.UpdateDocumentField(c.Request.Context(), cliente.ID, column, &rel)
-	}
-	if totalBytes > 0 && h.storageSvc != nil && cliente.TenantID != 0 {
-		_ = h.storageSvc.IncrementStorage(c.Request.Context(), cliente.TenantID, totalBytes)
+		// Antes só `arquivos[0]` era gravado e os demais sumiam em silêncio;
+		// agora o campo aceita a lista inteira, cada arquivo com registro
+		// próprio. Falha em um não descarta os outros.
+		_, _, _ = h.docsSvc.Salvar(c.Request.Context(), cliente, field, arquivos)
 	}
 }
 
@@ -546,6 +608,8 @@ func readClienteInput(c *gin.Context) ClienteInput {
 		EstadoCivil:    strPtr(c, "estado_civil"),
 		Naturalidade:   strPtr(c, "naturalidade"),
 		Profissao:      strPtr(c, "profissao"),
+		Origem:         strPtr(c, "origem"),
+		Interesse:      strPtr(c, "interesse"),
 		DataNascimento: strPtr(c, "data_nascimento"),
 		DataAdmissao:   strPtr(c, "data_admissao"),
 

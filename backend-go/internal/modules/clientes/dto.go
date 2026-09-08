@@ -30,6 +30,7 @@ type ListQuery struct {
 	Limit    int
 	Search   string
 	Status   string
+	Grupo    string // recorte por tom semântico das abas (ver models.StatusDoGrupo)
 	Corretor string
 	Inicio   *time.Time
 	Fim      *time.Time
@@ -40,6 +41,16 @@ type ListResponse struct {
 	Success    bool              `json:"success"`
 	Clientes   []ClienteResponse `json:"clientes"`
 	Pagination Pagination        `json:"pagination"`
+}
+
+// ContagensResponse alimenta as abas da lista de clientes: o número cru por
+// status e a soma já consolidada por grupo, para o front não ter que repetir a
+// tabela de agrupamento que o backend já declara em models.GrupoStatus.
+type ContagensResponse struct {
+	Success   bool             `json:"success"`
+	Total     int64            `json:"total"`
+	PorStatus map[string]int64 `json:"por_status"`
+	PorGrupo  map[string]int64 `json:"por_grupo"`
 }
 
 type Pagination struct {
@@ -60,6 +71,8 @@ type ClienteInput struct {
 	EstadoCivil    *string
 	Naturalidade   *string
 	Profissao      *string
+	Origem         *string
+	Interesse      *string
 	DataNascimento *string
 	DataAdmissao   *string
 

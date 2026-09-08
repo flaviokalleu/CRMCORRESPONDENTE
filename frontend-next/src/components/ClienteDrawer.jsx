@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Loader2, X, Save, ExternalLink, AlertCircle,
-  User, Coins, Heart, ShieldCheck, ClipboardList,
+  User, Coins, Heart, ShieldCheck, ClipboardList, Paperclip,
 } from "lucide-react";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
+import { ClienteDocumentos } from "@/components/ClienteDocumentos";
 
 // Painel lateral de edição do cliente.
 //
@@ -66,6 +67,8 @@ const SECOES = [
       { key: "cpf", label: "CPF", type: "cpf" },
       { key: "estado_civil", label: "Estado civil", type: "select", options: ESTADO_CIVIL },
       { key: "naturalidade", label: "Naturalidade", type: "text", upper: true },
+      { key: "origem", label: "Origem do contato", type: "text" },
+      { key: "interesse", label: "Interesse", type: "text", upper: true, full: true },
       { key: "data_nascimento", label: "Data de nascimento", type: "date" },
       { key: "data_criacao", label: "Data do cadastro", type: "date" },
     ],
@@ -153,6 +156,9 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
   const [aberta, setAberta] = useState({ identificacao: true, renda: true, situacao: true });
+  // null enquanto o painel de documentos não foi montado — assim o contador só
+  // aparece depois de existir número de verdade para mostrar.
+  const [totalDocs, setTotalDocs] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && !saving) onClose(); };
@@ -317,9 +323,31 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
                 );
               })}
 
-              <p className="pt-1 text-[11px] text-cx-muted">
-                Envio de documentos continua no cadastro completo.
-              </p>
+              {/* Documentos moram aqui, não só no cadastro completo: quem
+                  confere um cliente precisa abrir o RG sem entrar em modo de
+                  edição do formulário inteiro. */}
+              <section className="overflow-hidden rounded-xl border border-cx-border">
+                <button
+                  type="button"
+                  onClick={() => setAberta((a) => ({ ...a, documentos: !a.documentos }))}
+                  aria-expanded={!!aberta.documentos}
+                  className="flex w-full items-center gap-2.5 bg-cx-bg px-3.5 py-2.5 text-left transition-colors hover:bg-cx-border/40"
+                >
+                  <Paperclip className="h-4 w-4 shrink-0 text-cx-blue" />
+                  <span className="flex-1 text-xs font-semibold text-cx-text">Documentos</span>
+                  {totalDocs !== null && (
+                    <span className="rounded-full bg-cx-blue-soft px-2 py-0.5 text-[10px] font-semibold text-cx-blue tabular-nums">
+                      {totalDocs}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-cx-muted">{aberta.documentos ? "▲" : "▼"}</span>
+                </button>
+                {aberta.documentos && (
+                  <div className="p-3.5">
+                    <ClienteDocumentos clienteId={clienteId} onTotalChange={setTotalDocs} />
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
