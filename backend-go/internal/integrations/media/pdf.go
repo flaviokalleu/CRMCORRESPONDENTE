@@ -100,23 +100,29 @@ func ContarPaginasArquivo(caminho string) (int, error) {
 	return api.PageCountFile(caminho)
 }
 
+// ContarPaginas faz o mesmo a partir dos bytes — é o que serve quando o PDF
+// vem do storage de objetos e nunca chega a existir como arquivo.
+func ContarPaginas(dados []byte) (int, error) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	ctx, err := api.ReadValidateAndOptimize(bytes.NewReader(dados), conf)
+	if err != nil {
+		return 0, err
+	}
+	return ctx.PageCount, nil
+}
+
 // ExtrairPagina devolve uma página (1-based) de um PDF como um novo PDF de uma
 // página só, pronto para responder por HTTP.
-func ExtrairPagina(caminho string, pagina int) ([]byte, error) {
+func ExtrairPagina(dados []byte, pagina int) ([]byte, error) {
 	if pagina < 1 {
 		return nil, fmt.Errorf("media: página %d inválida", pagina)
 	}
-	f, err := os.Open(caminho)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
 
 	var buf bytes.Buffer
-	if err := api.Trim(f, &buf, []string{fmt.Sprint(pagina)}, conf); err != nil {
+	if err := api.Trim(bytes.NewReader(dados), &buf, []string{fmt.Sprint(pagina)}, conf); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

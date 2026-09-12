@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -13,10 +14,10 @@ import (
 
 	"gorm.io/gorm"
 
+	"crmimob/internal/blob"
 	"crmimob/internal/integrations/media"
 	"crmimob/internal/integrations/storage"
 	"crmimob/internal/models"
-	"crmimob/internal/uploads"
 )
 
 // NomeConsolidado é o arquivo de cache do PDF único de um tipo. O prefixo `_`
@@ -42,10 +43,23 @@ var (
 type DocumentosService struct {
 	db         *gorm.DB
 	storageSvc *storage.Service
+	store      blob.Store
 }
 
-func NewDocumentosService(db *gorm.DB, storageSvc *storage.Service) *DocumentosService {
-	return &DocumentosService{db: db, storageSvc: storageSvc}
+func NewDocumentosService(db *gorm.DB, storageSvc *storage.Service, store blob.Store) *DocumentosService {
+	return &DocumentosService{db: db, storageSvc: storageSvc, store: store}
+}
+
+// Store expõe o armazenamento para quem precisa transmitir bytes ao cliente
+// HTTP — o handler entrega o arquivo por streaming, sem que a chave vire
+// caminho de disco em nenhum ponto.
+func (s *DocumentosService) Store() blob.Store { return s.store }
+
+// chaveDoc monta o identificador de um arquivo. É o mesmo formato nos dois
+// backends (caminho relativo com barras normais), e é o que fica gravado em
+// `cliente_documentos.caminho` — trocar disco por S3 não reescreve registro.
+func chaveDoc(cpf, coluna, nome string) string {
+	return path.Join("clientes", cpf, coluna, nome)
 }
 
 // Salvar grava os arquivos de um campo multipart, otimizados, e registra uma
@@ -65,11 +79,6 @@ func (s *DocumentosService) Salvar(
 		return nil, nil, ErrCaminhoInvalido
 	}
 
-	dir := clienteDocDir(cpf, coluna)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, nil, err
-	}
-
 	proximaOrdem, err := s.proximaOrdem(ctx, cliente.ID, tipo)
 	if err != nil {
 		return nil, nil, err
@@ -80,7 +89,7 @@ func (s *DocumentosService) Salvar(
 	var totalBytes int64
 
 	for _, fh := range arquivos {
-		doc, err := s.salvarUm(ctx, cliente, tipo, dir, fh, proximaOrdem)
+		doc, err := s.salvarUm(ctx, cliente, tipo, coluna, fh, proximaOrdem)
 		if err != nil {
 			falhas = append(falhas, fh.Filename)
 			continue
@@ -92,7 +101,7 @@ func (s *DocumentosService) Salvar(
 
 	if len(criados) > 0 {
 		// O cache do tipo e o dossiê completo deixaram de valer.
-		s.invalidarConsolidado(cpf, coluna)
+		s.invalidarConsolidado(ctx, cpf, coluna)
 		if err := s.sincronizarColunaLegada(ctx, cliente, tipo); err != nil {
 			return criados, falhas, err
 		}
@@ -104,7 +113,7 @@ func (s *DocumentosService) Salvar(
 }
 
 func (s *DocumentosService) salvarUm(
-	ctx context.Context, cliente *models.Cliente, tipo, dir string,
+	ctx context.Context, cliente *models.Cliente, tipo, coluna string,
 	fh *multipart.FileHeader, ordem int,
 ) (*models.ClienteDocumento, error) {
 	src, err := fh.Open()
@@ -125,14 +134,8 @@ func (s *DocumentosService) salvarUm(
 
 	base := sanitizarNome(fh.Filename)
 	nomeArquivo := fmt.Sprintf("%03d_%s%s", ordem+1, base, res.Extensao)
-	destino := filepath.Join(dir, nomeArquivo)
-	if err := os.WriteFile(destino, res.Bytes, 0o644); err != nil {
-		return nil, err
-	}
-
-	rel, err := uploads.Relativo(destino)
-	if err != nil {
-		_ = os.Remove(destino)
+	rel := chaveDoc(safeCPF(cliente), coluna, nomeArquivo)
+	if err := s.store.Gravar(ctx, rel, res.Bytes, res.Mime); err != nil {
 		return nil, err
 	}
 
@@ -149,7 +152,9 @@ func (s *DocumentosService) salvarUm(
 		Paginas:      res.Paginas,
 	}
 	if err := s.db.WithContext(ctx).Create(&doc).Error; err != nil {
-		_ = os.Remove(destino)
+		// O registro é a fonte da verdade; um objeto órfão no storage seria
+		// invisível e nunca mais referenciado.
+		_ = s.store.Remover(ctx, rel)
 		return nil, err
 	}
 	return &doc, nil
@@ -197,14 +202,12 @@ func (s *DocumentosService) Remover(ctx context.Context, cliente *models.Cliente
 	if err := s.db.WithContext(ctx).Delete(&models.ClienteDocumento{}, doc.ID).Error; err != nil {
 		return err
 	}
-	if abs, err := uploads.Resolve(doc.Caminho); err == nil {
-		_ = os.Remove(abs)
-	}
+	_ = s.store.Remover(ctx, doc.Caminho)
 	if s.storageSvc != nil && cliente.TenantID != 0 {
 		_ = s.storageSvc.DecrementStorage(ctx, cliente.TenantID, doc.Bytes)
 	}
 	if coluna, ok := models.DocumentTypeMap[doc.Tipo]; ok {
-		s.invalidarConsolidado(safeCPF(cliente), coluna)
+		s.invalidarConsolidado(ctx, safeCPF(cliente), coluna)
 		_ = s.sincronizarColunaLegada(ctx, cliente, doc.Tipo)
 	}
 	return nil
@@ -218,9 +221,7 @@ func (s *DocumentosService) RemoverTipo(ctx context.Context, cliente *models.Cli
 	}
 	var liberados int64
 	for _, doc := range docs {
-		if abs, err := uploads.Resolve(doc.Caminho); err == nil {
-			_ = os.Remove(abs)
-		}
+		_ = s.store.Remover(ctx, doc.Caminho)
 		liberados += doc.Bytes
 	}
 	if err := s.db.WithContext(ctx).
@@ -232,7 +233,7 @@ func (s *DocumentosService) RemoverTipo(ctx context.Context, cliente *models.Cli
 		_ = s.storageSvc.DecrementStorage(ctx, cliente.TenantID, liberados)
 	}
 	if coluna, ok := models.DocumentTypeMap[tipo]; ok {
-		s.invalidarConsolidado(safeCPF(cliente), coluna)
+		s.invalidarConsolidado(ctx, safeCPF(cliente), coluna)
 		_ = s.sincronizarColunaLegada(ctx, cliente, tipo)
 	}
 	return len(docs), nil
@@ -252,12 +253,11 @@ func (s *DocumentosService) PDFConsolidado(ctx context.Context, cliente *models.
 	if len(docs) == 0 {
 		return "", 0, nil, media.ErrSemArquivos
 	}
-	destino := filepath.Join(clienteDocDir(safeCPF(cliente), coluna), NomeConsolidado)
-	return s.montarSeNecessario(destino, docs)
+	return s.montarSeNecessario(ctx, chaveDoc(safeCPF(cliente), coluna, NomeConsolidado), docs)
 }
 
-// PDFDossie devolve o PDF com TODOS os documentos do cliente, na ordem em que
-// os tipos aparecem no formulário — é o que se manda ao banco de uma vez.
+// PDFDossie devolve a chave do PDF com TODOS os documentos do cliente, na ordem
+// em que os tipos aparecem no formulário — é o que se manda ao banco de uma vez.
 func (s *DocumentosService) PDFDossie(ctx context.Context, cliente *models.Cliente) (string, int, []string, error) {
 	docs, err := s.Listar(ctx, cliente.ID)
 	if err != nil {
@@ -267,59 +267,90 @@ func (s *DocumentosService) PDFDossie(ctx context.Context, cliente *models.Clien
 		return "", 0, nil, media.ErrSemArquivos
 	}
 	ordenarPorTipoDoFormulario(docs)
-	destino := filepath.Join(uploads.Root(), "clientes", safeCPF(cliente), NomeDossie)
-	return s.montarSeNecessario(destino, docs)
+	chave := path.Join("clientes", safeCPF(cliente), NomeDossie)
+	return s.montarSeNecessario(ctx, chave, docs)
 }
 
-// montarSeNecessario reaproveita o cache quando ele é mais novo que todos os
-// arquivos de origem. Um dossiê de trinta páginas leva segundos para montar;
-// refazer isso a cada clique de visualização seria desperdício visível.
-func (s *DocumentosService) montarSeNecessario(destino string, docs []models.ClienteDocumento) (string, int, []string, error) {
-	var origens []string
+// montarSeNecessario devolve a chave do PDF consolidado, montando-o quando o
+// cache não existe ou está mais velho que o arquivo de origem mais recente.
+//
+// Um dossiê de trinta páginas leva segundos para montar; refazer isso a cada
+// clique de visualização seria desperdício visível.
+func (s *DocumentosService) montarSeNecessario(
+	ctx context.Context, chaveDestino string, docs []models.ClienteDocumento,
+) (string, int, []string, error) {
 	var maisRecente int64
 	for _, doc := range docs {
-		abs, err := uploads.Resolve(doc.Caminho)
+		info, err := s.store.Info(ctx, doc.Caminho)
 		if err != nil {
 			continue
 		}
-		st, err := os.Stat(abs)
-		if err != nil {
-			continue
+		if info.Alterado > maisRecente {
+			maisRecente = info.Alterado
 		}
-		if m := st.ModTime().UnixNano(); m > maisRecente {
-			maisRecente = m
-		}
-		origens = append(origens, abs)
-	}
-	if len(origens) == 0 {
-		return "", 0, nil, media.ErrSemArquivos
 	}
 
-	if st, err := os.Stat(destino); err == nil && st.ModTime().UnixNano() >= maisRecente {
-		n, err := media.ContarPaginasArquivo(destino)
-		if err == nil {
-			return destino, n, nil, nil
+	if info, err := s.store.Info(ctx, chaveDestino); err == nil && info.Alterado >= maisRecente {
+		if dados, err := s.store.Ler(ctx, chaveDestino); err == nil {
+			if n, err := media.ContarPaginas(dados); err == nil {
+				return chaveDestino, n, nil, nil
+			}
 		}
 		// Cache ilegível — cai para a remontagem abaixo.
 	}
 
-	paginas, ignorados, err := media.ConstruirPDF(origens, destino)
+	// O pdfcpu trabalha sobre arquivos, e com S3 não há arquivo: os originais
+	// são materializados num diretório temporário que morre no fim da função.
+	tmp, err := os.MkdirTemp("", "consolidar-*")
+	if err != nil {
+		return "", 0, nil, err
+	}
+	defer os.RemoveAll(tmp)
+
+	var origens []string
+	var ignorados []string
+	for i, doc := range docs {
+		dados, err := s.store.Ler(ctx, doc.Caminho)
+		if err != nil {
+			ignorados = append(ignorados, doc.NomeOriginal)
+			continue
+		}
+		local := filepath.Join(tmp, fmt.Sprintf("%04d%s", i, filepath.Ext(doc.Caminho)))
+		if err := os.WriteFile(local, dados, 0o600); err != nil {
+			ignorados = append(ignorados, doc.NomeOriginal)
+			continue
+		}
+		origens = append(origens, local)
+	}
+	if len(origens) == 0 {
+		return "", 0, ignorados, media.ErrSemArquivos
+	}
+
+	saida := filepath.Join(tmp, "saida.pdf")
+	paginas, ignoradosPDF, err := media.ConstruirPDF(origens, saida)
+	if err != nil {
+		return "", 0, append(ignorados, ignoradosPDF...), err
+	}
+	dados, err := os.ReadFile(saida)
 	if err != nil {
 		return "", 0, ignorados, err
 	}
-	return destino, paginas, ignorados, nil
+	if err := s.store.Gravar(ctx, chaveDestino, dados, "application/pdf"); err != nil {
+		return "", 0, ignorados, err
+	}
+	return chaveDestino, paginas, append(ignorados, ignoradosPDF...), nil
 }
 
 // invalidarConsolidado apaga os caches que dependem de um tipo. Apagar é mais
 // seguro que confiar só em data de modificação: relógio de sistema volta atrás,
-// cópia de arquivo preserva mtime, e um cache velho servido como atual é um
+// cópia de objeto preserva a data, e um cache velho servido como atual é um
 // documento errado na mão de quem analisa crédito.
-func (s *DocumentosService) invalidarConsolidado(cpf, coluna string) {
+func (s *DocumentosService) invalidarConsolidado(ctx context.Context, cpf, coluna string) {
 	if cpf == "" {
 		return
 	}
-	_ = os.Remove(filepath.Join(clienteDocDir(cpf, coluna), NomeConsolidado))
-	_ = os.Remove(filepath.Join(uploads.Root(), "clientes", cpf, NomeDossie))
+	_ = s.store.Remover(ctx, chaveDoc(cpf, coluna, NomeConsolidado))
+	_ = s.store.Remover(ctx, path.Join("clientes", cpf, NomeDossie))
 }
 
 // sincronizarColunaLegada mantém `clientes.<coluna>` apontando para o PDF
@@ -342,7 +373,7 @@ func (s *DocumentosService) sincronizarColunaLegada(ctx context.Context, cliente
 
 	var valor *string
 	if total > 0 {
-		rel := filepath.ToSlash(filepath.Join("clientes", safeCPF(cliente), coluna, NomeConsolidado))
+		rel := chaveDoc(safeCPF(cliente), coluna, NomeConsolidado)
 		valor = &rel
 	}
 	return s.db.WithContext(ctx).Model(&models.Cliente{}).

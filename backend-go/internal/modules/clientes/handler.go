@@ -3,8 +3,7 @@ package clientes
 import (
 	"errors"
 	"net/http"
-	"os"
-	"path/filepath"
+	"path"
 	"strconv"
 	"time"
 
@@ -460,21 +459,21 @@ func (h *Handler) DocumentInfo(c *gin.Context) {
 	}
 	// O caminho gravado na coluna aponta para o PDF consolidado do tipo, que é
 	// montado sob demanda — pedir a informação é o gatilho para gerá-lo.
-	arquivo, paginas, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
+	chave, paginas, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
 	if err != nil {
 		responderErroPDF(c, err)
 		return
 	}
-	st, err := os.Stat(arquivo)
+	info, err := h.docsSvc.Store().Info(c.Request.Context(), chave)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Documento não encontrado"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"totalPages":   paginas,
-		"fileSize":     st.Size(),
-		"lastModified": st.ModTime().Format(time.RFC3339),
-		"fileName":     filepath.Base(arquivo),
+		"fileSize":     info.Tamanho,
+		"lastModified": time.Unix(0, info.Alterado).Format(time.RFC3339),
+		"fileName":     path.Base(chave),
 		"type":         tipo,
 		"clienteCpf":   safeCPF(cliente),
 	})
@@ -517,12 +516,17 @@ func (h *Handler) DocumentPage(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado ao documento"})
 		return
 	}
-	arquivo, _, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
+	chave, _, _, err := h.docsSvc.PDFConsolidado(c.Request.Context(), cliente, tipo)
 	if err != nil {
 		responderErroPDF(c, err)
 		return
 	}
-	buf, err := media.ExtrairPagina(arquivo, pageNumber)
+	consolidado, err := h.docsSvc.Store().Ler(c.Request.Context(), chave)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Documento não encontrado"})
+		return
+	}
+	buf, err := media.ExtrairPagina(consolidado, pageNumber)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Página não encontrada"})
 		return

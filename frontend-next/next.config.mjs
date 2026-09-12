@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Empacota servidor e só as dependências usadas numa pasta própria, para a
+  // imagem Docker não carregar o node_modules inteiro (centenas de MB) nem o
+  // código-fonte. Sem efeito em `next dev`.
+  output: 'standalone',
   async headers() {
     return [{
       source: '/:path*',

@@ -1,3 +1,8 @@
+-- O baseline 0001 veio de pg_dump e traz `set_config('search_path','')`,
+-- que vale pela sessão inteira do golang-migrate. Sem restaurar aqui, os
+-- nomes sem schema abaixo falham com "relação não existe" num banco novo.
+SET search_path TO public;
+
 -- Origem e interesse do cliente — dois campos que a lista de clientes exibe como
 -- coluna própria e que até aqui não tinham onde ser gravados.
 --

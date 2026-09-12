@@ -1,0 +1,178 @@
+# Stack completa do CRM. Um `docker compose up -d` levanta banco, storage,
+# API, frontend e o proxy com TLS.
+#
+# Só o Caddy publica portas na VPS (80/443). Postgres e MinIO existem apenas na
+# rede interna do compose — não há porta para a internet alcançar, e o
+# documento de cliente é entregue pela API depois da checagem de sessão.
+#
+# Antes do primeiro `up`: copie `.env.example` para `.env` e preencha.
+
+name: crm
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # O locale importa: ordenação de nome com acento sai errada em C.UTF-8.
+      LANG: pt_BR.UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` responde antes do banco aceitar conexão de verdade em
+      # alguns casos; o -d força a checagem contra o banco da aplicação.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [interna]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [interna]
+    # O console de administração fica só no localhost da VPS. Para abrir de
+    # fora, use um túnel SSH: ssh -L 9001:localhost:9001 usuario@vps
+    ports:
+      - "127.0.0.1:9001:9001"
+
+  minio-init:
+    # Cria o bucket e sai. A API também cria se faltar, mas fazer aqui deixa o
+    # bucket pronto antes do primeiro upload e permite ajustar política num só
+    # lugar.
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-crm-uploads}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$S3_ACCESS_KEY $$S3_SECRET_KEY &&
+      mc mb --ignore-existing local/$$S3_BUCKET &&
+      mc anonymous set none local/$$S3_BUCKET &&
+      echo 'bucket'  $$S3_BUCKET  'pronto (privado)'
+      "
+    networks: [interna]
+    restart: "no"
+
+  migrate:
+    # Aplica as migrations e sai. A API espera este serviço terminar com
+    # sucesso, então ela nunca sobe contra um banco desatualizado — e o deploy
+    # falha aqui, de forma visível, em vez de num erro de coluna inexistente.
+    image: migrate/migrate:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend-go/migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${DB_USERNAME}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable"
+      - "up"
+    networks: [interna]
+    restart: on-failure
+
+  api:
+    build:
+      context: ./backend-go
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: 8001
+      NODE_ENV: production
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: disable
+      DB_TIMEZONE: America/Sao_Paulo
+
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY}
+      FRONTEND_URL: https://${DOMINIO}
+
+      # Documentos de cliente no MinIO. O endpoint é o nome do serviço na rede
+      # interna, sem TLS: o tráfego não sai do host.
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-crm-uploads}
+      S3_USE_SSL: "false"
+
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      # Imagens de imóvel, logo de tenant e avatar continuam no disco e são
+      # servidas como estáticos; sem este volume elas somem a cada deploy.
+      - uploadsdata:/data/uploads
+    networks: [interna]
+
+  web:
+    build:
+      context: ./frontend-next
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      # Privada de propósito: o navegador nunca fala com a API direto, quem
+      # chama é o servidor do Next pela rede interna.
+      API_URL: http://api:8001/api
+      NEXT_PUBLIC_NOME_SISTEMA: ${NOME_SISTEMA:-Webba CRM}
+    networks: [interna]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    environment:
+      DOMINIO: ${DOMINIO}
+      EMAIL_TLS: ${EMAIL_TLS}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    networks: [interna]
+
+networks:
+  interna:
+    driver: bridge
+
+volumes:
+  pgdata:
+  miniodata:
+  uploadsdata:
+  caddydata:
+  caddyconfig:

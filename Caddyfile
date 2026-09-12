@@ -1,0 +1,40 @@
+# Proxy de entrada. O Caddy pede e renova o certificado do Let's Encrypt
+# sozinho — não há certbot nem cron para manter.
+
+{
+	email {$EMAIL_TLS}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# A API vem primeiro: o Caddy casa a rota mais específica, mas declarar
+	# nesta ordem deixa a intenção explícita para quem lê.
+	handle /api/* {
+		reverse_proxy api:8001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	# Upload de documento com várias páginas passa fácil dos 10 MB padrão.
+	request_body {
+		max_size 100MB
+	}
+
+	header {
+		# HSTS só faz sentido depois que o domínio está em HTTPS de verdade;
+		# como o Caddy garante isso, pode entrar já.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

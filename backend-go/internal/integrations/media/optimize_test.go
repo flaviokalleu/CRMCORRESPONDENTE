@@ -410,7 +410,11 @@ func TestConstruirPDFMisturaImagensEPDFs(t *testing.T) {
 	t.Logf("consolidado com %d paginas", paginas)
 
 	// extrair uma pagina devolve um PDF de 1 pagina
-	buf, err := ExtrairPagina(destino, 3)
+	consolidado, err := os.ReadFile(destino)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf, err := ExtrairPagina(consolidado, 3)
 	if err != nil {
 		t.Fatalf("ExtrairPagina: %v", err)
 	}

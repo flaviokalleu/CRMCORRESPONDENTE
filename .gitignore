@@ -14,3 +14,7 @@ SECURITY-REVIEW.md
 # Mídia pesada que não é versionada.
 frontend-next/public/videos/hero.mp4
 image.png
+
+# Segredos do docker-compose (senha do banco, chaves JWT e do MinIO).
+# O modelo versionado é o .env.example.
+/.env

@@ -3,8 +3,9 @@ package clientes
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
-	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,9 +14,9 @@ import (
 	"gorm.io/gorm"
 
 	"crmimob/internal/auth"
+	"crmimob/internal/blob"
 	"crmimob/internal/integrations/media"
 	"crmimob/internal/models"
-	"crmimob/internal/uploads"
 )
 
 // DocumentoResposta é o shape de um arquivo na API. `caminho` nunca sai daqui:
@@ -37,12 +38,12 @@ type DocumentoResposta struct {
 // GrupoDocumentos junta os arquivos de um tipo com o total do grupo, para a
 // interface não ter que somar no cliente o que o servidor já sabe.
 type GrupoDocumentos struct {
-	Tipo      string              `json:"tipo"`
-	Rotulo    string              `json:"rotulo"`
-	Arquivos  []DocumentoResposta `json:"arquivos"`
-	Total     int                 `json:"total"`
-	Bytes     int64               `json:"bytes"`
-	Paginas   int                 `json:"paginas"`
+	Tipo     string              `json:"tipo"`
+	Rotulo   string              `json:"rotulo"`
+	Arquivos []DocumentoResposta `json:"arquivos"`
+	Total    int                 `json:"total"`
+	Bytes    int64               `json:"bytes"`
+	Paginas  int                 `json:"paginas"`
 }
 
 // RotuloDocumento traduz a chave técnica do tipo para o nome que aparece no
@@ -146,17 +147,8 @@ func (h *Handler) BaixarDocumento(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar documento"})
 		return
 	}
-	abs, err := uploads.Resolve(doc.Caminho)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Acesso negado ao documento"})
-		return
-	}
-	if _, err := os.Stat(abs); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Arquivo não está mais no disco"})
-		return
-	}
-	nome := nomeParaDownload(doc.NomeOriginal, filepath.Ext(abs))
-	servirArquivo(c, abs, doc.Mime, nome, c.Query("download") != "")
+	nome := nomeParaDownload(doc.NomeOriginal, path.Ext(doc.Caminho))
+	h.servirDoStore(c, doc.Caminho, doc.Mime, nome)
 }
 
 // RemoverDocumento — DELETE /clientes/:id/documentos/arquivo/:docId
@@ -222,10 +214,10 @@ func (h *Handler) EnviarDocumentos(c *gin.Context) {
 		economizado += d.BytesOrigem - d.Bytes
 	}
 	c.JSON(http.StatusCreated, gin.H{
-		"success":          true,
-		"arquivos":         resp,
-		"falhas":           falhas,
-		"bytes_poupados":   economizado,
+		"success":        true,
+		"arquivos":       resp,
+		"falhas":         falhas,
+		"bytes_poupados": economizado,
 	})
 }
 
@@ -244,7 +236,7 @@ func (h *Handler) PDFDoTipo(c *gin.Context) {
 	}
 	nome := fmt.Sprintf("%s-%s.pdf", slug(RotuloDocumento[tipo]), safeCPF(cliente))
 	cabecalhoPDF(c, paginas, ignorados)
-	servirArquivo(c, caminho, "application/pdf", nome, c.Query("download") != "")
+	h.servirDoStore(c, caminho, "application/pdf", nome)
 }
 
 // PDFDossieCompleto — GET /clientes/:id/documentos/pdf
@@ -261,7 +253,7 @@ func (h *Handler) PDFDossieCompleto(c *gin.Context) {
 	}
 	nome := fmt.Sprintf("dossie-%s.pdf", safeCPF(cliente))
 	cabecalhoPDF(c, paginas, ignorados)
-	servirArquivo(c, caminho, "application/pdf", nome, c.Query("download") != "")
+	h.servirDoStore(c, caminho, "application/pdf", nome)
 }
 
 // --- helpers ---
@@ -308,18 +300,47 @@ func cabecalhoPDF(c *gin.Context, paginas int, ignorados []string) {
 	}
 }
 
-// servirArquivo entrega o arquivo com os cabeçalhos certos. Documento de
-// cliente é dado pessoal: nunca deve ficar em cache compartilhado.
-func servirArquivo(c *gin.Context, caminho, mime, nomeSugerido string, forcarDownload bool) {
+// servirDoStore transmite um objeto do armazenamento direto para a resposta.
+//
+// Os bytes passam pela API de propósito: assim o bucket não precisa estar
+// acessível pela internet e a URL do documento não vale nada fora da sessão —
+// o que importa quando o arquivo é um RG ou um contracheque. O custo é a banda
+// passar por aqui, aceito conscientemente.
+//
+// O streaming é feito com io.Copy em vez de ler tudo em memória: um dossiê de
+// trinta páginas com várias requisições simultâneas encheria a RAM do contêiner.
+func (h *Handler) servirDoStore(c *gin.Context, chave, mime, nomeSugerido string) {
+	leitor, info, err := h.docsSvc.Store().Abrir(c.Request.Context(), chave)
+	if err != nil {
+		if errors.Is(err, blob.ErrNaoEncontrado) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Arquivo não encontrado no armazenamento"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao ler o arquivo"})
+		return
+	}
+	defer leitor.Close()
+
 	disposicao := "inline"
-	if forcarDownload {
+	if c.Query("download") != "" {
 		disposicao = "attachment"
+	}
+	if mime == "" {
+		mime = info.Mime
 	}
 	c.Header("Content-Type", mime)
 	c.Header("Content-Disposition", fmt.Sprintf("%s; filename*=UTF-8''%s", disposicao, escaparNome(nomeSugerido)))
 	c.Header("Cache-Control", "private, no-store")
 	c.Header("X-Content-Type-Options", "nosniff")
-	c.File(caminho)
+	if info.Tamanho > 0 {
+		c.Header("Content-Length", strconv.FormatInt(info.Tamanho, 10))
+	}
+	c.Status(http.StatusOK)
+	if _, err := io.Copy(c.Writer, leitor); err != nil {
+		// A resposta já começou; só resta abortar a conexão para o cliente não
+		// receber um arquivo truncado como se estivesse completo.
+		c.Abort()
+	}
 }
 
 // nomeParaDownload devolve o nome original com a extensão que o arquivo tem de

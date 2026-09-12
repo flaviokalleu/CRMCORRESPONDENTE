@@ -1,0 +1,8 @@
+# Não entra na imagem: só engordam o contexto de build e nada disso é usado
+# para compilar o binário.
+.env
+.env.local
+*.log
+uploads/
+.git/
+Dockerfile

@@ -1,6 +1,9 @@
 package server
 
 import (
+	"context"
+	"log/slog"
+
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	"crmimob/internal/auth"
+	"crmimob/internal/blob"
 	"crmimob/internal/config"
 	"crmimob/internal/integrations/asaas/webhook"
 	"crmimob/internal/integrations/storage"
@@ -69,6 +73,14 @@ type Deps struct {
 // clusters de negócio migrados. Ver docs/migration/wiring/*.md para o mapa
 // completo de decisões por cluster.
 func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
+	// Armazenamento dos documentos: disco em desenvolvimento, S3/MinIO quando
+	// STORAGE_DRIVER=s3. Falhar aqui é melhor que subir uma API que aceita
+	// upload e perde o arquivo.
+	blobStore, errBlob := blob.DoAmbiente(context.Background(), clientes.UploadsRoot(), slog.Default())
+	if errBlob != nil {
+		panic("storage de arquivos indisponível: " + errBlob.Error())
+	}
+
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -122,6 +134,10 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	// id consegue a foto daquele usuário sem estar logado. Se isso passar a ser
 	// um problema, o caminho é servir por rota autenticada com nome opaco — não
 	// remover esta linha e deixar o avatar quebrado.
+	// Documentos de cliente NÃO passam por aqui: eles vivem no blobStore e são
+	// entregues por rota autenticada, com checagem de tenant. As três pastas
+	// abaixo continuam no disco (imagens de imóvel, logo do tenant, avatar) e
+	// dependem do volume montado no contêiner.
 	uploadsBase := clientes.UploadsRoot()
 	api.Static("/uploads/imoveis", filepath.Join(uploadsBase, "imoveis"))
 	api.Static("/uploads/tenants", filepath.Join(uploadsBase, "tenants"))
@@ -237,7 +253,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 
 		clientesRepo := clientes.NewRepository(db)
 		clientesSvc := clientes.NewService(clientesRepo)
-		clientesDocsSvc := clientes.NewDocumentosService(db, storageSvc)
+		clientesDocsSvc := clientes.NewDocumentosService(db, storageSvc, blobStore)
 		clientesHandler := clientes.NewHandler(clientesSvc, storageSvc, clientesDocsSvc)
 		clientesHandler.RegisterListaClientesRoutes(cluster02)
 		clientesHandler.RegisterRoutes(cluster02) // catch-all — por último
