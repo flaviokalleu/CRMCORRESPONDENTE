@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Calculator, Search } from "lucide-react";
+import { Calculator, Search } from "@/components/icons";
 
 // Barra de busca do topo.
 //

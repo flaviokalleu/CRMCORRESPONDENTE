@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BedDouble, Bath, Car, Maximize } from "lucide-react";
+import { ArrowUpRight, BedDouble, Bath, Car, Maximize } from "@/components/icons";
 import { formatMoeda, imovelImagemUrl } from "@/components/public/ImovelCard";
 
 // Card de imóvel premium para a landing (fundo escuro, moldura dourada,

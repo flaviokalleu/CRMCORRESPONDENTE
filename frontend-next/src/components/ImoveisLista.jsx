@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Building2, BedDouble, Bath, MapPin, Search, Plus, Star, ImageOff, Eye,
-} from "lucide-react";
+} from "@/components/icons";
 import { situacaoInfo, formatBRL, imovelImageUrl } from "@/lib/imovel-meta";
 
 function ImovelCover({ src, alt }) {

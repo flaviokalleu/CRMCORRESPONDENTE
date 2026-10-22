@@ -1,7 +1,7 @@
 "use client";
 
 import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
-import { Users, Building2, KeyRound, Wallet, MessageCircle } from "lucide-react";
+import { Users, Building2, KeyRound, Wallet, MessageCircle } from "@/components/icons";
 
 // Composição Remotion: sequência animada com precisão de frame mostrando os
 // módulos do CRM. Tocada ao vivo no navegador via @remotion/player (não é

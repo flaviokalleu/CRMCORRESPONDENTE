@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/page";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "@/components/icons";
 
 // O bloqueio que vale está no backend: middleware.RequireAdministrador() no
 // grupo financeiroAuth (router.go), que cobre /receitas, /despesas,

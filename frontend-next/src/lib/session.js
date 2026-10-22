@@ -7,6 +7,9 @@ import { cookies } from "next/headers";
 
 const ACCESS_COOKIE = "cri_token";
 const REFRESH_COOKIE = "cri_refresh";
+// "Lembrar-me": "1" mantém a sessão depois de fechar o navegador (cookies com
+// validade); "0" usa cookies de sessão, que o navegador apaga ao fechar.
+const REMEMBER_COOKIE = "cri_remember";
 
 const baseCookieOpts = {
   httpOnly: true,
@@ -15,14 +18,25 @@ const baseCookieOpts = {
   path: "/",
 };
 
-export async function setSession({ token, refreshToken }) {
+// Opções de validade dos cookies conforme o "Lembrar-me". Sem maxAge o cookie
+// é de sessão; o próprio JWT continua vencendo em 1h/7d no backend.
+export function sessionCookieAges(remember) {
+  return remember
+    ? { access: { maxAge: 60 * 60 }, refresh: { maxAge: 7 * 24 * 60 * 60 }, flag: { maxAge: 7 * 24 * 60 * 60 } }
+    : { access: {}, refresh: {}, flag: {} };
+}
+
+// `remember` indefinido (refresh no meio da sessão) mantém a escolha feita
+// no login, lida do próprio cookie.
+export async function setSession({ token, refreshToken, remember }) {
   const store = await cookies();
-  // access token: 1h (mesma janela do backend Go)
-  store.set(ACCESS_COOKIE, token, { ...baseCookieOpts, maxAge: 60 * 60 });
+  const keep = remember ?? store.get(REMEMBER_COOKIE)?.value !== "0";
+  const ages = sessionCookieAges(keep);
+  store.set(ACCESS_COOKIE, token, { ...baseCookieOpts, ...ages.access });
   if (refreshToken) {
-    // refresh token: 7d
-    store.set(REFRESH_COOKIE, refreshToken, { ...baseCookieOpts, maxAge: 7 * 24 * 60 * 60 });
+    store.set(REFRESH_COOKIE, refreshToken, { ...baseCookieOpts, ...ages.refresh });
   }
+  store.set(REMEMBER_COOKIE, keep ? "1" : "0", { ...baseCookieOpts, ...ages.flag });
 }
 
 export async function getAccessToken() {
@@ -39,13 +53,14 @@ export async function clearSession() {
   const store = await cookies();
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
+  store.delete(REMEMBER_COOKIE);
 }
 
 export async function hasSession() {
   return (await getAccessToken()) !== null;
 }
 
-export const COOKIE_NAMES = { ACCESS_COOKIE, REFRESH_COOKIE };
+export const COOKIE_NAMES = { ACCESS_COOKIE, REFRESH_COOKIE, REMEMBER_COOKIE };
 
 // Expostos para quem precisa gravar os cookies na RESPOSTA em vez do store
 // (route handler que devolve redirect — ver /api/auth/renew). As janelas

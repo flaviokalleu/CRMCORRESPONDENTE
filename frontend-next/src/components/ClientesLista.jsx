@@ -8,7 +8,7 @@ import {
   Phone, MessageCircle, MoreVertical, Inbox, RefreshCw, StickyNote,
   LayoutGrid, Rows3, GripVertical, SlidersHorizontal, X,
   CheckCircle2, XCircle, Clock3, CircleDot,
-} from "lucide-react";
+} from "@/components/icons";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -46,7 +46,7 @@ const KANBAN_LIMIT = 100;
 // Altura única de todo controle da barra superior. Um só valor evita a régua
 // irregular que aparece quando input, select e botão vêm cada um com a altura
 // padrão do seu componente; 44px também é alvo de toque confortável no celular.
-const CONTROLE = "h-11";
+const CONTROLE = "h-10";
 
 // Abas do topo. Os grupos e seus nomes são definidos pelo backend em
 // `models.GrupoStatus` — aqui só damos rótulo e ordem. `valor: ""` é a aba
@@ -72,13 +72,13 @@ const ABAS = [
 // continua no cartão do celular e no painel de edição.
 const COLUNAS = [
   { titulo: "Nome", largura: "w-auto" },
-  { titulo: "Contato", largura: "w-[175px]" },
-  { titulo: "Origem", largura: "w-[120px]" },
-  { titulo: "Status", largura: "w-[230px]" },
-  { titulo: "Interesse", largura: "w-[130px]", classe: "hidden @[1000px]:table-cell" },
-  { titulo: "Último contato", largura: "w-[100px]" },
-  { titulo: "Responsável", largura: "w-[128px]", classe: "hidden @[1180px]:table-cell" },
-  { titulo: "Ações", largura: "w-[116px]" },
+  { titulo: "Contato", largura: "w-[165px]" },
+  { titulo: "Origem", largura: "w-[104px]" },
+  { titulo: "Status", largura: "w-[228px]" },
+  { titulo: "Interesse", largura: "w-[130px]", classe: "hidden @[1240px]:table-cell" },
+  { titulo: "Último contato", largura: "w-[132px]" },
+  { titulo: "Responsável", largura: "w-[128px]", classe: "hidden @[1400px]:table-cell" },
+  { titulo: "Ações", largura: "w-[132px]" },
 ];
 
 // Formata a renda (VARCHAR pt-BR "7000,00" ou numérico) com separador de milhar.
@@ -175,18 +175,21 @@ function baixarCSV(clientes, nomeArquivo) {
 // três visões terem o mesmo repertório. Todo clique aqui é isolado com
 // stopPropagation — o contêiner ao redor abre o painel de edição, e essas ações
 // não devem disparar isso.
+// Ações da linha no padrão do kit: botões quadrados de 32px, tom suave.
+const ACAO = "size-8 rounded-lg [&_svg]:size-3.5";
+
 function AcoesRapidas({ cliente, onNotas, compacto = false }) {
   const fone = (cliente.telefone || "").replace(/\D/g, "");
   const tamanho = compacto ? "icon-xs" : "icon-sm";
   return (
-    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {fone ? (
         <Button
           variant="ghost"
           size={tamanho}
           nativeButton={false}
           render={<a href={`https://wa.me/55${fone}`} target="_blank" rel="noreferrer" />}
-          className="bg-wb-good/10 text-wb-good hover:bg-wb-good/20"
+          className={cn(ACAO, "bg-[var(--channel-whatsapp-tint)] text-[var(--channel-whatsapp-ink)] hover:bg-green-100")}
           title="Falar no WhatsApp"
           aria-label={`Falar com ${cliente.nome || "cliente"} no WhatsApp`}
         >
@@ -199,7 +202,7 @@ function AcoesRapidas({ cliente, onNotas, compacto = false }) {
           size={tamanho}
           nativeButton={false}
           render={<a href={`tel:+55${fone}`} />}
-          className="text-cx-muted hover:text-cx-blue"
+          className={cn(ACAO, "bg-slate-100 text-slate-600 hover:bg-navy-soft hover:text-primary")}
           title="Ligar"
           aria-label={`Ligar para ${cliente.nome || "cliente"}`}
         >
@@ -208,7 +211,7 @@ function AcoesRapidas({ cliente, onNotas, compacto = false }) {
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="ghost" size={tamanho} className="text-cx-muted" />}
+          render={<Button variant="ghost" size={tamanho} className={cn(ACAO, "bg-slate-100 text-slate-600 hover:bg-navy-soft hover:text-primary")} />}
           title="Mais ações"
           aria-label={`Mais ações para ${cliente.nome || "cliente"}`}
         >
@@ -280,16 +283,19 @@ function Responsavel({ user }) {
 // `solid` é STATUS_COLOR — cor cheia, calibrada para o traço se distinguir do
 // fundo do cartão. Não use `ink` aqui: ele foi escurecido para texto sobre o
 // fundo tingido que este desenho não tem mais.
-const BARRA_STATUS = "h-4 w-[3px] shrink-0 rounded-full";
+const PONTO_STATUS = "size-1.5 shrink-0 rounded-full";
 
+// Pill de status no padrão Tag do kit: tom suave de fundo, texto no passo
+// escuro e um ponto na cor cheia.
 function StatusBadge({ status, className }) {
   const info = statusInfo(status);
   return (
     <span
-      className={cn("flex w-fit items-center gap-2 text-[13px]! font-medium text-cx-text", className)}
+      className={cn("inline-flex max-w-full w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs! font-bold leading-tight", className)}
+      style={{ backgroundColor: info.soft, color: info.ink }}
       title={info.label}
     >
-      <span className={BARRA_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
+      <span className={PONTO_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
       <span className="truncate">{info.label}</span>
     </span>
   );
@@ -315,19 +321,20 @@ function StatusControl({ cliente, onChange, saving, className }) {
       <SelectTrigger
         size="sm"
         className={cn(
-          "h-auto w-fit max-w-full gap-2 rounded-md border-transparent bg-transparent py-1 pr-1.5 pl-2 text-[13px]! font-medium text-cx-text *:data-[slot=select-value]:gap-2",
-          "transition-colors hover:bg-cx-bg aria-expanded:bg-cx-bg disabled:cursor-wait",
+          "h-auto min-h-0! w-fit max-w-full gap-1.5 rounded-full border-transparent py-1 pr-1.5 pl-2.5 text-xs! font-bold leading-tight shadow-none *:data-[slot=select-value]:gap-1.5",
+          "transition-[filter] hover:brightness-95 aria-expanded:brightness-95 disabled:cursor-wait",
           "[&>svg:last-child]:size-3.5 [&>svg:last-child]:opacity-0 [&>svg:last-child]:transition-opacity",
           "hover:[&>svg:last-child]:opacity-60 focus-visible:[&>svg:last-child]:opacity-60 aria-expanded:[&>svg:last-child]:opacity-60",
           className
         )}
+        style={{ backgroundColor: info.soft, color: info.ink }}
         title={info.label}
         aria-label={`Status: ${info.label}. Alterar`}
       >
         <SelectValue>
           {() => (
             <>
-              <span className={BARRA_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
+              <span className={PONTO_STATUS} style={{ backgroundColor: info.solid }} aria-hidden="true" />
               <span className="truncate">{info.label}</span>
             </>
           )}
@@ -350,7 +357,7 @@ function CelulaOrigem({ origem }) {
   if (!visual) return <span className="text-cx-muted">—</span>;
   const { Icon, cor, label } = visual;
   return (
-    <span className="flex items-center justify-center gap-2">
+    <span className="flex items-center gap-2">
       <Icon className={cn("size-4 shrink-0", cor)} />
       <span className="truncate">{label}</span>
     </span>
@@ -625,10 +632,80 @@ export function ClientesLista({ initialSearch = "",
         </div>
       </div>
 
-      {/* Abas por grupo + visão + filtros. As abas rolam na horizontal no
-          celular, em vez de quebrar em duas fileiras. */}
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Card único no padrão do kit: barra de ferramentas, abas de status
+          sublinhadas com contagem, a tabela e a paginação. */}
+      <section className="ikit-card">
+        <div className="ikit-toolbar">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setPage(1); }}
+              placeholder="Buscar por nome, e-mail ou CPF…"
+              aria-label="Buscar clientes"
+              className={cn(CONTROLE, "pl-10!")}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <ToggleGroup
+              value={[view]}
+              onValueChange={(v) => changeView(v[0])}
+              spacing={0}
+              variant="outline"
+              aria-label="Modo de visualização"
+              className={cn(CONTROLE, "shrink-0")}
+            >
+              <ToggleGroupItem value="lista" aria-label="Ver em lista" className="h-full px-3">
+                <Rows3 /> <span className="hidden sm:inline">Lista</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Ver em kanban" className="h-full px-3">
+                <LayoutGrid /> <span className="hidden sm:inline">Kanban</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button
+              variant="outline"
+              onClick={() => setFiltrosAbertos((v) => !v)}
+              aria-expanded={filtrosAbertos}
+              className={cn(CONTROLE, "shrink-0 gap-2")}
+            >
+              <SlidersHorizontal /> Mais filtros
+              {filtrosAtivos > 0 ? (
+                <span className="inline-flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white tabular-nums">
+                  {filtrosAtivos}
+                </span>
+              ) : null}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={recarregar}
+              aria-label="Recarregar lista"
+              title="Recarregar"
+              className={cn(CONTROLE, "aspect-square shrink-0 p-0")}
+            >
+              <RefreshCw className={loading ? "animate-spin" : undefined} />
+            </Button>
+          </div>
+        </div>
+
+        <Collapsible open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
+          <CollapsibleContent>
+            <div className="ikit-filters">
+              <FiltrosSecundarios
+                status={status} setStatus={setStatus}
+                corretor={corretor} setCorretor={setCorretor}
+                inicio={inicio} setInicio={setInicio}
+                fim={fim} setFim={setFim}
+                responsaveis={responsaveis}
+                setPage={setPage}
+                filtrosAtivos={filtrosAtivos}
+                onLimpar={limparFiltros}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Abas por grupo de status, sublinhadas, com contagem. */}
+        <div className="ikit-tabs" role="tablist" aria-label="Grupos de status">
           {ABAS.map((aba) => {
             const ativa = grupo === aba.valor;
             const n = contagemDaAba(aba);
@@ -636,307 +713,279 @@ export function ClientesLista({ initialSearch = "",
               <button
                 key={aba.valor || "todos"}
                 type="button"
+                role="tab"
+                aria-selected={ativa}
                 onClick={() => trocarAba(aba.valor)}
-                aria-pressed={ativa}
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-colors",
-                  CONTROLE,
-                  ativa
-                    ? "bg-cx-blue text-white"
-                    : "bg-cx-surface text-cx-muted ring-1 ring-cx-border hover:text-cx-text"
-                )}
+                className={cn("ikit-tab", ativa && "is-active")}
               >
                 {aba.label}
-                {typeof n === "number" ? (
-                  <span
-                    className={cn(
-                      "rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums",
-                      ativa ? "bg-white/20" : "bg-cx-bg text-cx-muted"
-                    )}
-                  >
-                    {n}
-                  </span>
-                ) : null}
+                {typeof n === "number" ? <span className="ikit-tab-count">{n}</span> : null}
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-2">
-          <ToggleGroup
-            value={[view]}
-            onValueChange={(v) => changeView(v[0])}
-            spacing={0}
-            variant="outline"
-            aria-label="Modo de visualização"
-            className={cn(CONTROLE, "shrink-0")}
-          >
-            <ToggleGroupItem value="lista" aria-label="Ver em lista" className="h-full px-3">
-              <Rows3 /> <span className="hidden sm:inline">Lista</span>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="kanban" aria-label="Ver em kanban" className="h-full px-3">
-              <LayoutGrid /> <span className="hidden sm:inline">Kanban</span>
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <Button
-            variant="outline"
-            onClick={() => setFiltrosAbertos((v) => !v)}
-            aria-expanded={filtrosAbertos}
-            className={cn(CONTROLE, "shrink-0 gap-2 border-cx-border text-cx-text")}
-          >
-            <SlidersHorizontal /> Filtros
-            {filtrosAtivos > 0 ? (
-              <span className="inline-flex size-5 items-center justify-center rounded-full bg-cx-blue text-[10px] font-bold text-white tabular-nums">
-                {filtrosAtivos}
-              </span>
-            ) : null}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={recarregar}
-            aria-label="Recarregar lista"
-            title="Recarregar"
-            className={cn(CONTROLE, "aspect-square shrink-0 border-cx-border p-0 text-cx-muted")}
-          >
-            <RefreshCw className={loading ? "animate-spin" : undefined} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Busca sempre visível; o resto dos filtros abre no botão Filtros. */}
-      <Card className="gap-0 ring-cx-border bg-cx-surface p-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cx-muted" />
-          {/* crm-design.css impõe `padding: 11px 14px` em todo input dentro de
-              .crm-content, com especificidade maior que a utilitária: sem o `!`
-              o ícone fica em cima do texto. */}
-          <Input
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
-            placeholder="Buscar por nome, e-mail ou CPF…"
-            aria-label="Buscar clientes"
-            className={cn(CONTROLE, "border-cx-border pl-10! text-sm")}
-          />
-        </div>
-        <Collapsible open={filtrosAbertos} onOpenChange={setFiltrosAbertos}>
-          <CollapsibleContent>
-            <FiltrosSecundarios
-              status={status} setStatus={setStatus}
-              corretor={corretor} setCorretor={setCorretor}
-              inicio={inicio} setInicio={setInicio}
-              fim={fim} setFim={setFim}
-              responsaveis={responsaveis}
-              setPage={setPage}
-              filtrosAtivos={filtrosAtivos}
-              onLimpar={limparFiltros}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-
-      {/* Vazio — um só componente para as duas visões. */}
-      {vazio && (
-        <Card className="items-center gap-3 ring-cx-border bg-cx-surface py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl border border-cx-border text-cx-muted">
-            <Inbox className="size-6" />
+        {/* Vazio — um só componente para as duas visões. */}
+        {vazio && (
+          <div className="iempty">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-cx-border text-cx-muted">
+              <Inbox className="size-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-cx-text">Nenhum cliente encontrado</p>
+              <p className="text-xs text-cx-muted">
+                {temFiltro ? "Ajuste a busca ou os filtros." : "Cadastre o primeiro cliente para começar."}
+              </p>
+            </div>
+            {temFiltro ? (
+              <Button variant="outline" onClick={() => { setQ(""); setGrupo(""); limparFiltros(); }} className="border-cx-border">
+                <X /> Limpar filtros
+              </Button>
+            ) : (
+              <Button
+                nativeButton={false}
+                render={<Link href="/clientes/adicionar" />}
+                className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark"
+              >
+                <Plus /> Novo cliente
+              </Button>
+            )}
           </div>
-          <div>
-            <p className="text-sm font-medium text-cx-text">Nenhum cliente encontrado</p>
-            <p className="text-xs text-cx-muted">
-              {temFiltro ? "Ajuste a busca ou os filtros." : "Cadastre o primeiro cliente para começar."}
-            </p>
-          </div>
-          {temFiltro ? (
-            <Button variant="outline" onClick={() => { setQ(""); setGrupo(""); limparFiltros(); }} className="border-cx-border">
-              <X /> Limpar filtros
-            </Button>
-          ) : (
-            <Button
-              nativeButton={false}
-              render={<Link href="/clientes/adicionar" />}
-              className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark"
-            >
-              <Plus /> Novo cliente
-            </Button>
-          )}
-        </Card>
-      )}
+        )}
 
-      {/* LISTA — tabela a partir de lg; abaixo disso, cartões, porque uma tabela
-          de nove colunas em 390px só existe como rolagem lateral. */}
-      {view === "lista" && !vazio && (
-        <>
-          <Card className="@container hidden overflow-hidden ring-cx-border bg-cx-surface p-0 lg:block">
-            <Table className="min-w-[820px] table-fixed">
-              <TableHeader>
-                <TableRow className="border-cx-border/[0.15] hover:bg-transparent">
-                  <TableHead className="w-10 px-3! py-3! text-center">
-                    <Checkbox
-                      className="mx-auto"
-                      checked={todosSelecionados}
-                      indeterminate={selecionadosVisiveis.length > 0 && !todosSelecionados}
-                      onCheckedChange={alternarTodos}
-                      aria-label="Selecionar todos os clientes da página"
-                    />
-                  </TableHead>
-                  {COLUNAS.map(({ titulo, largura, classe }) => (
-                    <TableHead
-                      key={titulo}
-                      className={cn(
-                        "px-3! py-3! text-center text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase",
-                        largura, classe
-                      )}
-                    >
-                      {titulo}
+        {/* LISTA — tabela a partir de lg; abaixo disso, cartões, porque uma tabela
+            de nove colunas em 390px só existe como rolagem lateral. */}
+        {view === "lista" && !vazio && (
+          <>
+            <div className="@container hidden overflow-x-auto lg:block">
+              <Table className="min-w-[820px] table-fixed">
+                <TableHeader>
+                  <TableRow className="border-cx-border/[0.15] hover:bg-transparent">
+                    <TableHead className="w-10 px-3! py-3! text-center">
+                      <Checkbox
+                        className="mx-auto"
+                        checked={todosSelecionados}
+                        indeterminate={selecionadosVisiveis.length > 0 && !todosSelecionados}
+                        onCheckedChange={alternarTodos}
+                        aria-label="Selecionar todos os clientes da página"
+                      />
                     </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && clientes.length === 0 ? (
-                  <LinhasEsqueleto colunas={9} />
-                ) : (
-                  clientes.map((c) => (
-                    <TableRow
-                      key={c.id}
-                      onClick={() => setEditingId(c.id)}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
-                      }}
-                      aria-label={`Abrir ${c.nome || "cliente"}`}
-                      data-state={selecionados.has(c.id) ? "selected" : undefined}
-                      className={cn(
-                        "cursor-pointer border-cx-border/[0.12] hover:bg-cx-bg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cx-blue",
-                        loading && "opacity-50 transition-opacity"
-                      )}
-                    >
-                      <TableCell className="px-3! py-3! text-center" onClick={(e) => e.stopPropagation()}>
+                    {COLUNAS.map(({ titulo, largura, classe }) => (
+                      <TableHead
+                        key={titulo}
+                        className={cn(
+                          "px-3! py-3!",
+                          largura, classe
+                        )}
+                      >
+                        {titulo}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading && clientes.length === 0 ? (
+                    <LinhasEsqueleto colunas={9} />
+                  ) : (
+                    clientes.map((c) => (
+                      <TableRow
+                        key={c.id}
+                        onClick={() => setEditingId(c.id)}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
+                        }}
+                        aria-label={`Abrir ${c.nome || "cliente"}`}
+                        data-state={selecionados.has(c.id) ? "selected" : undefined}
+                        className={cn(
+                          "cursor-pointer border-cx-border/[0.12] hover:bg-cx-bg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cx-blue",
+                          loading && "opacity-50 transition-opacity"
+                        )}
+                      >
+                        <TableCell className="px-3! py-3! text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            className="mx-auto"
+                            checked={selecionados.has(c.id)}
+                            onCheckedChange={() => alternarUm(c.id)}
+                            aria-label={`Selecionar ${c.nome || "cliente"}`}
+                          />
+                        </TableCell>
+                        <TableCell className="px-3! py-3!">
+                          <div className="flex items-center gap-3">
+                            <AvatarCliente nome={c.nome} />
+                            <span className="block min-w-0 text-left">
+                              <span className="block truncate font-medium text-cx-text" title={c.nome || undefined}>{c.nome || "—"}</span>
+                              <span className="block truncate text-xs text-cx-muted" title={c.email || undefined}>{c.email || "sem e-mail"}</span>
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-3! py-3! text-cx-muted">
+                          {c.telefone ? (
+                            <a
+                              href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1.5 hover:text-cx-text"
+                            >
+                              <MessageCircle className="size-3.5 shrink-0 text-[var(--channel-whatsapp)]" />
+                              <span className="truncate tabular-nums">{maskTelefone(c.telefone)}</span>
+                            </a>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="px-3! py-3! text-cx-text">
+                          <CelulaOrigem origem={c.origem} />
+                        </TableCell>
+                        <TableCell className="px-3! py-3!" onClick={(e) => e.stopPropagation()}>
+                          {canChangeStatus
+                            ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
+                            : <StatusBadge status={c.status} />}
+                        </TableCell>
+                        <TableCell className="hidden px-3! py-3! text-cx-text @[1240px]:table-cell">
+                          <span className="block truncate" title={c.interesse || undefined}>{c.interesse || <span className="text-cx-muted">—</span>}</span>
+                        </TableCell>
+                        <TableCell className="px-3! py-3! text-cx-muted">
+                          <CelulaUltimoContato cliente={c} />
+                        </TableCell>
+                        <TableCell className="hidden px-3! py-3! text-cx-text @[1400px]:table-cell">
+                          <Responsavel user={c.user} />
+                        </TableCell>
+                        <TableCell className="px-3! py-3!">
+                          <div className="flex items-center">
+                            <AcoesRapidas cliente={c} onNotas={setNotesFor} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mesma lista em cartões, para telas estreitas. */}
+            <div className="grid gap-2 p-4 lg:hidden">
+              {loading && clientes.length === 0
+                ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[136px] rounded-xl" />)
+                : clientes.map((c) => (
+                  <Card
+                    key={c.id}
+                    onClick={() => setEditingId(c.id)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
+                    }}
+                    aria-label={`Abrir ${c.nome || "cliente"}`}
+                    className={cn(
+                      "cursor-pointer gap-3 ring-cx-border bg-cx-surface p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cx-blue",
+                      loading && "opacity-50 transition-opacity"
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span onClick={(e) => e.stopPropagation()} className="pt-1">
                         <Checkbox
-                          className="mx-auto"
                           checked={selecionados.has(c.id)}
                           onCheckedChange={() => alternarUm(c.id)}
                           aria-label={`Selecionar ${c.nome || "cliente"}`}
                         />
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <AvatarCliente nome={c.nome} />
-                          <span className="block min-w-0 text-left">
-                            <span className="block truncate font-medium text-cx-text" title={c.nome || undefined}>{c.nome || "—"}</span>
-                            <span className="block truncate text-xs text-cx-muted" title={c.email || undefined}>{c.email || "sem e-mail"}</span>
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-center text-cx-muted">
-                        {c.telefone ? (
-                          <a
-                            href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-center gap-1.5 hover:text-cx-text"
-                          >
-                            <MessageCircle className="size-3.5 shrink-0 text-wb-good" />
-                            <span className="truncate tabular-nums">{maskTelefone(c.telefone)}</span>
-                          </a>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-center text-cx-text">
-                        <CelulaOrigem origem={c.origem} />
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-center" onClick={(e) => e.stopPropagation()}>
-                        {canChangeStatus
-                          ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} className="mx-auto" />
-                          : <StatusBadge status={c.status} className="mx-auto" />}
-                      </TableCell>
-                      <TableCell className="hidden px-3! py-3! text-center text-cx-text @[1000px]:table-cell">
-                        <span className="block truncate" title={c.interesse || undefined}>{c.interesse || <span className="text-cx-muted">—</span>}</span>
-                      </TableCell>
-                      <TableCell className="px-3! py-3! text-center text-cx-muted">
-                        <CelulaUltimoContato cliente={c} />
-                      </TableCell>
-                      <TableCell className="hidden px-3! py-3! text-center text-cx-text @[1180px]:table-cell">
-                        <Responsavel user={c.user} />
-                      </TableCell>
-                      <TableCell className="px-3! py-3!">
-                        <div className="flex items-center justify-center">
-                          <AcoesRapidas cliente={c} onNotas={setNotesFor} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
+                      </span>
+                      <AvatarCliente nome={c.nome} className="size-10" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-cx-text">{c.nome || "—"}</p>
+                        <p className="truncate text-xs text-cx-muted tabular-nums">
+                          {c.telefone ? maskTelefone(c.telefone) : c.email || "sem contato"}
+                        </p>
+                      </div>
+                      <AcoesRapidas cliente={c} onNotas={setNotesFor} />
+                    </div>
 
-          {/* Mesma lista em cartões, para telas estreitas. */}
-          <div className="grid gap-2 lg:hidden">
-            {loading && clientes.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[136px] rounded-xl" />)
-              : clientes.map((c) => (
-                <Card
-                  key={c.id}
-                  onClick={() => setEditingId(c.id)}
-                  tabIndex={0}
-                  role="button"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
-                  }}
-                  aria-label={`Abrir ${c.nome || "cliente"}`}
-                  className={cn(
-                    "cursor-pointer gap-3 ring-cx-border bg-cx-surface p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cx-blue",
-                    loading && "opacity-50 transition-opacity"
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <span onClick={(e) => e.stopPropagation()} className="pt-1">
-                      <Checkbox
-                        checked={selecionados.has(c.id)}
-                        onCheckedChange={() => alternarUm(c.id)}
-                        aria-label={`Selecionar ${c.nome || "cliente"}`}
-                      />
-                    </span>
-                    <AvatarCliente nome={c.nome} className="size-10" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-cx-text">{c.nome || "—"}</p>
-                      <p className="truncate text-xs text-cx-muted tabular-nums">
-                        {c.telefone ? maskTelefone(c.telefone) : c.email || "sem contato"}
-                      </p>
-                    </div>
-                    <AcoesRapidas cliente={c} onNotas={setNotesFor} />
-                  </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                      <div className="flex min-w-0 gap-1.5">
+                        <dt className="shrink-0 text-cx-muted">Origem</dt>
+                        <dd className="min-w-0 truncate font-medium text-cx-text">{c.origem || "—"}</dd>
+                      </div>
+                      <div className="flex min-w-0 gap-1.5">
+                        <dt className="shrink-0 text-cx-muted">Interesse</dt>
+                        <dd className="min-w-0 truncate font-medium text-cx-text">{c.interesse || "—"}</dd>
+                      </div>
+                      <div className="flex min-w-0 gap-1.5">
+                        <dt className="shrink-0 text-cx-muted">Resp.</dt>
+                        <dd className="min-w-0 truncate font-medium text-cx-text">{c.user?.first_name || "—"}</dd>
+                      </div>
+                      <div className="flex min-w-0 gap-1.5">
+                        <dt className="shrink-0 text-cx-muted">Contato</dt>
+                        <dd className="min-w-0 truncate font-medium text-cx-text">{tempoRelativo(c.updated_at) || "—"}</dd>
+                      </div>
+                    </dl>
 
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <div className="flex min-w-0 gap-1.5">
-                      <dt className="shrink-0 text-cx-muted">Origem</dt>
-                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.origem || "—"}</dd>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {canChangeStatus
+                        ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
+                        : <StatusBadge status={c.status} />}
                     </div>
-                    <div className="flex min-w-0 gap-1.5">
-                      <dt className="shrink-0 text-cx-muted">Interesse</dt>
-                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.interesse || "—"}</dd>
-                    </div>
-                    <div className="flex min-w-0 gap-1.5">
-                      <dt className="shrink-0 text-cx-muted">Resp.</dt>
-                      <dd className="min-w-0 truncate font-medium text-cx-text">{c.user?.first_name || "—"}</dd>
-                    </div>
-                    <div className="flex min-w-0 gap-1.5">
-                      <dt className="shrink-0 text-cx-muted">Contato</dt>
-                      <dd className="min-w-0 truncate font-medium text-cx-text">{tempoRelativo(c.updated_at) || "—"}</dd>
-                    </div>
-                  </dl>
+                  </Card>
+                ))}
+            </div>
+          </>
+        )}
 
-                  <div onClick={(e) => e.stopPropagation()}>
-                    {canChangeStatus
-                      ? <StatusControl cliente={c} onChange={changeStatus} saving={savingId === c.id} />
-                      : <StatusBadge status={c.status} />}
-                  </div>
-                </Card>
-              ))}
+        {/* Rodapé: contagem à esquerda, paginação à direita. Só na lista — o
+            Kanban carrega a carteira inteira. */}
+        {view === "lista" && total > 0 && (
+          <div className="ipaginator">
+            <span className="tabular-nums">
+              Mostrando {from} a {to} de {total} {total === 1 ? "cliente" : "clientes"}
+            </span>
+            <nav className="flex items-center gap-1" aria-label="Paginação">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                aria-label="Página anterior"
+                className="border-cx-border text-cx-muted"
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="px-2 font-semibold text-cx-text tabular-nums sm:hidden">
+                {page} / {pages}
+              </span>
+              <span className="hidden items-center gap-1 sm:flex">
+                {janelaDePaginas(page, pages).map((n) =>
+                  typeof n === "string" ? (
+                    <span key={n} className="px-1" aria-hidden="true">…</span>
+                  ) : (
+                    <Button
+                      key={n}
+                      variant={n === page ? "default" : "outline"}
+                      size="icon-sm"
+                      disabled={loading}
+                      onClick={() => setPage(n)}
+                      aria-current={n === page ? "page" : undefined}
+                      className={cn(
+                        "min-w-7 px-2 text-xs font-semibold tabular-nums",
+                        n === page ? "bg-cx-blue text-white hover:bg-cx-blue-dark" : "border-cx-border text-cx-muted"
+                      )}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+              </span>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                disabled={page >= pages || loading}
+                onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                aria-label="Próxima página"
+                className="border-cx-border text-cx-muted"
+              >
+                <ChevronRight />
+              </Button>
+            </nav>
           </div>
-        </>
-      )}
+        )}
+
+      </section>
 
       {/* KANBAN — rolagem horizontal de colunas fixas. No celular o globals.css
           converte a faixa em lista vertical (regra `.min-w-max`). */}
@@ -1060,62 +1109,6 @@ export function ClientesLista({ initialSearch = "",
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* Rodapé: contagem à esquerda, paginação à direita. Só na lista — o
-          Kanban carrega a carteira inteira. */}
-      {view === "lista" && total > 0 && (
-        <div className="flex flex-col-reverse items-center justify-between gap-3 text-xs text-cx-muted sm:flex-row">
-          <span className="tabular-nums">
-            Mostrando {from} a {to} de {total} {total === 1 ? "cliente" : "clientes"}
-          </span>
-          <nav className="flex items-center gap-1" aria-label="Paginação">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              aria-label="Página anterior"
-              className="border-cx-border text-cx-muted"
-            >
-              <ChevronLeft />
-            </Button>
-            <span className="px-2 font-semibold text-cx-text tabular-nums sm:hidden">
-              {page} / {pages}
-            </span>
-            <span className="hidden items-center gap-1 sm:flex">
-              {janelaDePaginas(page, pages).map((n) =>
-                typeof n === "string" ? (
-                  <span key={n} className="px-1" aria-hidden="true">…</span>
-                ) : (
-                  <Button
-                    key={n}
-                    variant={n === page ? "default" : "outline"}
-                    size="icon-sm"
-                    disabled={loading}
-                    onClick={() => setPage(n)}
-                    aria-current={n === page ? "page" : undefined}
-                    className={cn(
-                      "min-w-7 px-2 text-xs font-semibold tabular-nums",
-                      n === page ? "bg-cx-blue text-white hover:bg-cx-blue-dark" : "border-cx-border text-cx-muted"
-                    )}
-                  >
-                    {n}
-                  </Button>
-                ))}
-            </span>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              disabled={page >= pages || loading}
-              onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              aria-label="Próxima página"
-              className="border-cx-border text-cx-muted"
-            >
-              <ChevronRight />
-            </Button>
-          </nav>
         </div>
       )}
 

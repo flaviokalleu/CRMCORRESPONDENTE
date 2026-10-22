@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { Info } from "@/components/icons";
 
 // Aviso de que o valor liberado varia por imóvel e por laudo.
 //

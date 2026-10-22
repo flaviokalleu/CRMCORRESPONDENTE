@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/components/icons";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Painel, PainelTitulo } from "./Painel";
+import { NEON, NeonGlow } from "@/lib/chart-neon";
 
 const CORES = {
-  analise: "#a65308",
-  aprovados: "#047857",
-  reprovados: "#b42318",
+  analise: NEON.warn,
+  aprovados: NEON.good,
+  reprovados: NEON.bad,
 };
 
 const fmt = (n) => (n ?? 0).toLocaleString("pt-BR");
@@ -18,11 +19,10 @@ function TooltipResultado({ active, payload }) {
   if (!active || !payload?.length) return null;
   const item = payload[0]?.payload;
   return (
-    <div className="rounded-xl border border-wb-border bg-white px-3 py-2 text-xs shadow-xl shadow-slate-900/10">
-      <p className="font-semibold text-wb-text">{item.rotulo}</p>
-      <p className="mt-0.5 text-wb-muted">
-        <span className="font-tabular font-semibold text-wb-text">{fmt(item.valor)}</span> clientes ·{" "}
-        {fmtPct(item.parte)}
+    <div className="ix-tooltip">
+      <p className="font-semibold">{item.rotulo}</p>
+      <p className="mt-0.5">
+        <strong className="font-tabular">{fmt(item.valor)}</strong> clientes · {fmtPct(item.parte)}
       </p>
     </div>
   );
@@ -50,93 +50,90 @@ export function EsteiraResultado({
   ].map((item) => ({ ...item, parte: total > 0 ? (item.valor / total) * 100 : 0 }));
 
   return (
-    <Painel className={`flex flex-col ${className}`}>
+    <Painel futurista className={`flex flex-col ${className}`}>
       <PainelTitulo
         titulo={titulo}
         descricao={`Distribuição das entradas no ${periodoLabel.toLowerCase()}.`}
         acao={
-          <Link
-            href="/clientes/lista?view=kanban"
-            className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-wb-brand hover:text-wb-info"
-          >
+          <Link href="/clientes/lista?view=kanban" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold">
             Abrir funil <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         }
       />
 
       {total > 0 ? (
-        <>
-          <div className="grid flex-1 items-center gap-4 sm:grid-cols-[190px_1fr]">
-            <div className="relative mx-auto h-[190px] w-full max-w-[210px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={segmentos}
-                    dataKey="valor"
-                    nameKey="rotulo"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={58}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    {segmentos.map((item) => (
-                      <Cell key={item.chave} fill={item.cor} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<TooltipResultado />} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
-                <span className="font-tabular text-2xl font-semibold tracking-[-0.04em] text-wb-good">
-                  {fmtPct(resolucao)}
-                </span>
-                <span className="mt-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-wb-muted">
-                  resolvido
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2">
-                <p className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-wb-good">Aprovação das decisões</p>
-                <p className="font-tabular mt-0.5 text-xl font-semibold text-wb-text">{fmtPct(aprovacaoDecidida)}</p>
-                <p className="mt-0.5 text-[0.68rem] text-wb-muted">
-                  {decisoes > 0 ? `${fmt(aprovados)} de ${fmt(decisoes)} decisões concluídas` : "Sem decisão concluída no período"}
-                </p>
-              </div>
-              <ul className="space-y-3">
-                {segmentos.map((item) => (
-                  <li key={item.chave} className="flex items-center gap-2.5 text-sm">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-[4px]"
-                      style={{ backgroundColor: item.cor }}
-                      aria-hidden="true"
-                    />
-                    <span className="text-wb-muted">{item.rotulo}</span>
-                    <span className="font-tabular ml-auto font-semibold text-wb-text">
-                      {fmt(item.valor)}
-                    </span>
-                    <span className="font-tabular w-14 text-right text-xs text-wb-muted">
-                      {fmtPct(item.parte)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+        <div className="flex flex-1 flex-col gap-5">
+          {/* Rosca grande no topo; legenda embaixo — nada lado a lado apertado. */}
+          <div className="relative mx-auto h-[240px] w-full max-w-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <defs><NeonGlow id="resGlow" blur={3} /></defs>
+                <Pie
+                  data={[{ valor: 1 }]}
+                  dataKey="valor"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={78}
+                  outerRadius={112}
+                  stroke="none"
+                  fill="rgba(148,163,184,0.10)"
+                  isAnimationActive={false}
+                />
+                <Pie
+                  data={segmentos}
+                  dataKey="valor"
+                  nameKey="rotulo"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={82}
+                  outerRadius={108}
+                  paddingAngle={3}
+                  cornerRadius={6}
+                  stroke="none"
+                  isAnimationActive={false}
+                  style={{ filter: "url(#resGlow)" }}
+                >
+                  {segmentos.map((item) => (
+                    <Cell key={item.chave} fill={item.cor} />
+                  ))}
+                </Pie>
+                <Tooltip content={<TooltipResultado />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
+              <span className="ix-chart-kpi font-tabular text-4xl font-bold">{fmtPct(resolucao)}</span>
+              <span className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-wb-muted">resolvido</span>
             </div>
           </div>
 
+          <ul className="grid gap-2.5">
+            {segmentos.map((item) => (
+              <li key={item.chave} className="flex items-center gap-3 text-sm">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.cor, boxShadow: `0 0 10px ${item.cor}` }} aria-hidden="true" />
+                <span className="text-slate-300">{item.rotulo}</span>
+                <span className="font-tabular ml-auto font-bold text-white">{fmt(item.valor)}</span>
+                <span className="font-tabular w-16 text-right text-xs text-slate-400">{fmtPct(item.parte)}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-[0.06em] text-emerald-300">Aprovação das decisões</p>
+            <p className="font-tabular mt-1 text-2xl font-bold text-white">{fmtPct(aprovacaoDecidida)}</p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              {decisoes > 0 ? `${fmt(aprovados)} de ${fmt(decisoes)} decisões concluídas` : "Sem decisão concluída no período"}
+            </p>
+          </div>
+
           {aguardando > 0 ? (
-            <p className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-wb-warn">
-              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-wb-warn" aria-hidden="true" />
+            <p className="flex items-start gap-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" aria-hidden="true" />
               {fmt(aguardando)} {aguardando === 1 ? "cliente aguarda" : "clientes aguardam"} ação na fila atual.
             </p>
           ) : null}
-        </>
+        </div>
       ) : (
-        <p className="flex flex-1 items-center justify-center py-10 text-sm text-wb-muted">
+        <p className="ix-chart-empty flex flex-1 items-center justify-center py-10 text-sm">
           Nenhum cliente na carteira ainda.
         </p>
       )}

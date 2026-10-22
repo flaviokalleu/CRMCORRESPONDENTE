@@ -17,5 +17,6 @@ export async function GET(request) {
   const res = NextResponse.redirect(new URL("/login", request.url));
   res.cookies.delete({ name: COOKIE_NAMES.ACCESS_COOKIE, path: "/" });
   res.cookies.delete({ name: COOKIE_NAMES.REFRESH_COOKIE, path: "/" });
+  res.cookies.delete({ name: COOKIE_NAMES.REMEMBER_COOKIE, path: "/" });
   return res;
 }

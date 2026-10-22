@@ -1,9 +1,7 @@
-import { DashboardReferencia } from "@/components/dashboard/DashboardReferencia";
+import { KpisOperacao, ListasOperacao, BannerFinanciamento } from "@/components/dashboard/DashboardReferencia";
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, BarChart3, BellRing, CheckCircle2, Plus, UsersRound, Clock3 } from "@/components/icons";
 import { apiGet } from "@/lib/api-server";
-import { PulsoOperacao } from "@/components/dashboard/PulsoOperacao";
-import { DashboardToolbar } from "@/components/dashboard/DashboardToolbar";
 import { MetasGerenciais } from "@/components/dashboard/MetasGerenciais";
 import { GraficoEvolucao } from "@/components/dashboard/GraficoEvolucao";
 import { GraficoSemanal } from "@/components/dashboard/GraficoSemanal";
@@ -176,7 +174,6 @@ export default async function DashboardPage({ searchParams }) {
   const isAdmin = !!(perms.isAdministrador ?? user.is_administrador) || isSuperAdmin;
   const isCorrespondente = !isAdmin && !!(perms.isCorrespondente ?? user.is_correspondente);
   const isCorretor = !isAdmin && !isCorrespondente && !!(perms.isCorretor ?? user.is_corretor);
-  const podeFiltrarResponsavel = isAdmin || isCorrespondente;
 
   const papel = isSuperAdmin ? "Super admin" : isAdmin ? "Administrador" : isCorrespondente ? "Correspondente" : isCorretor ? "Corretor" : "Equipe";
   const teamMap = new Map();
@@ -185,7 +182,6 @@ export default async function DashboardPage({ searchParams }) {
     const nome = `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim() || member.username || member.email;
     teamMap.set(String(member.id), { id: String(member.id), nome });
   }
-  const responsaveis = Array.from(teamMap.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const responsavelNome = teamMap.get(responsavel)?.nome ?? "Toda a equipe";
 
   const total = main.totalCount ?? main.totalClientes ?? 0;
@@ -267,51 +263,49 @@ export default async function DashboardPage({ searchParams }) {
     },
   ];
 
-  const csvRows = [
-    ["PAINEL GERENCIAL"],
-    ["Período", period.label],
-    ["Responsável", responsavelNome],
-    [],
-    ["Indicador", "Valor"],
-    ["Carteira no escopo", total],
-    ["Entradas no período", totalPeriodo],
-    ["Aprovação das decisões", fmtPct(taxaAprovacao)],
-    ["Resolução do período", fmtPct(taxaResolucao)],
-    ["Fila de atenção", aguardando],
-    ["SLA vencido", slaResumo.vencidos],
-    ["Situações ativas", activeAlerts],
-    [],
-    ["CLIENTE", "STATUS", "RESPONSÁVEL", "ÚLTIMA MOVIMENTAÇÃO"],
-    ...filaClientes.map((item) => [item.nome, item.status, item.responsavel_nome || "Sem responsável", item.updated_at || item.created_at]),
-  ];
+
+  const ICONE_ACAO = { adicionar: Plus, relatorio: BarChart3, fila: Clock3, carteira: UsersRound };
+  // Primária por último, como no cabeçalho de página do kit.
+  const acoesOrdenadas = [...acoes].sort((x, y) => Number(!!x.primaria) - Number(!!y.primaria));
+  const tomDestaque = slaResumo.vencidos > 0 ? "danger" : aguardando > 0 ? "warning" : "success";
+  const IconeDestaque = slaResumo.vencidos > 0 ? AlertTriangle : aguardando > 0 ? BellRing : CheckCircle2;
 
   return (
     <div id="dashboard-print-root" className="wb-page min-h-full">
-      <DashboardReferencia user={user} main={main} historical={historical} imoveis={listaImoveis} tarefas={!(isAdmin || isCorrespondente) || tarefasData == null ? null : asList(tarefasData)} recentes={recentesData == null ? null : asList(recentesData)} propostas={propostasData == null ? null : asList(propostasData)} />
-      <details className="ref-management"><summary>Análises gerenciais, filtros e exportação</summary>
-      <div className="mx-auto w-full max-w-[1680px] space-y-5 p-4 sm:p-5 lg:p-6 min-[1900px]:max-w-[1840px]">
-        <DashboardToolbar filtros={filtros} responsaveis={responsaveis} podeFiltrarResponsavel={podeFiltrarResponsavel} csvRows={csvRows} />
+      <div className="ref-dashboard">
+        {/* Cabeçalho de página */}
+        <section className="ref-welcome">
+          <div>
+            <h1>Dashboard</h1>
+            <p>{saudacao}, {user.first_name || "bem-vindo"}! {dataFormatada} · atualizado às {horaAtualizada}.</p>
+          </div>
+          <div className="dash-actions">
+            {acoesOrdenadas.map(({ label, href, icone, primaria }) => {
+              const Icone = ICONE_ACAO[icone] || Plus;
+              return (
+                <Link key={label} href={href} className={primaria ? "cx-btn cx-btn-primary" : "cx-btn cx-btn-outline"}>
+                  <Icone className="h-4 w-4" aria-hidden="true" /> {label}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
 
-        <PulsoOperacao
-          nome={user.first_name}
-          papel={papel}
-          saudacao={saudacao}
-          subtitulo={isCorretor ? "Sua carteira, seus resultados e as ações com prazo." : isCorrespondente ? "Fila de crédito, nível de serviço e decisões com base explícita." : "Desempenho, prioridades, equipe e caixa em uma leitura executiva."}
-          dataFormatada={dataFormatada}
-          horaAtualizada={horaAtualizada}
-          vitais={vitais}
-          destaque={destaque}
-          alertas={activeAlerts}
-          acoes={acoes}
-        />
-
+        {/* Indicadores: operação e metas, 4 por linha (acima dos gráficos) */}
+        <KpisOperacao main={main} propostas={propostasData == null ? null : asList(propostasData)} total={total} carteiraHref={carteiraHref} responsavelNome={responsavelNome} />
         <MetasGerenciais aprovacao={taxaAprovacao} resolucao={taxaResolucao} meta={meta} slaResumo={slaResumo} alertas={activeAlerts} totalPeriodo={totalPeriodo} />
 
-        <section aria-labelledby="desempenho-title" className="space-y-3.5">
-          <DashboardSectionHeader id="desempenho-title" eyebrow="Desempenho" titulo="Ritmo, conversão e desfecho" descricao={`Leitura de ${period.label.toLowerCase()} com comparação equivalente.`} />
-          <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-12">
+        <p role="status" className={`dash-alert dash-alert-${tomDestaque}`}>
+          <IconeDestaque className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{destaque}</span>
+          {activeAlerts > 0 ? <a href="#alertas">Ver fila de atenção</a> : null}
+        </p>
+
+        {/* Gráficos grandes, no painel escuro */}
+        <section aria-labelledby="desempenho-title" className="dash-section">
+          <DashboardSectionHeader id="desempenho-title" titulo="Desempenho" descricao={`Ritmo, conversão e desfecho · ${period.label.toLowerCase()} com comparação equivalente.`} />
+          <div className="dash-charts">
             <GraficoEvolucao
-              className="xl:col-span-7"
               titulo={isCorretor ? "Evolução da minha carteira" : "Evolução da operação"}
               mensal={{
                 rotulos: historical?.labels ?? [],
@@ -323,7 +317,6 @@ export default async function DashboardPage({ searchParams }) {
               }}
             />
             <EsteiraResultado
-              className="xl:col-span-5"
               titulo={isCorretor ? "Resultado da minha carteira" : isCorrespondente ? "Resultado das análises" : "Resultado da operação"}
               pendentes={pendentes}
               aprovados={aprovados}
@@ -349,20 +342,26 @@ export default async function DashboardPage({ searchParams }) {
           />
         </section>
 
-        <section aria-labelledby="prioridades-title" className="space-y-3.5">
-          <DashboardSectionHeader id="prioridades-title" eyebrow="Execução" titulo="Prioridades e responsáveis" descricao="Uma fila única, ordenada pelo risco de prazo e pronta para ação." />
+
+        <section aria-labelledby="prioridades-title" className="dash-section">
+          <DashboardSectionHeader id="prioridades-title" titulo="Prioridades e responsáveis" descricao="Uma fila única, ordenada pelo risco de prazo e pronta para ação." />
           <CentralAtencao clientes={filaClientes} alertas={avisos} sla={sla} href={filaHref} />
         </section>
 
-        <section aria-labelledby="negocio-title" className="space-y-3.5">
-          <DashboardSectionHeader id="negocio-title" eyebrow="Negócio" titulo={isAdmin ? "Caixa, portfólio e equipe" : "Carteira e oportunidades"} descricao="Visão integrada do que sustenta o próximo resultado." />
-          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-12">
+        <section aria-labelledby="dia-title" className="dash-section">
+          <DashboardSectionHeader id="dia-title" titulo="Operação do dia" descricao="Quem entrou, o que vence e o que está disponível para oferecer." />
+          <ListasOperacao imoveis={listaImoveis} tarefas={!(isAdmin || isCorrespondente) || tarefasData == null ? null : asList(tarefasData)} recentes={recentesData == null ? null : asList(recentesData)} />
+        </section>
+
+        <section aria-labelledby="negocio-title" className="dash-section">
+          <DashboardSectionHeader id="negocio-title" titulo={isAdmin ? "Caixa, portfólio e equipe" : "Carteira e oportunidades"} descricao="Visão integrada do que sustenta o próximo resultado." />
+          <div className="dash-negocio">
             {isAdmin ? (
-              <FluxoCaixaCard fluxo={fluxo} periodoLabel={period.label} className="md:col-span-2 xl:col-span-5" />
+              <FluxoCaixaCard fluxo={fluxo} periodoLabel={period.label} />
             ) : isCorrespondente ? (
-              <BlocoRitmo entradasPeriodo={totalPeriodo} periodoLabel={period.label} taxaAprovacao={taxaAprovacao} aguardando={aguardando} className="xl:col-span-4" />
+              <BlocoRitmo entradasPeriodo={totalPeriodo} periodoLabel={period.label} taxaAprovacao={taxaAprovacao} aguardando={aguardando} />
             ) : (
-              <BlocoCarteira total={total} esteMes={main.clientesEsteMes} aguardando={aguardando} imoveisDisponiveis={imoveisDisponiveis} className="xl:col-span-4" />
+              <BlocoCarteira total={total} esteMes={main.clientesEsteMes} aguardando={aguardando} imoveisDisponiveis={imoveisDisponiveis} />
             )}
             <PortfolioCard
               imoveisTotal={listaImoveis?.length ?? null}
@@ -370,19 +369,18 @@ export default async function DashboardPage({ searchParams }) {
               contratosAluguel={listaAlugueis?.length ?? null}
               renda={main.rendaAnalysis}
               indisponivel={listaImoveis == null || listaAlugueis == null}
-              className={isAdmin ? "xl:col-span-3" : "xl:col-span-4"}
             />
             {isAdmin ? (
-              <RankingEquipe usuarios={analytics?.topUsuarios} periodoLabel={period.label} className="xl:col-span-4" />
+              <RankingEquipe usuarios={analytics?.topUsuarios} periodoLabel={period.label} />
             ) : (
-              <PainelTaxas taxaAprovacao={taxaAprovacao} taxaResolucao={taxaResolucao} taxaRejeicao={taxaRejeicao} className="xl:col-span-4" />
+              <PainelTaxas taxaAprovacao={taxaAprovacao} taxaResolucao={taxaResolucao} taxaRejeicao={taxaRejeicao} />
             )}
           </div>
         </section>
 
         {isSuperAdmin && sysStats ? (
-          <section className="wb-panel p-5">
-            <DashboardSectionHeader eyebrow="Sistema" titulo="Visão global da instalação" descricao="Indicadores exclusivos da administração da plataforma." />
+          <section className="dash-section wb-panel p-6">
+            <DashboardSectionHeader titulo="Visão global da instalação" descricao="Indicadores exclusivos da administração da plataforma." />
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <MiniStat rotulo="Registros" valor={fmt(sysStats.totalRegistros)} />
               <MiniStat rotulo="Usuários" valor={fmt(sysStats.totalUsuarios)} />
@@ -391,20 +389,19 @@ export default async function DashboardPage({ searchParams }) {
             </div>
           </section>
         ) : null}
+
+        <BannerFinanciamento />
       </div>
-      </details>
     </div>
   );
 }
 
-function DashboardSectionHeader({ id, eyebrow, titulo, descricao }) {
+// Título de seção no padrão do kit: título forte e descrição esmaecida.
+function DashboardSectionHeader({ id, titulo, descricao }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3 border-l-4 border-cx-orange-bright py-0.5 pl-3 pr-0.5">
-      <div>
-        <p className="wb-eyebrow">{eyebrow}</p>
-        <h2 id={id} className="mt-1 text-lg font-semibold tracking-[-0.025em] text-wb-text">{titulo}</h2>
-      </div>
-      <p className="max-w-xl text-right text-xs leading-relaxed text-wb-muted sm:text-sm">{descricao}</p>
+    <div className="dash-section-head">
+      <h2 id={id}>{titulo}</h2>
+      {descricao ? <p>{descricao}</p> : null}
     </div>
   );
 }

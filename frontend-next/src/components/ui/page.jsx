@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Children, cloneElement, isValidElement } from "react";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 
 // Primitivos de UI presentacionais (sem hooks — seguros em Server Components)
 // para manter todas as páginas no mesmo idioma visual: superfície aqua
@@ -44,24 +44,35 @@ export function EmptyState({ icon: Icon, title, hint, children }) {
   return (
     <div className="crm-empty crm-card flex flex-col items-center justify-center gap-3 text-center">
       {Icon && (
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cx-border bg-cx-surface text-cx-muted">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-soft text-primary">
           <Icon className="h-6 w-6" />
         </div>
       )}
       <div>
-        <p className="text-sm font-medium text-cx-text">{title}</p>
-        {hint && <p className="text-xs text-cx-muted">{hint}</p>}
+        <p className="text-base font-semibold text-ink-heading">{title}</p>
+        {hint && <p className="text-sm text-cx-muted">{hint}</p>}
       </div>
       {children}
     </div>
   );
 }
 
-// Tabela — wrappers finos que aplicam o estilo padrão.
-export function Table({ children, className = "" }) {
+// Tabela — card "Lista de …" do kit (Contatos): título do card, a tabela e
+// o rodapé com a contagem. `title` é o título do card; o rodapé conta as
+// linhas do <tbody> sozinho.
+export function Table({ children, className = "", title, footer }) {
   const sections = Children.toArray(children);
   const head = sections.find((child) => isValidElement(child) && child.type === Thead);
   const labels = head ? Children.toArray(head.props.children).map((cell) => cell.props?.children) : [];
+  // Linha de estado vazio (uma célula com colSpan) não conta como registro.
+  const linhas = sections
+    .filter((section) => isValidElement(section) && section.type === 'tbody')
+    .flatMap((section) => Children.toArray(section.props.children))
+    .filter((row) => {
+      if (!isValidElement(row)) return false;
+      const cells = Children.toArray(row.props.children).filter(isValidElement);
+      return !(cells.length === 1 && cells[0].props?.colSpan);
+    }).length;
   const content = sections.map((section) => {
     if (!isValidElement(section) || section.type !== 'tbody') return section;
     return cloneElement(section, {}, Children.map(section.props.children, (row) => {
@@ -71,11 +82,18 @@ export function Table({ children, className = "" }) {
       ));
     }));
   });
+  const rodape = footer ?? (linhas > 0 ? `Exibindo 1 a ${linhas} de ${linhas} registro(s)` : null);
   return (
     <div className="crm-table">
+      {title && (
+        <div className="crm-table-head">
+          <h2>{title}</h2>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className={`w-full text-left text-sm ${className}`}>{content}</table>
       </div>
+      {rodape && <div className="crm-table-foot">{rodape}</div>}
     </div>
   );
 }
@@ -83,7 +101,7 @@ export function Table({ children, className = "" }) {
 export function Thead({ children }) {
   return (
     <thead>
-      <tr className="border-b border-cx-border bg-cx-surface text-[10px] uppercase tracking-[0.1em] text-cx-muted">
+      <tr>
         {children}
       </tr>
     </thead>
@@ -91,16 +109,16 @@ export function Thead({ children }) {
 }
 
 export function Th({ children, right, className = "" }) {
-  return <th className={`px-4 py-3 font-semibold ${right ? "text-right" : ""} ${className}`}>{children}</th>;
+  return <th className={`${right ? "text-right" : ""} ${className}`}>{children}</th>;
 }
 
 export function Row({ children, className = "" }) {
-  return <tr className={`border-b border-cx-border/[0.12] last:border-0 hover:bg-cx-surface ${className}`}>{children}</tr>;
+  return <tr className={className}>{children}</tr>;
 }
 
 export function Td({ children, right, muted, label, className = "", ...props }) {
   return (
-    <td {...props} data-label={typeof label === 'string' ? label : undefined} className={`px-4 py-3 ${right ? "text-right" : ""} ${muted ? "text-cx-muted" : "text-cx-text"} ${className}`}>
+    <td {...props} data-label={typeof label === 'string' ? label : undefined} className={`${right ? "text-right" : ""} ${muted ? "text-cx-muted" : "text-cx-text"} ${className}`}>
       {children}
     </td>
   );

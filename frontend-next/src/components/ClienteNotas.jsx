@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { StickyNote, Send, Trash2, Loader2, User } from "lucide-react";
+import { StickyNote, Send, Trash2, Loader2, User } from "@/components/icons";
 
 // Notas do cliente — listar + adicionar (todos os papéis: corretor, admin,
 // correspondente). Usa as rotas Go /api/notas. O `criado_por_id` vai do usuário

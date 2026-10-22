@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, SearchX } from "lucide-react";
+import { ArrowLeft, MessageCircle, SearchX } from "@/components/icons";
 import { apiGet } from "@/lib/api-server";
 import { ImovelCardPublico } from "@/components/public/ImovelCardPublico";
 import { WhatsAppFlutuante } from "@/components/public/WhatsAppFlutuante";

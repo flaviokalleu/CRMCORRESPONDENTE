@@ -7,7 +7,7 @@ import {
   CircleAlert,
   HandCoins,
   KeyRound,
-} from "lucide-react";
+} from "@/components/icons";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatBRL } from "@/components/ui/page";
 import { Painel, PainelTitulo } from "./Painel";
@@ -38,7 +38,7 @@ function Linha({ icone: Icone, rotulo, valor, hint, corIcone, href }) {
         <p className="text-xs text-wb-muted">{rotulo}</p>
         <p className="font-tabular truncate text-sm font-semibold text-wb-text">{valor}</p>
       </div>
-      {hint ? <span className="shrink-0 text-[0.68rem] text-wb-muted">{hint}</span> : null}
+      {hint ? <span className="shrink-0 text-xs text-wb-muted">{hint}</span> : null}
       {href ? (
         <ArrowUpRight
           className="h-3.5 w-3.5 shrink-0 text-wb-muted/40 transition group-hover:text-wb-brand"

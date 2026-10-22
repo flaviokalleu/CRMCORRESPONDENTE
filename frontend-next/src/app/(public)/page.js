@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, CheckCircle2, ClipboardList, Clock3, Menu, MessageCircle, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { ArrowRight, BarChart3, CheckCircle2, ClipboardList, Clock3, Menu, MessageCircle, ShieldCheck, Sparkles, Users, Workflow } from "@/components/icons";
 import { apiGet } from "@/lib/api-server";
 import { WebbaBrand } from "@/components/WebbaBrand";
 
@@ -21,7 +21,7 @@ const plans = [
 ];
 
 function DashboardMockup({ totalClientes = 1248, totalLeads = 320 }) {
-  return <div className="marketing-dashboard-mockup" aria-label="Prévia do dashboard Webba CRM"><div className="marketing-mockup-sidebar"><WebbaBrand subtitle /><span className="active">⌂ Dashboard</span><span>♙ Leads</span><span>♧ Clientes</span><span>▣ Imóveis</span><span>▤ Propostas</span><span>◈ Relatórios</span><span>⚙ Configurações</span></div><div className="marketing-mockup-main"><div className="marketing-mockup-top"><span>⌕&nbsp; Buscar...</span><small>Flávio M.<br />Administrador</small></div><h3>Olá! <span>👋</span></h3><p>Aqui estão os principais dados do seu negócio.</p><div className="marketing-mockup-kpis"><div><Users /><b>{totalClientes.toLocaleString("pt-BR")}</b><small>Leads</small><em>↑ 12%</em></div><div><Workflow /><b>{totalLeads}</b><small>Oportunidades</small><em>↑ 8%</em></div><div><CheckCircle2 /><b>118</b><small>Negócios fechados</small><em>↑ 23%</em></div></div><div className="marketing-mockup-graphs"><div><strong>Evolução</strong><div className="marketing-mini-chart"><i /><i /><i /><i /><i /><i /></div></div><div><strong>Funil de vendas</strong><div className="marketing-funnel"><i /><i /><i /><i /></div></div></div></div></div>;
+  return <div className="marketing-dashboard-mockup" aria-label="Prévia do dashboard Webba CRM"><div className="marketing-mockup-sidebar"><WebbaBrand subtitle /><span className="active">⌂ Dashboard</span><span>♙ Leads</span><span>♧ Clientes</span><span>▣ Imóveis</span><span>▤ Propostas</span><span>◈ Relatórios</span><span>⚙ Configurações</span></div><div className="marketing-mockup-main"><div className="marketing-mockup-top"><span>⌕&nbsp; Buscar...</span><small>Flávio M.<br />Administrador</small></div><h3>Olá!</h3><p>Aqui estão os principais dados do seu negócio.</p><div className="marketing-mockup-kpis"><div><Users /><b>{totalClientes.toLocaleString("pt-BR")}</b><small>Leads</small><em>↑ 12%</em></div><div><Workflow /><b>{totalLeads}</b><small>Oportunidades</small><em>↑ 8%</em></div><div><CheckCircle2 /><b>118</b><small>Negócios fechados</small><em>↑ 23%</em></div></div><div className="marketing-mockup-graphs"><div><strong>Evolução</strong><div className="marketing-mini-chart"><i /><i /><i /><i /><i /><i /></div></div><div><strong>Funil de vendas</strong><div className="marketing-funnel"><i /><i /><i /><i /></div></div></div></div></div>;
 }
 
 export default async function LandingPage() {

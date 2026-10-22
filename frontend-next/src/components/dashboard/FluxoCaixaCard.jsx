@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, CircleAlert, TrendingUp } from "lucide-react";
+import { ArrowUpRight, CircleAlert, TrendingUp } from "@/components/icons";
 import {
   Bar,
   BarChart,
@@ -63,17 +63,17 @@ export function FluxoCaixaCard({ fluxo, periodoLabel = "período selecionado", c
         <>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3 rounded-xl border border-wb-border bg-wb-surface-2 px-3.5 py-3 sm:col-span-1">
-              <p className="text-[0.62rem] font-bold uppercase tracking-[0.09em] text-wb-muted">Saldo realizado</p>
+              <p className="text-xs font-semibold text-wb-muted">Saldo realizado</p>
               <p className={`font-tabular mt-1 text-2xl font-semibold tracking-[-0.04em] ${lucroPositivo ? "text-wb-good" : "text-wb-bad"}`}>
                 {formatBRL(lucro, { compact: true })}
               </p>
             </div>
             <div className="rounded-xl border border-wb-border px-3 py-3">
-              <p className="text-[0.62rem] font-bold uppercase tracking-[0.09em] text-wb-muted">Receitas</p>
+              <p className="text-xs font-semibold text-wb-muted">Receitas</p>
               <p className="font-tabular mt-1 text-sm font-semibold text-wb-good">{formatBRL(receitas, { compact: true })}</p>
             </div>
             <div className="rounded-xl border border-wb-border px-3 py-3">
-              <p className="text-[0.62rem] font-bold uppercase tracking-[0.09em] text-wb-muted">Despesas</p>
+              <p className="text-xs font-semibold text-wb-muted">Despesas</p>
               <p className="font-tabular mt-1 text-sm font-semibold text-wb-bad">{formatBRL(despesas, { compact: true })}</p>
             </div>
           </div>
@@ -100,18 +100,18 @@ export function FluxoCaixaCard({ fluxo, periodoLabel = "período selecionado", c
 
           <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2.5">
             <div className="min-w-0">
-              <p className="inline-flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-wb-brand">
+              <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-wb-brand">
                 <TrendingUp className="h-3.5 w-3.5" /> Projeção em 30 dias
               </p>
               <p className="font-tabular mt-0.5 text-sm font-semibold text-wb-text">{formatBRL(projection.saldoProjetado ?? lucro, { compact: true })}</p>
             </div>
-            <p className="text-right text-[0.68rem] leading-relaxed text-wb-muted">
+            <p className="text-right text-xs leading-relaxed text-wb-muted">
               +{formatBRL(projection.entradas ?? 0, { compact: true })}<br />−{formatBRL(projection.saidas ?? 0, { compact: true })}
             </p>
           </div>
 
           {pendencias > 0 ? (
-            <p className="mt-2 text-[0.68rem] text-wb-muted">
+            <p className="mt-2 text-xs text-wb-muted">
               {fmt(pendencias)} {pendencias === 1 ? "lançamento futuro cadastrado" : "lançamentos futuros cadastrados"}.
             </p>
           ) : null}

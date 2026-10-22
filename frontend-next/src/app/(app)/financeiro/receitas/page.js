@@ -1,7 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { ReceitaForm } from "@/components/ReceitaForm";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp } from "@/components/icons";
 
 export const metadata = { title: "Receitas" };
 
@@ -17,7 +17,7 @@ export default async function ReceitasPage() {
       {receitas.length === 0 ? (
         <EmptyState icon={TrendingUp} title="Nenhuma receita cadastrada" hint="Registre a primeira entrada acima." />
       ) : (
-        <Table>
+        <Table title="Lista de receitas">
           <Thead>
             <Th>#</Th>
             <Th>Tipo</Th>

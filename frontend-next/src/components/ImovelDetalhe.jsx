@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, BedDouble, Bath, MapPin, Star, KeyRound, Building2, Tag,
   Pencil, Trash2, Loader2, ImageOff, ChevronLeft, ChevronRight, Coins,
-} from "lucide-react";
+} from "@/components/icons";
 import { situacaoInfo, formatBRL, imovelImageUrl } from "@/lib/imovel-meta";
 
 function Spec({ icon: Icon, label, value }) {

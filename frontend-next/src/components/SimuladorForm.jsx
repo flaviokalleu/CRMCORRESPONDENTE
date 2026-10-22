@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Building2, Check, Percent, RotateCcw, Table2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, Percent, RotateCcw, Table2 } from "@/components/icons";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);

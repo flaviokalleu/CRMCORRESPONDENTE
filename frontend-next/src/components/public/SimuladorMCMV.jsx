@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertCircle, ArrowRight, BadgePercent, Wallet } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgePercent, Wallet } from "@/components/icons";
 import { COMPROMETIMENTO_MAXIMO, PRAZO_MAXIMO_MESES, simularMCMV } from "@/lib/mcmv";
 import { AvisoValorVaria } from "./AvisoValorVaria";
 

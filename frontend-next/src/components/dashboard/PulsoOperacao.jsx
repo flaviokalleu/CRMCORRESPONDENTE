@@ -12,7 +12,7 @@ import {
   Landmark,
   Plus,
   UsersRound,
-} from "lucide-react";
+} from "@/components/icons";
 
 const TOM_VALOR = {
   bom: "text-emerald-300",

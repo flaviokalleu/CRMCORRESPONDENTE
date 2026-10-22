@@ -40,7 +40,9 @@ export const CHART_COLORS = {
 // teal #0f766e, por exemplo, reprova no piso de croma (lê como cinza).
 //
 // A 6ª série não vira uma cor gerada: agrupa em "Outros" ou vira facetas.
-export const CATEGORICAL = ["#1c60ab", "#c2410c", "#047857", "#6d28d9", "#a16207"];
+// Design system InnLex: navy lidera, teal é o acento; sem roxo. Todas ≥ 3:1
+// sobre o cartão branco e separadas por luminosidade, não só por matiz.
+export const CATEGORICAL = ["#1e3a8a", "#0d9488", "#d97706", "#64748b", "#dc2626"];
 
 // Paleta de status fixa (nunca reaproveitada para série categórica).
 // Passos -600 do Tailwind: sobre o cartão branco os -300 antigos ficavam em
@@ -57,9 +59,9 @@ export const STATUS_COLORS = {
 // era branco translúcido, que sumia por completo no branco.
 export const CHART_CHROME = {
   surface: "#ffffff",
-  gridline: "rgba(31,42,55,0.10)",
-  axis: "rgba(31,42,55,0.25)",
-  textPrimary: "#1f2a37",
-  textSecondary: "#5b6b7c",
-  textMuted: "#7a8899",
+  gridline: "#e2e8f0", // slate-200 (border-default)
+  axis: "#cbd5e1", // slate-300
+  textPrimary: "#0f172a", // slate-950 (text-heading)
+  textSecondary: "#334155", // slate-700 (text-body)
+  textMuted: "#64748b", // slate-500 (text-muted)
 };

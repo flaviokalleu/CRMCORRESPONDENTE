@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Loader2, X, Save, ExternalLink, AlertCircle,
   User, Coins, Heart, ShieldCheck, ClipboardList, Paperclip,
-} from "lucide-react";
+} from "@/components/icons";
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
 import { ClienteDocumentos } from "@/components/ClienteDocumentos";
 import { TelaAprovacaoModal, pedeTelaAprovacao } from "@/components/TelaAprovacaoModal";

@@ -79,6 +79,11 @@ func New(cfg Config) *Client {
 	return &Client{cfg: cfg}
 }
 
+// Configured informa se há credenciais SMTP; sem elas o envio é simulado.
+func (c *Client) Configured() bool {
+	return c.cfg.User != "" && c.cfg.Password != ""
+}
+
 // dialer monta o gomail.Dialer equivalente a
 // nodemailer.createTransport({host, port, secure:false, auth:{user, pass}}).
 // secure:false = STARTTLS na porta 587 (comportamento padrão do gomail.Dialer);

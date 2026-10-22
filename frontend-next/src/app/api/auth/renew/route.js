@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { API_URL } from "@/lib/api-server";
-import { COOKIE_NAMES, COOKIE_OPTS, ACCESS_MAX_AGE, REFRESH_MAX_AGE } from "@/lib/session";
+import { COOKIE_NAMES, COOKIE_OPTS, sessionCookieAges } from "@/lib/session";
 
 // Renovação de sessão na NAVEGAÇÃO.
 //
@@ -28,6 +28,7 @@ export async function GET(request) {
     const res = NextResponse.redirect(new URL("/login", request.url));
     res.cookies.delete({ name: COOKIE_NAMES.ACCESS_COOKIE, path: "/" });
     res.cookies.delete({ name: COOKIE_NAMES.REFRESH_COOKIE, path: "/" });
+    res.cookies.delete({ name: COOKIE_NAMES.REMEMBER_COOKIE, path: "/" });
     res.cookies.delete({ name: GUARD, path: "/" });
     return res;
   };
@@ -56,11 +57,10 @@ export async function GET(request) {
   if (!data?.token) return paraLogin();
 
   const res = NextResponse.redirect(new URL(destino, request.url));
-  res.cookies.set(COOKIE_NAMES.ACCESS_COOKIE, data.token, { ...COOKIE_OPTS, maxAge: ACCESS_MAX_AGE });
-  res.cookies.set(COOKIE_NAMES.REFRESH_COOKIE, data.refreshToken || refreshToken, {
-    ...COOKIE_OPTS,
-    maxAge: REFRESH_MAX_AGE,
-  });
+  // Respeita o "Lembrar-me" escolhido no login.
+  const ages = sessionCookieAges(request.cookies.get(COOKIE_NAMES.REMEMBER_COOKIE)?.value !== "0");
+  res.cookies.set(COOKIE_NAMES.ACCESS_COOKIE, data.token, { ...COOKIE_OPTS, ...ages.access });
+  res.cookies.set(COOKIE_NAMES.REFRESH_COOKIE, data.refreshToken || refreshToken, { ...COOKIE_OPTS, ...ages.refresh });
   // Vale poucos segundos: só o bastante para pegar um redirect em cadeia.
   res.cookies.set(GUARD, "1", { ...COOKIE_OPTS, maxAge: 15 });
   return res;

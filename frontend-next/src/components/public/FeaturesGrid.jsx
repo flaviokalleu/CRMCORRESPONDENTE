@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, KeyRound, MessageCircle, ShieldCheck, Users, Wallet } from "lucide-react";
+import { Building2, KeyRound, MessageCircle, ShieldCheck, Users, Wallet } from "@/components/icons";
 import { FeatureCard } from "./FeatureCard";
 
 // Ícones (componentes/funções) não podem atravessar o limite Server->Client

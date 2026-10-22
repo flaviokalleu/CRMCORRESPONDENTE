@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, X } from "@/components/icons";
 
 // WhatsApp flutuante.
 //

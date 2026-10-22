@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText, Image as ImageIcon, Download, Eye, Trash2, Upload, Loader2,
   FolderOpen, AlertCircle, Layers,
-} from "lucide-react";
+} from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

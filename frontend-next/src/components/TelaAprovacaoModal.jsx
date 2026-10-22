@@ -5,7 +5,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Landmark, Upload, FileText } from "lucide-react";
+import { Landmark, Upload, FileText } from "@/components/icons";
 import { statusInfo } from "@/lib/cliente-status";
 import { cn } from "@/lib/utils";
 

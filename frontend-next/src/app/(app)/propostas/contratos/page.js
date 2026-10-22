@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Scale } from "lucide-react";
+import { ArrowLeft, ArrowRight, Scale } from "@/components/icons";
 import { apiGet } from "@/lib/api-server";
 import { fraunces } from "@/lib/fonts";
 import { CONTRACT_GROUPS, CONTRACT_TYPES, CONTRACT_ICONS } from "@/lib/contract-templates";

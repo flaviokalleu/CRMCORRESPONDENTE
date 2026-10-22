@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Copy, Download, Printer, Scale } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, Printer, Scale } from "@/components/icons";
 import { ICONS } from "@/lib/contract-icons";
 import { htmlToPlainText } from "@/lib/contract-templates";
 import { ContractDocument } from "./ContractDocument";

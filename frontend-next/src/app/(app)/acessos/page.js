@@ -30,7 +30,7 @@ export default async function AcessosPage() {
         </div>
       )}
 
-      <Table className="min-w-[720px]">
+      <Table title="Registros de acesso" className="min-w-[720px]">
         <Thead>
           <Th>Usuário</Th>
           <Th>IP</Th>

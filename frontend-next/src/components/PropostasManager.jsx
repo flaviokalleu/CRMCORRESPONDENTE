@@ -6,7 +6,7 @@ import {
   FileText, FileSignature, FileClock, Home as HomeIcon, Receipt, Plus, Search,
   Filter, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, Check, Handshake,
   Send, X, Trash2, Loader2, Inbox, AlertTriangle, Lightbulb,
-} from "lucide-react";
+} from "@/components/icons";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -388,18 +388,10 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
 
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
-          {/* Nav Propostas | Contratos | Modelos — só "Propostas" é esta
-              página; os outros dois já existem no sistema. */}
-          <nav aria-label="Propostas e contratos" className="flex w-fit gap-1 rounded-lg border border-cx-border bg-cx-surface p-1">
-            <span aria-current="page" className="rounded-md bg-cx-blue px-3 py-1.5 text-sm font-medium text-white">Propostas</span>
-            <Link href="/contratos/lista" className="rounded-md px-3 py-1.5 text-sm font-medium text-cx-muted hover:bg-cx-bg hover:text-cx-text">Contratos</Link>
-            <Link href="/propostas/contratos" className="rounded-md px-3 py-1.5 text-sm font-medium text-cx-muted hover:bg-cx-bg hover:text-cx-text">Modelos</Link>
-          </nav>
-
-          <Card className="gap-0 ring-cx-border bg-cx-surface p-3">
+          <section className="ikit-card">
             {/* Busca + etapa + responsável + mais filtros */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
+            <div className="ikit-toolbar">
+              <div className="relative" style={{ flex: "1 1 320px" }}>
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cx-muted" />
                 <Input
                   value={search}
@@ -448,7 +440,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
 
             <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
               <CollapsibleContent>
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-cx-border pt-3">
+                <div className="ikit-filters flex flex-wrap items-center gap-2">
                   <Select value={payment} onValueChange={(v) => { setPayment(v ?? ""); setPage(1); }}>
                     <SelectTrigger aria-label="Filtrar forma de pagamento" className="h-11 w-full border-cx-border text-sm sm:w-[200px]">
                       <SelectValue placeholder="Forma de pagamento" />
@@ -467,8 +459,16 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
               </CollapsibleContent>
             </Collapsible>
 
+            {/* Propostas | Contratos | Modelos — abas sublinhadas do kit. Só
+                "Propostas" é esta página; as outras duas já existem no sistema. */}
+            <nav aria-label="Propostas e contratos" className="ikit-tabs">
+              <span aria-current="page" className="ikit-tab is-active">Propostas <span className="ikit-tab-count">{propostas.length}</span></span>
+              <Link href="/contratos/lista" className="ikit-tab">Contratos</Link>
+              <Link href="/propostas/contratos" className="ikit-tab">Modelos</Link>
+            </nav>
+
             {/* Tabela */}
-            <div className="mt-3 -mx-3 overflow-x-auto border-t border-cx-border">
+            <div className="overflow-x-auto">
               <Table className="min-w-[900px] table-fixed">
                 <TableHeader>
                   <TableRow className="border-cx-border/[0.15] hover:bg-transparent">
@@ -604,7 +604,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
 
             {/* Rodapé: contagem à esquerda, paginação à direita. */}
             {!loadError && total > 0 && (
-              <div className="mt-3 flex flex-col-reverse items-center justify-between gap-3 border-t border-cx-border pt-3 text-xs text-cx-muted sm:flex-row">
+              <div className="ipaginator">
                 <span className="tabular-nums">
                   Mostrando {from} a {to} de {total} {total === 1 ? "proposta" : "propostas"}
                   {selecionadosVisiveis.length > 0 && ` · ${selecionadosVisiveis.length} selecionada${selecionadosVisiveis.length > 1 ? "s" : ""}`}
@@ -638,7 +638,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                 </nav>
               </div>
             )}
-          </Card>
+          </section>
         </div>
 
         {/* Coluna lateral */}

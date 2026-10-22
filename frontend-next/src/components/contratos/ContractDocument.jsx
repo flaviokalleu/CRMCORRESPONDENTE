@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { Home } from "lucide-react";
+import { Home } from "@/components/icons";
 import { pickClauseIcon } from "@/lib/contract-icons";
 
 // Palavras-chave que ganham negrito dentro do texto corrido das partes —

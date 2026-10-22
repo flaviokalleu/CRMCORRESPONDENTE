@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Printer } from "lucide-react";
+import { Download, Printer } from "@/components/icons";
 
 const csvCell = (value) => {
   const text = String(value ?? "").replace(/"/g, '""');

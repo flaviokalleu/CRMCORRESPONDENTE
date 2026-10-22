@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
-import { UsersRound, Phone, MapPin } from "lucide-react";
+import { UsersRound, Phone, MapPin } from "@/components/icons";
 
 export const metadata = { title: "Lista de Correspondentes" };
 
@@ -20,7 +20,7 @@ export default async function ListaCorrespondentesPage() {
       {correspondentes.length === 0 ? (
         <EmptyState icon={UsersRound} title="Nenhum correspondente cadastrado" hint="Adicione o primeiro correspondente." />
       ) : (
-        <Table className="min-w-[720px]">
+        <Table title="Lista de correspondentes" className="min-w-[720px]">
           <Thead>
             <Th>Correspondente</Th>
             <Th>Usuário</Th>

@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@/components/icons";
 
 export const metadata = { title: "Clientes Aluguel" };
 
@@ -21,7 +21,7 @@ export default async function ClientesAluguelPage() {
       {clientes.length === 0 ? (
         <EmptyState icon={KeyRound} title="Nenhum inquilino cadastrado" hint="Os clientes de aluguel aparecerão aqui." />
       ) : (
-        <Table className="min-w-[820px]">
+        <Table title="Lista de inquilinos" className="min-w-[820px]">
           <Thead>
             <Th>Inquilino</Th>
             <Th>Contato</Th>

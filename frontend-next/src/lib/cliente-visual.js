@@ -1,7 +1,7 @@
 import {
   Users, Globe, Search, MessageCircle, Megaphone, Store, Signpost,
   Building2, Contact,
-} from "lucide-react";
+} from "@/components/icons";
 
 // Aparência derivada dos dados do cliente: cor do avatar, ícone/cor da origem e
 // tempo relativo do último contato. Fica fora do componente de lista porque as

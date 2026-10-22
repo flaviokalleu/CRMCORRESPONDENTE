@@ -3,7 +3,7 @@ import {
   Users, CheckCircle2, Clock3, Percent, Wallet, TrendingUp, TrendingDown,
   Inbox, AlertTriangle, RefreshCw, Lightbulb, ExternalLink, Download, Plus,
   FileCheck2,
-} from "lucide-react";
+} from "@/components/icons";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {

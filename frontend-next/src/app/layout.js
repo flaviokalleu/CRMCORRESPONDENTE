@@ -1,11 +1,14 @@
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Poppins, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./crm-design.css";
 import { AuthProvider } from "@/context/AuthContext";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+// Poppins em tudo, nos pesos 400–700: a hierarquia vem de tamanho e peso,
+// nunca de uma segunda família (padrão do design system InnLex).
+const poppins = Poppins({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -53,7 +56,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="pt-BR"
-      className={`${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${poppins.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* AuthProvider no layout raiz — useAuth() funciona em TODA página,

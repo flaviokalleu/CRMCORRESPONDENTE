@@ -1,7 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { ProprietarioAddForm } from "@/components/ProprietarioAddForm";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
-import { UserSquare, Phone, MapPin } from "lucide-react";
+import { UserSquare, Phone, MapPin } from "@/components/icons";
 
 export const metadata = { title: "Proprietários" };
 
@@ -22,7 +22,7 @@ export default async function ListaProprietariosPage() {
         ) : proprietarios.length === 0 ? (
           <EmptyState icon={UserSquare} title="Nenhum proprietário cadastrado" hint="Adicione o primeiro proprietário acima." />
         ) : (
-          <Table className="min-w-[640px]">
+          <Table title="Lista de proprietários" className="min-w-[640px]">
             <Thead>
               <Th>Proprietário</Th>
               <Th>Telefone</Th>

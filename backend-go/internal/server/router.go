@@ -18,6 +18,7 @@ import (
 	"crmimob/internal/blob"
 	"crmimob/internal/config"
 	"crmimob/internal/integrations/asaas/webhook"
+	"crmimob/internal/integrations/email"
 	"crmimob/internal/integrations/storage"
 	"crmimob/internal/integrations/whatsapp"
 	"crmimob/internal/jobs"
@@ -106,6 +107,12 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	authRepo := auth.NewRepository(db)
 	authSvc := auth.NewService(cfg)
 	authHandler := auth.NewHandler(authRepo, authSvc)
+	// O link do e-mail de redefinição aponta para a primeira FRONTEND_URL.
+	resetBaseURL := "http://localhost:3000"
+	if len(cfg.FrontendURLs) > 0 {
+		resetBaseURL = cfg.FrontendURLs[0]
+	}
+	authHandler.WithPasswordReset(email.New(email.LoadConfigFromEnv()), resetBaseURL)
 
 	r.GET("/api/health", func(c *gin.Context) {
 		sqlDB, err := db.DB()
@@ -146,6 +153,8 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	authGroup := api.Group("/auth")
 	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<20), authHandler.Login)
 	authGroup.POST("/refresh-token", middleware.BodyLimit(1<<20), authHandler.Refresh)
+	authGroup.POST("/forgot-password", middleware.RateLimit(5, 15*time.Minute), middleware.BodyLimit(1<<16), authHandler.ForgotPassword)
+	authGroup.POST("/reset-password", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<16), authHandler.ResetPassword)
 	authGroup.POST("/logout", authHandler.Required(), authHandler.Logout)
 	authGroup.POST("/validate-token", authHandler.Required(), authHandler.Validate)
 	authGroup.GET("/me", authHandler.Required(), authHandler.Me)

@@ -2,7 +2,7 @@ import { apiGet } from "@/lib/api-server";
 import { ContratoVincularForm } from "@/components/aluguel/ContratoVincularForm";
 import { ContratoRowActions } from "@/components/aluguel/ContratoRowActions";
 import { PageHeader, Card, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
-import { FileSignature, FileText } from "lucide-react";
+import { FileSignature, FileText } from "@/components/icons";
 
 export const metadata = { title: "Contratos" };
 
@@ -24,7 +24,7 @@ export default async function ContratosListPage() {
         {lista.length === 0 ? (
           <EmptyState icon={FileSignature} title="Nenhum contrato cadastrado" hint="Vincule um imóvel a um inquilino acima." />
         ) : (
-          <Table className="min-w-[760px]">
+          <Table title="Lista de contratos" className="min-w-[760px]">
             <Thead>
               <Th>#</Th>
               <Th>Inquilino</Th>

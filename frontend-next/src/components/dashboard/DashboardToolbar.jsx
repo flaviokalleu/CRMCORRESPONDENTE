@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarRange, Filter, Settings2 } from "lucide-react";
+import { CalendarRange, Filter, Settings2 } from "@/components/icons";
 import { DashboardExportActions } from "./DashboardExportActions";
 
 const PERIODOS = [
@@ -20,15 +20,15 @@ function hrefPeriodo(periodo, filtros) {
 
 export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarResponsavel, csvRows }) {
   return (
-    <section className="dashboard-no-print wb-panel p-3.5" aria-label="Filtros do painel gerencial">
+    <section className="dashboard-no-print wb-panel p-5" aria-label="Filtros do painel gerencial">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50 text-wb-brand">
             <Filter className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-xs font-semibold text-wb-text">Escopo gerencial</p>
-            <p className="text-[0.68rem] text-wb-muted">
+            <p className="text-sm font-semibold text-wb-text">Escopo gerencial</p>
+            <p className="text-xs text-wb-muted">
               Clientes e equipe seguem o recorte; caixa permanece corporativo.
             </p>
           </div>
@@ -38,7 +38,7 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
                 key={value}
                 href={hrefPeriodo(value, filtros)}
                 aria-current={filtros.periodo === value ? "page" : undefined}
-                className={`rounded-md px-2.5 py-1.5 text-[0.7rem] font-semibold transition-colors ${
+                className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${
                   filtros.periodo === value
                     ? "bg-wb-brand text-white shadow-sm"
                     : "text-wb-muted hover:bg-white hover:text-wb-text"
@@ -67,7 +67,7 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
           ) : null}
           {podeFiltrarResponsavel ? (
             <label className="min-w-[190px] flex-1 sm:max-w-[250px]">
-              <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-[0.1em] text-wb-muted">
+              <span className="mb-1 block text-xs font-semibold text-wb-muted">
                 Responsável
               </span>
               <select
@@ -85,10 +85,10 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
             </label>
           ) : null}
           <label>
-            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-[0.1em] text-wb-muted">
+            <span className="mb-1 block text-xs font-semibold text-wb-muted">
               Meta aprovação
             </span>
-            <span className="flex h-9 items-center rounded-lg border border-wb-border bg-white px-2.5">
+            <span className="dash-num">
               <input
                 name="meta"
                 type="number"
@@ -101,10 +101,10 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
             </span>
           </label>
           <label>
-            <span className="mb-1 block text-[0.65rem] font-bold uppercase tracking-[0.1em] text-wb-muted">
+            <span className="mb-1 block text-xs font-semibold text-wb-muted">
               SLA da fila
             </span>
-            <span className="flex h-9 items-center rounded-lg border border-wb-border bg-white px-2.5">
+            <span className="dash-num">
               <input
                 name="sla"
                 type="number"
@@ -139,11 +139,11 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
             <input type="hidden" name="meta" value={filtros.meta} />
             <input type="hidden" name="sla" value={filtros.sla} />
             <label>
-              <span className="mb-1 block text-[0.65rem] font-semibold text-wb-muted">Início</span>
+              <span className="mb-1 block text-xs font-semibold text-wb-muted">Início</span>
               <input name="inicio" type="date" required defaultValue={filtros.inicio} className="h-9 w-full rounded-lg border border-wb-border px-2 text-xs" />
             </label>
             <label>
-              <span className="mb-1 block text-[0.65rem] font-semibold text-wb-muted">Fim</span>
+              <span className="mb-1 block text-xs font-semibold text-wb-muted">Fim</span>
               <input name="fim" type="date" required defaultValue={filtros.fim} className="h-9 w-full rounded-lg border border-wb-border px-2 text-xs" />
             </label>
             <button type="submit" className="col-span-2 h-9 rounded-lg bg-wb-brand text-xs font-semibold text-white">

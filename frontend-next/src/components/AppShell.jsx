@@ -12,11 +12,11 @@ export function AppShell({ children }) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   useEffect(() => {
     const check = () => {
-      const mobile = window.innerWidth < 768;
+      // Abaixo de 1024px a sidebar vira drawer (padrão do shell InnLex).
+      const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
       setSidebarOpen(!mobile);
     };
@@ -36,7 +36,7 @@ export function AppShell({ children }) {
 
   return (
     <div
-      className="app-shell-root bg-aqua-frame flex h-screen overflow-hidden"
+      className="app-shell-root flex h-screen overflow-hidden"
     >
       <a
         href="#conteudo"
@@ -45,26 +45,23 @@ export function AppShell({ children }) {
         Pular para o conteúdo
       </a>
 
-      {sidebarVisible && (
+      {(
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-[240px] shrink-0 border-r border-white/20 transition-transform duration-300 ease-in-out md:static md:translate-x-0 print:hidden ${
+          className={`app-shell-aside fixed inset-y-0 left-0 z-50 shrink-0 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 print:hidden ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar
-            onClose={() => isMobile && setSidebarOpen(false)}
-            onToggleVisibility={() => setSidebarVisible(false)}
-          />
+          <Sidebar onClose={() => setSidebarOpen(false)} />
         </aside>
       )}
 
       <AnimatePresence>
-        {isMobile && sidebarOpen && sidebarVisible && (
+        {isMobile && sidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -72,12 +69,7 @@ export function AppShell({ children }) {
 
       <div className="app-shell-main flex flex-1 flex-col min-w-0 overflow-hidden">
         <div className="print:hidden">
-          <Header
-            isMobile={isMobile}
-            sidebarVisible={sidebarVisible}
-            onToggleSidebarOpen={() => setSidebarOpen((v) => !v)}
-            onShowSidebar={() => setSidebarVisible(true)}
-          />
+          <Header isMobile={isMobile} onToggleSidebarOpen={() => setSidebarOpen((v) => !v)} />
         </div>
         {/* Superfície clara "cx": vale para toda página renderizada no shell.
             A moldura (sidebar/header) fica no azul institucional escuro e o

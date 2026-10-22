@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Building2, MapPin, BedDouble, Bath, Tag, FileText, ImagePlus, Star,
   KeyRound, Save, Loader2, CheckCircle, AlertCircle, X, Coins, Home,
-} from "lucide-react";
+} from "@/components/icons";
 import { TIPOS_PADRAO, imovelImageUrl } from "@/lib/imovel-meta";
 
 // Form de imóvel (criação + edição). Envia multipart/form-data — o backend Go

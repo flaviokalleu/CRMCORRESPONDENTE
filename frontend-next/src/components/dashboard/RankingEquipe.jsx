@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Trophy } from "lucide-react";
+import { ArrowUpRight, Trophy } from "@/components/icons";
 import {
   Bar,
   BarChart,
@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { Painel, PainelTitulo } from "./Painel";
+import { NEON, NeonGlow } from "@/lib/chart-neon";
 
 const fmt = (n) => (n ?? 0).toLocaleString("pt-BR");
 
@@ -21,10 +22,10 @@ function TooltipEquipe({ active, payload, periodoLabel }) {
   if (!active || !payload?.length) return null;
   const item = payload[0]?.payload;
   return (
-    <div className="rounded-xl border border-wb-border bg-white px-3 py-2 text-xs shadow-xl shadow-slate-900/10">
-      <p className="font-semibold text-wb-text">{item.nomeCompleto}</p>
-      <p className="mt-0.5 text-wb-muted">
-        <span className="font-tabular font-semibold text-wb-brand">{fmt(item.clientes)}</span>{" "}
+    <div className="ix-tooltip">
+      <p className="font-semibold">{item.nomeCompleto}</p>
+      <p className="mt-0.5">
+        <strong className="font-tabular">{fmt(item.clientes)}</strong>{" "}
         {item.clientes === 1 ? "novo cliente" : "novos clientes"} · {periodoLabel.toLowerCase()}
       </p>
     </div>
@@ -47,14 +48,14 @@ export function RankingEquipe({ usuarios, periodoLabel = "Período selecionado",
   });
 
   return (
-    <Painel className={`flex flex-col ${className}`}>
+    <Painel futurista className={`flex flex-col ${className}`}>
       <PainelTitulo
         titulo="Produção da equipe"
         descricao={`Novos clientes por responsável · ${periodoLabel.toLowerCase()}.`}
         acao={
           <Link
             href="/corretores/lista"
-            className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-wb-brand hover:text-wb-info"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold"
           >
             Equipe <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
@@ -62,20 +63,21 @@ export function RankingEquipe({ usuarios, periodoLabel = "Período selecionado",
       />
 
       {dados.length === 0 ? (
-        <div className="flex min-h-[135px] items-center justify-center rounded-xl border border-dashed border-wb-border bg-wb-surface-2 px-4 text-center">
-          <p className="text-sm text-wb-muted">Nenhum cadastro de equipe no período selecionado.</p>
+        <div className="ix-chart-empty flex min-h-[220px] items-center justify-center px-4 text-center">
+          <p className="text-sm">Nenhum cadastro de equipe no período selecionado.</p>
         </div>
       ) : (
         <>
-          <div className="mb-1 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-wb-brand">
-            <Trophy className="h-4 w-4 text-amber-600" aria-hidden="true" />
+          <div className="mb-1 flex items-center gap-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3.5 py-2.5 text-sm text-amber-100">
+            <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" />
             <span className="truncate">
               <strong className="font-semibold">{dados[0].nomeCompleto}</strong> lidera com{" "}
               {fmt(dados[0].clientes)} {dados[0].clientes === 1 ? "cadastro" : "cadastros"}.
             </span>
           </div>
           <div
-            className="mt-3 h-[235px] w-full"
+            className="mt-4 w-full"
+            style={{ height: Math.max(180, dados.length * 56 + 20) }}
             role="img"
             aria-label="Gráfico de barras com a produção mensal dos cinco primeiros membros da equipe"
           >
@@ -86,30 +88,41 @@ export function RankingEquipe({ usuarios, periodoLabel = "Período selecionado",
                 margin={{ top: 4, right: 30, left: 4, bottom: 0 }}
                 barCategoryGap="24%"
               >
-                <CartesianGrid stroke="#edf1f6" horizontal={false} />
+                <defs>
+                  <linearGradient id="rankLider" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={NEON.blueDeep} />
+                    <stop offset="100%" stopColor={NEON.teal} />
+                  </linearGradient>
+                  <linearGradient id="rankDemais" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="rgba(96,165,250,0.35)" />
+                    <stop offset="100%" stopColor="rgba(96,165,250,0.7)" />
+                  </linearGradient>
+                  <NeonGlow id="rankGlow" blur={3} />
+                </defs>
+                <CartesianGrid stroke={NEON.grid} horizontal={false} />
                 <XAxis type="number" hide domain={[0, "dataMax + 1"]} allowDecimals={false} />
                 <YAxis
                   type="category"
                   dataKey="nomeCurto"
                   axisLine={false}
                   tickLine={false}
-                  width={86}
-                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  width={110}
+                  tick={{ fill: NEON.text, fontSize: 13 }}
                 />
-                  <Tooltip cursor={{ fill: "#f7f9fc" }} content={<TooltipEquipe periodoLabel={periodoLabel} />} />
-                <Bar dataKey="clientes" radius={[0, 6, 6, 0]} isAnimationActive={false}>
+                  <Tooltip cursor={{ fill: "rgba(96,165,250,0.08)" }} content={<TooltipEquipe periodoLabel={periodoLabel} />} />
+                <Bar dataKey="clientes" radius={[0, 8, 8, 0]} maxBarSize={34} isAnimationActive={false} filter="url(#rankGlow)">
                   {dados.map((item, index) => (
                     <Cell
                       key={`${item.nomeCompleto}-${item.posicao}`}
-                      fill={index === 0 ? "#005ca9" : "#9fc3df"}
+                      fill={index === 0 ? "url(#rankLider)" : "url(#rankDemais)"}
                     />
                   ))}
                   <LabelList
                     dataKey="clientes"
                     position="right"
-                    fill="#17243a"
-                    fontSize={11}
-                    fontWeight={600}
+                    fill="#ffffff"
+                    fontSize={13}
+                    fontWeight={700}
                     formatter={fmt}
                   />
                 </Bar>

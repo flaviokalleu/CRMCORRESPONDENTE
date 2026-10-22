@@ -19,7 +19,7 @@ import {
   TrendingUp,
   User,
   Wrench,
-} from "lucide-react";
+} from "@/components/icons";
 
 // Mapa nome (string, vindo de contract-templates.js) → componente lucide.
 // Fica separado do template (que não deve importar React).

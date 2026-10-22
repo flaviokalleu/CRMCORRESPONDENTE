@@ -1,4 +1,4 @@
-import { FileSearch, Gift, Wallet } from "lucide-react";
+import { FileSearch, Gift, Wallet } from "@/components/icons";
 
 // "Foi liberado R$ 200 mil para mim" — o que isso quer dizer de verdade.
 //

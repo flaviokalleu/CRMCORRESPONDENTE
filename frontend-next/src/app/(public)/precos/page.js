@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, X } from "lucide-react";
+import { Check, X } from "@/components/icons";
 
 // Página de preços/planos SaaS ("/precos"). Server Component estático —
 // a SPA antiga (frontend/src/pages/PrecosPage.jsx) usa dados de planos

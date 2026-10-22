@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2, CircleAlert } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, CircleAlert } from "@/components/icons";
 import { Painel, PainelTitulo } from "./Painel";
 
 // ZONA 2 — Alertas operacionais: onde estão os problemas.

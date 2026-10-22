@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { FileBarChart2 } from "lucide-react";
+import { FileBarChart2 } from "@/components/icons";
 
 export const metadata = { title: "Laudos" };
 
@@ -29,7 +29,7 @@ export default async function LaudosPage() {
       ) : laudos.length === 0 ? (
         <EmptyState icon={FileBarChart2} title="Nenhum laudo encontrado" />
       ) : (
-        <Table className="min-w-[900px]">
+        <Table title="Lista de laudos" className="min-w-[900px]">
           <Thead>
             <Th>Parceiro</Th>
             <Th>Tipo</Th>

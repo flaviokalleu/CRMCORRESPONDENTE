@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, ShieldAlert, UserRound } from "@/components/icons";
 import { statusInfo } from "@/lib/cliente-status";
 import { Painel, PainelTitulo } from "./Painel";
 
@@ -102,11 +102,11 @@ export function CentralAtencao({ clientes, alertas, sla = 7, href, className = "
           </div>
         </div>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_250px]">
+        <div className="grid gap-5 min-[1600px]:grid-cols-[minmax(0,1fr)_280px]">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left">
               <thead>
-                <tr className="border-b border-wb-border text-[0.62rem] font-bold uppercase tracking-[0.1em] text-wb-muted">
+                <tr className="border-b border-wb-border text-xs font-semibold text-wb-muted">
                   <th className="pb-2.5 pr-3">Cliente e etapa</th>
                   <th className="px-3 pb-2.5">Responsável</th>
                   <th className="px-3 pb-2.5">Última ação</th>
@@ -122,20 +122,20 @@ export function CentralAtencao({ clientes, alertas, sla = 7, href, className = "
                       <td className="py-3 pr-3">
                         <Link href={`/editar-cliente/${item.id}`} className="block min-w-0">
                           <p className="truncate text-sm font-semibold text-wb-text group-hover:text-wb-brand">{item.nome}</p>
-                          <span className="mt-1 inline-flex items-center gap-1.5 text-[0.68rem] text-wb-muted">
+                          <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-wb-muted">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: status.solid }} />
                             {status.label}
                           </span>
                         </Link>
                       </td>
                       <td className="px-3 py-3 text-xs text-wb-muted">
-                        <span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" />{item.responsavel}</span>
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><UserRound className="h-3.5 w-3.5" />{item.responsavel}</span>
                       </td>
-                      <td className="font-tabular px-3 py-3 text-xs text-wb-muted">
+                      <td className="font-tabular whitespace-nowrap px-3 py-3 text-xs text-wb-muted">
                         {shortDate(item.updatedAt)} · {item.dias === 0 ? "hoje" : `há ${item.dias}d`}
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`inline-flex rounded-md border px-2 py-1 text-[0.66rem] font-bold ${SLA_STYLE[item.nivel]}`}>
+                        <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold ${SLA_STYLE[item.nivel]}`}>
                           {item.nivel === "vencido" ? `${item.dias - sla}d vencido` : item.nivel === "risco" ? "Em risco" : "No prazo"}
                         </span>
                       </td>
@@ -154,7 +154,7 @@ export function CentralAtencao({ clientes, alertas, sla = 7, href, className = "
           <aside className="rounded-xl border border-wb-border bg-wb-surface-2 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-wb-muted">Conformidade SLA</p>
+                <p className="text-xs font-semibold text-wb-muted">Conformidade SLA</p>
                 <p className="font-tabular mt-1 text-3xl font-semibold tracking-[-0.04em] text-wb-text">
                   {conformidade.toFixed(0)}%
                 </p>

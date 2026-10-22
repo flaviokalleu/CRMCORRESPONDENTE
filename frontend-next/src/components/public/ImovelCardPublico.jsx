@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bath, BedDouble, ImageOff, MapPin } from "lucide-react";
+import { Bath, BedDouble, ImageOff, MapPin } from "@/components/icons";
 import { imovelImageUrl } from "@/lib/imovel-meta";
 import { PREMISSA_CARD, parcelaDoImovel } from "@/lib/mcmv";
 

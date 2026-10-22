@@ -1,4 +1,4 @@
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList } from '@/components/icons';
 
 export function FormIntro({ title, description }) {
   return (

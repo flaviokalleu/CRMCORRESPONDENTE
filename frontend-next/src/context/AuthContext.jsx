@@ -43,7 +43,9 @@ export function AuthProvider({ children, initialUser = null }) {
     pathname === "/" ||
     pathname.startsWith("/imoveis") ||
     pathname.startsWith("/busca") ||
-    pathname.startsWith("/precos");
+    pathname.startsWith("/precos") ||
+    pathname.startsWith("/esqueci-senha") ||
+    pathname.startsWith("/redefinir-senha");
 
   useEffect(() => {
     // Se o Server Component pai já injetou o usuário (initialUser), não
@@ -56,12 +58,12 @@ export function AuthProvider({ children, initialUser = null }) {
     refresh();
   }, [initialUser, rotaPublica, refresh]);
 
-  const login = useCallback(async ({ email, password }) => {
+  const login = useCallback(async ({ email, password, remember = false }) => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

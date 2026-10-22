@@ -1,6 +1,6 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, EmptyState, formatBRL } from "@/components/ui/page";
-import { Wallet, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, AlertCircle } from "@/components/icons";
 
 export const metadata = { title: "Dashboard Financeiro" };
 

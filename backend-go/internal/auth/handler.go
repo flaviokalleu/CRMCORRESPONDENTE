@@ -15,6 +15,11 @@ import (
 type Handler struct {
 	repo *Repository
 	svc  *Service
+
+	// Recuperação de senha (ver reset.go). Sem mailer, o pedido é gravado
+	// mas nenhum e-mail sai.
+	mailer      Mailer
+	frontendURL string
 }
 
 func NewHandler(repo *Repository, svc *Service) *Handler {

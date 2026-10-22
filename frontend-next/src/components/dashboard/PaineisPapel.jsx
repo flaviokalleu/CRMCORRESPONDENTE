@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/components/icons";
 import { Painel, PainelTitulo } from "./Painel";
 
 // Blocos-variantes por PAPEL — ocupam os mesmos slots da grade, mas respondem
@@ -17,7 +17,7 @@ function LinhaStat({ rotulo, valor, hint }) {
       <span className="text-sm text-wb-muted">{rotulo}</span>
       <span className="text-right">
         <span className="font-tabular text-sm font-semibold text-wb-text">{valor}</span>
-        {hint && <span className="ml-2 text-[0.68rem] text-wb-muted">{hint}</span>}
+        {hint && <span className="ml-2 text-xs text-wb-muted">{hint}</span>}
       </span>
     </div>
   );

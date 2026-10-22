@@ -1,7 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { DespesaForm } from "@/components/DespesaForm";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { TrendingDown } from "lucide-react";
+import { TrendingDown } from "@/components/icons";
 
 export const metadata = { title: "Despesas" };
 
@@ -17,7 +17,7 @@ export default async function DespesasPage() {
       {despesas.length === 0 ? (
         <EmptyState icon={TrendingDown} title="Nenhuma despesa cadastrada" hint="Registre a primeira saída acima." />
       ) : (
-        <Table>
+        <Table title="Lista de despesas">
           <Thead>
             <Th>#</Th>
             <Th>Tipo</Th>

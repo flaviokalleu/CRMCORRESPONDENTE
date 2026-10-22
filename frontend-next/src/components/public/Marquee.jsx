@@ -1,4 +1,4 @@
-import { Star } from "lucide-react";
+import { Star } from "@/components/icons";
 
 // Faixa de marquee contínua com selos de confiança / diferenciais. Estática
 // no servidor (só CSS anima) — mantém SEO e custa zero JS.

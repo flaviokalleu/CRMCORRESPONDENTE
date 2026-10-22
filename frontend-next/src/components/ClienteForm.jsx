@@ -8,7 +8,7 @@ import {
   Landmark, Users, FileText, Upload, MapPin, Save, Loader2, CheckCircle,
   AlertCircle, UserCheck, FolderOpen, Check, ChevronRight, X, Fingerprint,
   Coins, Contact, Radio, Home,
-} from "lucide-react";
+} from "@/components/icons";
 
 // ── Formulário completo de cliente (criação + edição) ──────────────────────────
 // Envia multipart/form-data (o backend Go lê via c.GetPostForm — JSON chega

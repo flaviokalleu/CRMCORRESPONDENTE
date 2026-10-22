@@ -12,10 +12,12 @@ export async function POST(request) {
     return NextResponse.json({ error: "Corpo da requisição inválido" }, { status: 400 });
   }
 
+  // `remember` é só do BFF (validade dos cookies); o Go recebe e-mail e senha.
+  const { remember, ...credentials } = body || {};
   const goRes = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(credentials),
   });
 
   const data = await goRes.json().catch(() => ({}));
@@ -23,7 +25,7 @@ export async function POST(request) {
     return NextResponse.json({ error: data?.error || "Erro ao autenticar" }, { status: goRes.status });
   }
 
-  await setSession({ token: data.token, refreshToken: data.refreshToken });
+  await setSession({ token: data.token, refreshToken: data.refreshToken, remember: remember === true });
 
   // Devolve só o usuário — nunca o token — para o Client Component atualizar a UI.
   return NextResponse.json({ user: data.user });

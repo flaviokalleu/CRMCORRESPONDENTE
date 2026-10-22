@@ -1,7 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { AluguelRowActions } from "@/components/aluguel/AluguelRowActions";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@/components/icons";
 
 export const metadata = { title: "Aluguéis" };
 
@@ -22,7 +22,7 @@ export default async function AlugueisPage() {
       {alugueis.length === 0 ? (
         <EmptyState icon={KeyRound} title="Nenhum imóvel para aluguel" hint="Cadastre o primeiro imóvel de locação." />
       ) : (
-        <Table className="min-w-[880px]">
+        <Table title="Lista de imóveis em locação" className="min-w-[880px]">
           <Thead>
             <Th>Imóvel</Th>
             <Th>Descrição</Th>

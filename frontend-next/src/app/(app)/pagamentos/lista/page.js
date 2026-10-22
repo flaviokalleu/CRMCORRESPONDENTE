@@ -1,7 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { PagamentoRowActions } from "@/components/PagamentoRowActions";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { Receipt } from "lucide-react";
+import { Receipt } from "@/components/icons";
 
 export const metadata = { title: "Pagamentos" };
 
@@ -32,7 +32,7 @@ export default async function ListaPagamentosPage() {
       ) : pagamentos.length === 0 ? (
         <EmptyState icon={Receipt} title="Nenhum pagamento cadastrado" hint="Crie a primeira cobrança avulsa." />
       ) : (
-        <Table className="min-w-[820px]">
+        <Table title="Lista de pagamentos" className="min-w-[820px]">
           <Thead>
             <Th>#</Th>
             <Th>Título</Th>

@@ -7,7 +7,7 @@
 // validada no projeto para o cartão branco — ver comentário lá) e dos tokens
 // `cx-*`/`wb-*` do Tailwind; nada de cor solta aqui (skill `dataviz`).
 import { useId, useState } from "react";
-import { Inbox } from "lucide-react";
+import { Inbox } from "@/components/icons";
 import { CATEGORICAL, CHART_CHROME } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 
