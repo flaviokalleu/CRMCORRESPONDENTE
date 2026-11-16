@@ -1,0 +1,294 @@
+- generic [active] [ref=f6e1]:
+  - button "Open Next.js Dev Tools" [ref=f6e131] [cursor=pointer]
+  - alert [ref=f6e140]: Dashboard gerencial | CRM IMOB
+  - generic [ref=f6e142]:
+    - link "Pular para o conteúdo" [ref=f6e143] [cursor=pointer]:
+      - /url: "#conteudo"
+    - complementary [ref=f6e144]:
+      - generic [ref=f6e145]:
+        - link "Webba CRM — Dashboard" [ref=f6e147] [cursor=pointer]:
+          - /url: /dashboard
+          - generic [ref=f6e150]: Webba CRM
+        - navigation "Menu principal" [ref=f6e151]:
+          - generic [ref=f6e152]:
+            - generic [ref=f6e153]: Início
+            - link "Dashboard" [ref=f6e154] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Relatórios" [ref=f6e158] [cursor=pointer]:
+              - /url: /relatorio
+          - generic [ref=f6e162]:
+            - generic [ref=f6e163]: Dia a dia
+            - link "Tarefas" [ref=f6e164] [cursor=pointer]:
+              - /url: /lembretes
+            - link "Clientes" [ref=f6e168] [cursor=pointer]:
+              - /url: /clientes/lista
+            - link "Imóveis" [ref=f6e172] [cursor=pointer]:
+              - /url: /imoveis/lista
+            - link "Proprietários" [ref=f6e176] [cursor=pointer]:
+              - /url: /proprietarios/lista
+            - link "Propostas" [ref=f6e180] [cursor=pointer]:
+              - /url: /propostas
+            - link "Contratos" [ref=f6e184] [cursor=pointer]:
+              - /url: /contratos/lista
+            - link "Laudos" [ref=f6e188] [cursor=pointer]:
+              - /url: /laudos
+          - generic [ref=f6e192]:
+            - generic [ref=f6e193]: Dinheiro
+            - link "Painel financeiro" [ref=f6e194] [cursor=pointer]:
+              - /url: /financeiro/dashboard
+            - link "Receitas" [ref=f6e198] [cursor=pointer]:
+              - /url: /financeiro/receitas
+            - link "Despesas" [ref=f6e202] [cursor=pointer]:
+              - /url: /financeiro/despesas
+            - link "Pagamentos" [ref=f6e206] [cursor=pointer]:
+              - /url: /pagamentos/lista
+          - generic [ref=f6e210]:
+            - generic [ref=f6e211]: Equipe
+            - link "Corretores" [ref=f6e212] [cursor=pointer]:
+              - /url: /corretores/lista
+            - link "Correspondentes" [ref=f6e216] [cursor=pointer]:
+              - /url: /correspondentes/lista
+          - generic [ref=f6e220]:
+            - generic [ref=f6e221]: Ajustes
+            - link "Meu perfil" [ref=f6e222] [cursor=pointer]:
+              - /url: /configuracoes
+            - link "Minha empresa" [ref=f6e226] [cursor=pointer]:
+              - /url: /configuracoes-empresa
+            - link "WhatsApp" [ref=f6e230] [cursor=pointer]:
+              - /url: /whatsapp-qr
+            - link "Minha assinatura" [ref=f6e234] [cursor=pointer]:
+              - /url: /minha-assinatura
+            - link "Acessos" [ref=f6e238] [cursor=pointer]:
+              - /url: /acessos
+    - generic [ref=f6e242]:
+      - banner [ref=f6e244]:
+        - navigation "Trilha de navegação" [ref=f6e246]:
+          - list [ref=f6e247]:
+            - listitem [ref=f6e248]:
+              - generic [ref=f6e249]: Início
+              - generic [ref=f6e252]: Dashboard
+        - generic [ref=f6e253]:
+          - link "Buscar clientes" [ref=f6e254] [cursor=pointer]:
+            - /url: /clientes/lista
+          - 'link "Tarefas: Nenhuma tarefa para hoje" [ref=f6e257] [cursor=pointer]':
+            - /url: /lembretes
+          - 'button "Sua conta: perfil e sair" [ref=f6e260] [cursor=pointer]':
+            - generic [aria-hidden] [ref=f6e261]: BL
+            - generic [ref=f6e262]:
+              - generic [ref=f6e263]: Bruno Lima
+              - generic [ref=f6e264]: Administrador
+      - main [ref=f6e267]:
+        - generic [ref=f6e268]:
+          - status [ref=f6e269]:
+            - generic [ref=f6e270]: Seu teste grátis acaba em 7 dias. Pague a primeira mensalidade até 23/11/2026 para continuar sem interrupção.
+            - link "Assinar agora" [ref=f6e271] [cursor=pointer]:
+              - /url: /minha-assinatura
+          - generic [ref=f6e273]:
+            - generic [ref=f6e274]:
+              - generic [ref=f6e275]:
+                - heading "Dashboard" [level=1] [ref=f6e276]
+                - paragraph [ref=f6e277]: Boa tarde, Bruno! segunda-feira, 16 de novembro · atualizado às 13:19.
+              - generic [ref=f6e278]:
+                - link "Ver relatório" [ref=f6e279] [cursor=pointer]:
+                  - /url: /relatorio
+                - link "Novo cliente" [ref=f6e282] [cursor=pointer]:
+                  - /url: /clientes/adicionar
+            - generic [ref=f6e285]:
+              - link "Carteira no escopo 0 Toda a equipe" [ref=f6e286] [cursor=pointer]:
+                - /url: /clientes/lista?inicio=2026-10-18&fim=2026-11-16
+                - generic [ref=f6e287]:
+                  - paragraph [ref=f6e288]: Carteira no escopo
+                  - strong [ref=f6e290]: "0"
+                  - generic [ref=f6e291]: Toda a equipe
+              - link "Leads no mês 0 ↑ 0% Novos clientes cadastrados" [ref=f6e295] [cursor=pointer]:
+                - /url: /clientes/lista
+                - generic [ref=f6e296]:
+                  - paragraph [ref=f6e297]: Leads no mês
+                  - generic [ref=f6e298]:
+                    - strong [ref=f6e299]: "0"
+                    - generic [ref=f6e300]: ↑ 0%
+                  - generic [ref=f6e301]: Novos clientes cadastrados
+              - link "Em atendimento 0 Clientes pendentes na carteira" [ref=f6e305] [cursor=pointer]:
+                - /url: /clientes/lista?view=kanban
+                - generic [ref=f6e306]:
+                  - paragraph [ref=f6e307]: Em atendimento
+                  - strong [ref=f6e309]: "0"
+                  - generic [ref=f6e310]: Clientes pendentes na carteira
+              - link "Propostas cadastradas 0 Propostas da sua operação" [ref=f6e314] [cursor=pointer]:
+                - /url: /propostas
+                - generic [ref=f6e315]:
+                  - paragraph [ref=f6e316]: Propostas cadastradas
+                  - strong [ref=f6e318]: "0"
+                  - generic [ref=f6e319]: Propostas da sua operação
+            - region "Metas e nível de serviço" [ref=f6e323]:
+              - generic [ref=f6e324]:
+                - article [ref=f6e325]:
+                  - generic [ref=f6e327]:
+                    - paragraph [ref=f6e328]: Aprovação das decisões
+                    - strong [ref=f6e330]: —
+                    - generic "Sem decisões concluídas no período" [ref=f6e331]
+                - article [ref=f6e335]:
+                  - generic [ref=f6e337]:
+                    - paragraph [ref=f6e338]: Resolução do período
+                    - strong [ref=f6e340]: —
+                    - generic "0 entradas analisadas" [ref=f6e341]
+                - article [ref=f6e345]:
+                  - generic [ref=f6e347]:
+                    - paragraph [ref=f6e348]: SLA de 7 dias
+                    - strong [ref=f6e350]: 100,0%
+                    - generic "0 vencidos · 0 em risco" [ref=f6e351]
+                - article [ref=f6e355]:
+                  - generic [ref=f6e357]:
+                    - paragraph [ref=f6e358]: Situações ativas
+                    - strong [ref=f6e360]: "0"
+                    - generic "0 clientes requerem acompanhamento" [ref=f6e361]
+            - status [ref=f6e365]:
+              - generic [ref=f6e368]: Fila operacional em dia — nenhuma análise aguardando ação.
+            - region "Desempenho" [ref=f6e369]:
+              - generic [ref=f6e370]:
+                - heading "Desempenho" [level=2] [ref=f6e371]
+                - paragraph [ref=f6e372]: Ritmo, conversão e desfecho · últimos 30 dias com comparação equivalente.
+              - generic [ref=f6e373]:
+                - generic [ref=f6e374]:
+                  - generic [ref=f6e375]:
+                    - generic [ref=f6e376]:
+                      - paragraph [ref=f6e377]: Série histórica
+                      - heading "Evolução da operação" [level=2] [ref=f6e378]
+                      - paragraph [ref=f6e379]: Últimos 12 meses · novos clientes cadastrados
+                      - generic [ref=f6e380]:
+                        - generic [ref=f6e381]: "0"
+                        - generic [ref=f6e382]: no período móvel
+                    - link "Relatório" [ref=f6e383] [cursor=pointer]:
+                      - /url: /relatorio
+                  - generic [ref=f6e386]: Cadastros mensais
+                  - paragraph [ref=f6e390]: A série será exibida assim que houver cadastros nos últimos 12 meses.
+                - generic [ref=f6e391]:
+                  - generic [ref=f6e392]:
+                    - generic [ref=f6e393]:
+                      - heading "Resultado da operação" [level=2] [ref=f6e394]
+                      - paragraph [ref=f6e395]: Distribuição das entradas no últimos 30 dias.
+                    - link "Abrir funil" [ref=f6e396] [cursor=pointer]:
+                      - /url: /clientes/lista?view=kanban
+                  - paragraph [ref=f6e399]: Nenhum cliente na carteira ainda.
+              - generic [ref=f6e400]:
+                - generic [ref=f6e402]:
+                  - heading "Período atual x período anterior" [level=2] [ref=f6e403]
+                  - paragraph [ref=f6e404]: Últimos 30 dias comparado a uma janela anterior de igual duração.
+                - generic [ref=f6e405]:
+                  - generic [ref=f6e406]: "0"
+                  - generic [ref=f6e407]: novos clientes no período
+                - paragraph [ref=f6e409]: Sem cadastros nas duas janelas comparadas.
+            - region "Prioridades e responsáveis" [ref=f6e410]:
+              - generic [ref=f6e411]:
+                - heading "Prioridades e responsáveis" [level=2] [ref=f6e412]
+                - paragraph [ref=f6e413]: Uma fila única, ordenada pelo risco de prazo e pronta para ação.
+              - generic [ref=f6e414]:
+                - generic [ref=f6e415]:
+                  - generic [ref=f6e416]:
+                    - heading "Central de atenção" [level=2] [ref=f6e417]
+                    - paragraph [ref=f6e418]: Fila e alertas reunidos por cliente, com responsável, prazo e próxima ação.
+                  - link "Ver carteira" [ref=f6e419] [cursor=pointer]:
+                    - /url: /clientes/lista?status=atencao&inicio=2026-10-18&fim=2026-11-16
+                - generic [ref=f6e425]:
+                  - paragraph [ref=f6e426]: Operação em dia
+                  - paragraph [ref=f6e427]: Nenhuma situação ativa exige acompanhamento agora.
+            - region "Operação do dia" [ref=f6e428]:
+              - generic [ref=f6e429]:
+                - heading "Operação do dia" [level=2] [ref=f6e430]
+                - paragraph [ref=f6e431]: Quem entrou, o que vence e o que está disponível para oferecer.
+              - generic [ref=f6e432]:
+                - generic [ref=f6e433]:
+                  - generic [ref=f6e434]:
+                    - heading "Leads recentes" [level=2] [ref=f6e435]
+                    - link "Ver todos" [ref=f6e436] [cursor=pointer]:
+                      - /url: /clientes/lista
+                  - paragraph [ref=f6e439]: Nenhum cliente cadastrado.
+                - generic [ref=f6e440]:
+                  - generic [ref=f6e441]:
+                    - heading "Tarefas da equipe" [level=2] [ref=f6e442]
+                    - link "Ver todos" [ref=f6e443] [cursor=pointer]:
+                      - /url: /lembretes
+                  - paragraph [ref=f6e446]: Tudo em dia! Nenhuma tarefa pendente.
+                - generic [ref=f6e447]:
+                  - generic [ref=f6e448]:
+                    - heading "Imóveis em destaque" [level=2] [ref=f6e449]
+                    - link "Ver todos" [ref=f6e450] [cursor=pointer]:
+                      - /url: /imoveis/lista
+                  - paragraph [ref=f6e453]: Nenhum imóvel disponível no momento.
+            - region "Caixa, portfólio e equipe" [ref=f6e454]:
+              - generic [ref=f6e455]:
+                - heading "Caixa, portfólio e equipe" [level=2] [ref=f6e456]
+                - paragraph [ref=f6e457]: Visão integrada do que sustenta o próximo resultado.
+              - generic [ref=f6e458]:
+                - generic [ref=f6e459]:
+                  - generic [ref=f6e460]:
+                    - generic [ref=f6e461]:
+                      - heading "Fluxo e previsão de caixa" [level=2] [ref=f6e462]
+                      - paragraph [ref=f6e463]: Realizado no últimos 30 dias e tendência móvel de seis meses.
+                    - link "Financeiro" [ref=f6e464] [cursor=pointer]:
+                      - /url: /financeiro/dashboard
+                  - generic [ref=f6e467]:
+                    - generic [ref=f6e468]:
+                      - paragraph [ref=f6e469]: Saldo realizado
+                      - paragraph [ref=f6e470]: R$ 0
+                    - generic [ref=f6e471]:
+                      - paragraph [ref=f6e472]: Receitas
+                      - paragraph [ref=f6e473]: R$ 0
+                    - generic [ref=f6e474]:
+                      - paragraph [ref=f6e475]: Despesas
+                      - paragraph [ref=f6e476]: R$ 0
+                  - paragraph [ref=f6e478]: Cadastre receitas e despesas para formar a curva mensal.
+                  - generic [ref=f6e479]:
+                    - generic [ref=f6e480]:
+                      - paragraph [ref=f6e481]: Projeção em 30 dias
+                      - paragraph [ref=f6e484]: R$ 0
+                    - paragraph [ref=f6e485]: +R$ 0−R$ 0
+                - generic [ref=f6e486]:
+                  - generic [ref=f6e487]:
+                    - generic [ref=f6e488]:
+                      - heading "Portfólio" [level=2] [ref=f6e489]
+                      - paragraph [ref=f6e490]: Disponibilidade atual para venda e locação.
+                    - link "Imóveis" [ref=f6e491] [cursor=pointer]:
+                      - /url: /imoveis/lista
+                  - generic [ref=f6e494]:
+                    - generic [ref=f6e495]:
+                      - generic [ref=f6e496]:
+                        - generic [ref=f6e497]: "0"
+                        - generic [ref=f6e498]: imóveis disponíveis
+                      - paragraph [ref=f6e499]: de 0 imóveis cadastrados
+                    - img "0% dos imóveis estão disponíveis" [ref=f6e500]
+                  - generic [ref=f6e502]:
+                    - link "Imóveis cadastrados 0 0% disponível" [ref=f6e503] [cursor=pointer]:
+                      - /url: /imoveis/lista
+                      - generic [ref=f6e507]:
+                        - paragraph [ref=f6e508]: Imóveis cadastrados
+                        - paragraph [ref=f6e509]: "0"
+                      - generic [ref=f6e510]: 0% disponível
+                    - link [ref=f6e513] [cursor=pointer]:
+                      - /url: /alugueis
+                      - generic [ref=f6e517]:
+                        - paragraph [ref=f6e518]: Contratos de aluguel
+                        - paragraph [ref=f6e519]: "0"
+                    - generic [ref=f6e522]:
+                      - generic [ref=f6e526]:
+                        - paragraph [ref=f6e527]: Renda média da carteira
+                        - paragraph [ref=f6e528]: R$ 0
+                      - generic [ref=f6e529]: 0 com renda
+                - generic [ref=f6e530]:
+                  - generic [ref=f6e531]:
+                    - generic [ref=f6e532]:
+                      - heading "Produção da equipe" [level=2] [ref=f6e533]
+                      - paragraph [ref=f6e534]: Novos clientes por responsável · últimos 30 dias.
+                    - link "Equipe" [ref=f6e535] [cursor=pointer]:
+                      - /url: /corretores/lista
+                  - paragraph [ref=f6e539]: Nenhum cadastro de equipe no período selecionado.
+            - generic [ref=f6e540]:
+              - generic "Webba CRM Imobiliário" [ref=f6e541]: WEBBA
+              - heading "O financiamento que aproxima você do seu novo lar." [level=2] [ref=f6e543]: O financiamento que aproximavocê do seu novo lar.
+              - generic [ref=f6e544]: Taxasacessíveis
+              - generic [ref=f6e547]: Maisoportunidades
+              - generic [ref=f6e550]: Segurançae confiança
+              - link "Faça simulação agora" [ref=f6e553] [cursor=pointer]:
+                - /url: https://simuladorhabitacao.caixa.gov.br/simulacao
+                - text: Faça simulaçãoagora
+  - region "Notifications alt+T"

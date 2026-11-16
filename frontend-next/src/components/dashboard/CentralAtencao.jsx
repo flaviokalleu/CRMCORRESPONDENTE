@@ -110,7 +110,7 @@ export function CentralAtencao({ clientes, alertas, sla = 7, href, className = "
                   <th className="pb-2.5 pr-3">Cliente e etapa</th>
                   <th className="px-3 pb-2.5">Responsável</th>
                   <th className="px-3 pb-2.5">Última ação</th>
-                  <th className="px-3 pb-2.5">SLA</th>
+                  <th className="px-3 pb-2.5">Prazo</th>
                   <th className="pl-3 pb-2.5">Próxima ação</th>
                 </tr>
               </thead>
@@ -154,7 +154,7 @@ export function CentralAtencao({ clientes, alertas, sla = 7, href, className = "
           <aside className="rounded-xl border border-wb-border bg-wb-surface-2 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-wb-muted">Conformidade SLA</p>
+                <p className="text-xs font-semibold text-wb-muted">Dentro do prazo</p>
                 <p className="font-tabular mt-1 text-3xl font-semibold tracking-[-0.04em] text-wb-text">
                   {conformidade.toFixed(0)}%
                 </p>

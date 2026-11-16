@@ -1,63 +1,73 @@
+import Link from "next/link";
 import { apiGet } from "@/lib/api-server";
-import { PageHeader, Table, Thead, Th, Row, Td } from "@/components/ui/page";
+import { PageHeader, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
+import { Activity, Plus } from "@/components/icons";
 
 export const metadata = { title: "Acessos" };
 
-function Stat({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-cx-border bg-cx-surface p-4">
-      <p className="text-2xl font-semibold tabular-nums text-cx-text">{value}</p>
-      <p className="mt-1 text-xs text-cx-muted">{label}</p>
-    </div>
-  );
+const APARELHO = { mobile: "Celular", tablet: "Tablet", desktop: "Computador" };
+
+function quem(a) {
+  if (a.user) return `${a.user.first_name || ""} ${a.user.last_name || ""}`.trim() || a.user.email || "Usuário";
+  return a.user_id ? `Usuário #${a.user_id}` : "Visitante (sem login)";
+}
+
+function quando(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export default async function AcessosPage() {
-  const data = await apiGet("/acessos");
+  const [data, stats] = await Promise.all([apiGet("/acessos"), apiGet("/acessos/stats")]);
   const acessos = data?.acessos || (Array.isArray(data) ? data : []);
-  const stats = await apiGet("/acessos/stats");
+  const total24h = stats?.resumo?.totalAcessos ?? 0;
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title="Monitor de Acessos" subtitle="Acompanhe os acessos ao sistema." />
+      <PageHeader
+        title="Acessos"
+        subtitle={
+          total24h > 0
+            ? `Quem entrou no sistema e de onde. ${total24h.toLocaleString("pt-BR")} ${total24h === 1 ? "acesso" : "acessos"} nas últimas 24 horas.`
+            : "Quem entrou no sistema, quando e de qual aparelho."
+        }
+      />
 
-      {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Total de acessos" value={stats.totalAcessos ?? 0} />
-          <Stat label="Corretores" value={stats.acessosPorRole?.corretor ?? 0} />
-          <Stat label="Correspondentes" value={stats.acessosPorRole?.correspondente ?? 0} />
-          <Stat label="Visitantes" value={stats.acessosPorRole?.anonimo ?? 0} />
-        </div>
-      )}
-
-      <Table title="Registros de acesso" className="min-w-[720px]">
-        <Thead>
-          <Th>Usuário</Th>
-          <Th>IP</Th>
-          <Th>Dispositivo</Th>
-          <Th>Página</Th>
-          <Th>Data/Hora</Th>
-        </Thead>
-        <tbody>
-          {acessos.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-sm text-cx-muted">Nenhum acesso encontrado.</td>
-            </tr>
-          ) : (
-            acessos.map((a) => (
+      {!data ? (
+        <EmptyState icon={Activity} title="Não foi possível carregar os acessos" hint="Recarregue a página em alguns instantes." />
+      ) : acessos.length === 0 ? (
+        <EmptyState
+          icon={Activity}
+          title="Ainda não há acessos registrados"
+          hint="Quando você e sua equipe usarem o sistema, cada entrada aparece aqui: quem foi, quando e se foi pelo celular ou computador. Comece cadastrando um corretor da sua equipe."
+        >
+          <Link href="/corretores/adicionar" className="cx-btn cx-btn-primary">
+            <Plus className="h-4 w-4" aria-hidden="true" /> Cadastrar corretor
+          </Link>
+        </EmptyState>
+      ) : (
+        <Table title="Últimos acessos" className="min-w-[560px]">
+          <Thead>
+            <Th>Quem</Th>
+            <Th>Quando</Th>
+            <Th>Celular ou computador</Th>
+          </Thead>
+          <tbody>
+            {acessos.map((a) => (
               <Row key={a.id}>
-                <Td className="text-cx-text">
-                  {a.user ? `${a.user.first_name || ""} ${a.user.last_name || ""}`.trim() : a.user_id ? `Usuário #${a.user_id}` : "Anônimo"}
+                <Td className="font-medium text-cx-text">{quem(a)}</Td>
+                <Td muted className="tabular-nums">{quando(a.timestamp)}</Td>
+                <Td muted>
+                  <span className="block">{APARELHO[a.device_type] || "Não identificado"}</span>
+                  {a.ip && <span className="form-dica block tabular-nums">IP {a.ip}</span>}
                 </Td>
-                <Td muted className="tabular-nums">{a.ip}</Td>
-                <Td muted>{a.deviceType || "Desconhecido"}</Td>
-                <Td muted>{a.page || "N/D"}</Td>
-                <Td muted className="tabular-nums">{a.timestamp ? new Date(a.timestamp).toLocaleString("pt-BR") : ""}</Td>
               </Row>
-            ))
-          )}
-        </tbody>
-      </Table>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </div>
   );
 }

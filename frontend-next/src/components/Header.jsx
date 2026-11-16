@@ -3,9 +3,11 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, Settings, LogOut, ChevronRight, Bell, Search } from "@/components/icons";
-import { userPhotoUrl, iniciaisDe } from "@/lib/user-avatar";
+import { Menu, LogOut, ChevronRight, ChevronDown, Bell, Search, UserRound, Building } from "@/components/icons";
+import { userPhotoUrl } from "@/lib/user-avatar";
 import { useAuth } from "@/context/AuthContext";
+import { usePendencias } from "@/lib/use-pendencias";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator,
@@ -36,10 +38,10 @@ const SEGMENT_LABELS = {
   simulador: "Simulador",
   relatorio: "Relatórios",
   acessos: "Acessos",
-  "whatsapp-qr": "QR Code WhatsApp",
+  "whatsapp-qr": "WhatsApp",
   "super-admin": "Super Admin",
   "configuracoes-empresa": "Minha empresa",
-  configuracoes: "Configurações",
+  configuracoes: "Meu perfil",
   "minha-assinatura": "Minha assinatura",
   adicionar: "Adicionar",
   criar: "Novo",
@@ -62,7 +64,10 @@ function buildCrumbs(pathname) {
     }
     const known = Object.prototype.hasOwnProperty.call(SEGMENT_LABELS, part);
     // IDs e UUIDs nunca aparecem: viram "Visualizar".
-    const label = known ? SEGMENT_LABELS[part] : "Visualizar";
+    // /propostas/contratos é a galeria de modelos, não a lista de contratos.
+    const label = part === "contratos" && parts[i - 1] === "propostas"
+      ? "Modelos de contrato"
+      : known ? SEGMENT_LABELS[part] : "Visualizar";
     if (part === "dashboard") return;
     crumbs.push({ label, href, linkable: known && !NO_PAGE.has(part) });
   });
@@ -108,6 +113,14 @@ export function Header({ isMobile, onToggleSidebarOpen }) {
 
   const fullName = `${user?.first_name || "Usuário"} ${user?.last_name || ""}`.trim();
   const photo = userPhotoUrl(user?.photo);
+  const isAdmin = hasRole("administrador");
+  const isStaff = isAdmin || hasRole("correspondente");
+
+  // O sino só acende com pendência de verdade: tarefas vencendo até hoje.
+  const { tarefas } = usePendencias(pathname, { isStaff, operacional: isStaff || hasRole("corretor") });
+  const avisoSino = tarefas > 0
+    ? `${tarefas} ${tarefas === 1 ? "tarefa para hoje" : "tarefas para hoje"}`
+    : "Nenhuma tarefa para hoje";
 
   return (
     <header className="itopbar">
@@ -121,24 +134,22 @@ export function Header({ isMobile, onToggleSidebarOpen }) {
       </div>
 
       <div className="itopbar-end">
-        <Link href="/clientes/lista" aria-label="Buscar" title="Buscar" className="itopbar-btn"><Search /></Link>
-        <Link href="/lembretes" aria-label="Notificações" title="Notificações" className="itopbar-btn">
-          <Bell />
-          <span aria-hidden="true" className="itopbar-dot" />
-        </Link>
-        <Link href="/configuracoes" aria-label="Configurações" title="Configurações" className="itopbar-btn"><Settings /></Link>
-        <button type="button" onClick={() => logout()} aria-label="Sair" title="Sair" className="itopbar-btn"><LogOut /></button>
+        <Link href="/clientes/lista" aria-label="Buscar clientes" title="Buscar clientes" className="itopbar-btn"><Search /></Link>
+        {isStaff && (
+          <Link href="/lembretes" aria-label={`Tarefas: ${avisoSino}`} title={avisoSino} className="itopbar-btn">
+            <Bell />
+            {tarefas > 0 && <span aria-hidden="true" className="itopbar-dot" />}
+          </Link>
+        )}
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="itopbar-profile outline-none">
-            {photo
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={photo} alt="" className="itopbar-avatar" />
-              : <span className="itopbar-avatar">{iniciaisDe(fullName)}</span>}
+          <DropdownMenuTrigger className="itopbar-profile outline-none" aria-label="Sua conta: perfil e sair" title="Sua conta">
+            <UserAvatar src={photo} name={fullName} />
             <span className="itopbar-profile-meta">
               <span className="itopbar-profile-name">{fullName}</span>
               <span className="itopbar-profile-role">{displayRole}</span>
             </span>
+            <ChevronDown aria-hidden="true" className="itopbar-sep" />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuGroup>
@@ -148,14 +159,18 @@ export function Header({ isMobile, onToggleSidebarOpen }) {
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/configuracoes">
-                <Settings className="h-4 w-4 text-ink-muted" />
-                Configurações
-              </Link>
+            <DropdownMenuItem render={<Link href="/configuracoes" />}>
+              <UserRound className="h-4 w-4 text-ink-muted" />
+              Meu perfil
             </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem render={<Link href="/configuracoes-empresa" />}>
+                <Building className="h-4 w-4 text-ink-muted" />
+                Minha empresa
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()} className="text-red-600 focus:bg-red-100 focus:text-red-600">
+            <DropdownMenuItem onClick={() => logout()} variant="destructive">
               <LogOut className="h-4 w-4" />
               Sair
             </DropdownMenuItem>

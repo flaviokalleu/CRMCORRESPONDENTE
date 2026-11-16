@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -39,10 +41,19 @@ func (s *Service) claimsFor(u *models.User, ttl time.Duration) Claims {
 		TenantID:         u.TenantID,
 		IsSuperAdmin:     u.IsSuperAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
+			// ID único: dois logins no mesmo segundo (celular e computador)
+			// gerariam o mesmo token, e a coluna é UNIQUE.
+			ID:        idAleatorio(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
+}
+
+func idAleatorio() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 // GenerateAccess assina um access token (1h).

@@ -1,7 +1,8 @@
 import { apiGet } from "@/lib/api-server";
 import { ProprietarioAddForm } from "@/components/ProprietarioAddForm";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
-import { UserSquare, Phone, MapPin } from "@/components/icons";
+import { UserSquare, MapPin } from "@/components/icons";
+import { ContatoRapido } from "@/components/ui/contato-rapido";
 
 export const metadata = { title: "Proprietários" };
 
@@ -11,21 +12,23 @@ export default async function ListaProprietariosPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title="Proprietários" subtitle="Cadastre e gerencie os proprietários vinculados aos imóveis." />
+      <PageHeader
+        title="Proprietários"
+        subtitle={`${proprietarios.length} proprietário${proprietarios.length === 1 ? "" : "s"} · donos dos imóveis que você anuncia ou administra`}
+      />
 
       <ProprietarioAddForm />
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold text-cx-muted">Lista de proprietários</h2>
         {!data ? (
           <EmptyState icon={UserSquare} title="Não foi possível carregar os proprietários" />
         ) : proprietarios.length === 0 ? (
-          <EmptyState icon={UserSquare} title="Nenhum proprietário cadastrado" hint="Adicione o primeiro proprietário acima." />
+          <EmptyState icon={UserSquare} title="Nenhum proprietário cadastrado" hint="Toque em “Novo proprietário” acima para cadastrar o primeiro." />
         ) : (
           <Table title="Lista de proprietários" className="min-w-[640px]">
             <Thead>
               <Th>Proprietário</Th>
-              <Th>Telefone</Th>
+              <Th>Falar com</Th>
               <Th>Endereço</Th>
             </Thead>
             <tbody>
@@ -37,12 +40,8 @@ export default async function ListaProprietariosPage() {
                       <span className="font-medium text-cx-text">{p.name}</span>
                     </div>
                   </Td>
-                  <Td muted>
-                    {p.phone ? (
-                      <a href={`https://wa.me/55${(p.phone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-cx-text">
-                        <Phone className="h-3.5 w-3.5" /> {p.phone}
-                      </a>
-                    ) : "—"}
+                  <Td>
+                    <ContatoRapido telefone={p.phone} nome={p.name} />
                   </Td>
                   <Td muted>
                     {p.address ? (

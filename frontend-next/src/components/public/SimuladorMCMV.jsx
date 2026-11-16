@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AlertCircle, ArrowRight, BadgePercent, Wallet } from "@/components/icons";
 import { COMPROMETIMENTO_MAXIMO, PRAZO_MAXIMO_MESES, simularMCMV } from "@/lib/mcmv";
 import { AvisoValorVaria } from "./AvisoValorVaria";
+import { linkWhatsAppPublico } from "@/lib/contato-publico";
 
 // Simulador do Minha Casa Minha Vida na landing.
 //
@@ -210,9 +211,9 @@ export function SimuladorMCMV() {
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <a
-              href={`https://wa.me/5561999999999?text=${encodeURIComponent(
+              href={linkWhatsAppPublico(
                 `Olá! Simulei no site: renda de ${brl(renda)}, ${r.faixa.nome}, posso comprar até ${brl(r.poderDeCompra)}. Podem me ajudar?`,
-              )}`}
+              )}
               target="_blank"
               rel="noreferrer"
               className="inline-flex flex-1 items-center justify-center rounded-lg border border-cx-border px-5 py-3 text-sm font-semibold text-cx-text transition-colors hover:border-cx-blue"

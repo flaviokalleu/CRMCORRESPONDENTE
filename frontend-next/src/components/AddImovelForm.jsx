@@ -1,14 +1,14 @@
 "use client";
 
 import { ImovelForm } from "@/components/ImovelForm";
+import { PageHeader } from "@/components/ui/page";
 
 // Wrapper fino: o cadastro completo (multipart + upload de imagens) vive em
 // ImovelForm.
 export function AddImovelForm() {
   return (
-    <div className="p-6">
-      <h1 className="mb-1 text-xl font-semibold text-cx-text">Adicionar Imóvel</h1>
-      <p className="mb-6 text-sm text-cx-muted">Cadastro completo — dados, valores, descrição e imagens.</p>
+    <div>
+      <PageHeader title="Cadastrar imóvel" subtitle="Só nome, endereço e valor são obrigatórios. O resto pode ficar para depois." />
       <ImovelForm mode="create" />
     </div>
   );

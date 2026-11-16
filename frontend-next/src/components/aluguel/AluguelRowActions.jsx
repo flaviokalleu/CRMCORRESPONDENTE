@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Download, KeyRound, Loader2, Trash2, Home as DoorOpen } from "@/components/icons";
 
 // Client Component: ações por linha da lista de aluguéis (deletar, alternar
 // status alugado/disponível, baixar zip de fotos). Fala com o backend Go
@@ -30,15 +31,15 @@ export function AluguelRowActions({ aluguel }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Deletar o imóvel "${aluguel.nome_imovel}"? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Excluir o imóvel "${aluguel.nome_imovel}"? Não dá para desfazer.`)) return;
     setLoadingKey("delete");
     setError("");
     try {
       const res = await fetch(`/api/backend/alugueis/${aluguel.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao deletar imóvel");
+      if (!res.ok) throw new Error("Não foi possível excluir o imóvel");
       router.refresh();
     } catch (e) {
-      setError(e.message || "Erro ao deletar imóvel");
+      setError(e.message || "Não foi possível excluir o imóvel");
     } finally {
       setLoadingKey(null);
     }
@@ -66,39 +67,44 @@ export function AluguelRowActions({ aluguel }) {
     }
   }
 
+  // Uma ação principal com rótulo (alternar alugado/disponível) e as demais
+  // como ícones de 40px, numa linha só — antes as três se empilhavam e o
+  // texto "Baixar fotos" quebrava letra por letra na coluna estreita.
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex gap-2">
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleToggleStatus}
+          disabled={loadingKey === "status"}
+          className="lst-botao"
+          title={aluguel.alugado ? "O inquilino saiu? Volte para disponível" : "Fechou a locação? Marque como alugado"}
+        >
+          {aluguel.alugado ? <DoorOpen aria-hidden="true" /> : <KeyRound aria-hidden="true" />}
+          {loadingKey === "status" ? "Salvando…" : aluguel.alugado ? "Marcar disponível" : "Marcar alugado"}
+        </button>
         <button
           type="button"
           onClick={handleDownload}
           disabled={loadingKey === "download"}
-          className="flex-1 rounded-md border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+          className="lst-acao"
+          title="Baixar fotos (.zip)"
+          aria-label={`Baixar fotos de ${aluguel.nome_imovel}`}
         >
-          {loadingKey === "download" ? "Baixando..." : "Baixar fotos"}
+          {loadingKey === "download" ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
         </button>
         <button
           type="button"
           onClick={handleDelete}
           disabled={loadingKey === "delete"}
-          className="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          className="lst-acao lst-acao-perigo"
+          title="Excluir imóvel"
+          aria-label={`Excluir ${aluguel.nome_imovel}`}
         >
-          {loadingKey === "delete" ? "..." : "Deletar"}
+          <Trash2 aria-hidden="true" />
         </button>
       </div>
-      <button
-        type="button"
-        onClick={handleToggleStatus}
-        disabled={loadingKey === "status"}
-        className={`w-full rounded-md border px-2 py-1 text-xs font-semibold disabled:opacity-50 ${
-          aluguel.alugado
-            ? "border-green-300 text-green-700 hover:bg-green-50"
-            : "border-red-300 text-red-700 hover:bg-red-50"
-        }`}
-      >
-        {loadingKey === "status" ? "Atualizando..." : aluguel.alugado ? "Marcar disponível" : "Marcar alugado"}
-      </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="lst-erro" role="alert">{error}</p>}
     </div>
   );
 }

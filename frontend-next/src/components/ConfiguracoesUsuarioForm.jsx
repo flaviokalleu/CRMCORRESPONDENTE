@@ -1,7 +1,10 @@
 "use client";
 
 import { FormIntro } from "@/components/ui/form-intro";
-import { AVATAR_PLACEHOLDER, userPhotoUrl } from "@/lib/user-avatar";
+import { userPhotoUrl } from "@/lib/user-avatar";
+import { maskPhone } from "@/lib/masks";
+import { UserAvatar } from "@/components/UserAvatar";
+import { CheckCircle2, AlertCircle } from "@/components/icons";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -13,7 +16,7 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
     first_name: initialUser?.first_name || "",
     last_name: initialUser?.last_name || "",
     email: initialUser?.email || "",
-    telefone: initialUser?.telefone || "",
+    telefone: maskPhone(initialUser?.telefone || ""),
     address: initialUser?.address || "",
     pix_account: initialUser?.pix_account || "",
   });
@@ -57,7 +60,8 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    setForm((p) => ({ ...p, [name]: name === "telefone" ? maskPhone(value) : value }));
+    if (message.type === "success") setMessage({ type: "", text: "" });
   };
 
   const handleSubmit = async (e) => {
@@ -65,11 +69,11 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
     setMessage({ type: "", text: "" });
 
     if (password && password.length < 6) {
-      setMessage({ type: "error", text: "Senha deve ter pelo menos 6 caracteres." });
+      setMessage({ type: "error", text: "A nova senha precisa ter pelo menos 6 caracteres." });
       return;
     }
     if (password && password !== confirmPassword) {
-      setMessage({ type: "error", text: "Senhas não coincidem." });
+      setMessage({ type: "error", text: "As duas senhas não são iguais. Digite a mesma senha nos dois campos." });
       return;
     }
 
@@ -93,7 +97,7 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
           body: JSON.stringify(payload),
         });
       }
-      if (!res.ok) throw new Error("Erro ao salvar informações");
+      if (!res.ok) throw new Error("Não foi possível salvar. Confira os dados e tente de novo.");
       const salvo = await res.json().catch(() => null);
       if (salvo?.user?.photo) {
         // Nome do arquivo é fixo por usuário (usuario_{id}.ext), então o
@@ -102,11 +106,11 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
       }
       setArquivo(null);
       if (inputFoto.current) inputFoto.current.value = "";
-      setMessage({ type: "success", text: "Informações atualizadas com sucesso!" });
+      setMessage({ type: "success", text: "Pronto! Seus dados foram salvos." });
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setMessage({ type: "error", text: err.message || "Erro ao salvar informações" });
+      setMessage({ type: "error", text: err.message || "Não foi possível salvar. Tente de novo." });
     } finally {
       setSaving(false);
     }
@@ -114,25 +118,11 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
 
   return (
     <form onSubmit={handleSubmit} className="crm-form crm-form-composed space-y-4">
-      {message.text && (
-        <p className={`text-sm ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>{message.text}</p>
-      )}
-
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div className="md:col-span-2"><FormIntro title="Informações pessoais" description="Mantenha os dados de identificação e contato atualizados." /></div>
 
         <div className="md:col-span-2 flex items-center gap-4">
-          <span className="inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-full border border-cx-border bg-cx-bg">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previa || AVATAR_PLACEHOLDER}
-              alt="Sua foto de perfil"
-              width={64}
-              height={64}
-              className="h-full w-full object-cover"
-              onError={(e) => { e.currentTarget.src = AVATAR_PLACEHOLDER; }}
-            />
-          </span>
+          <UserAvatar src={previa} name={`${form.first_name} ${form.last_name}`} size="lg" alt="Sua foto de perfil" />
           <div>
             <label htmlFor="settings-photo" className="block text-sm text-cx-muted mb-2">Foto de perfil</label>
             <input
@@ -144,52 +134,60 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
               onChange={escolherFoto}
               className="block w-full text-sm text-cx-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cx-blue-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-cx-blue hover:file:bg-cx-border"
             />
-            <p className="mt-1 text-xs text-cx-muted">JPG ou PNG, até 5 MB. A foto aparece na lista de clientes e no Kanban.</p>
+            <p className="form-dica">JPG ou PNG, até 5 MB. A foto aparece no topo da tela, na lista de clientes e no Kanban.</p>
           </div>
         </div>
         <Field label="Nome" name="first_name" value={form.first_name} onChange={handleChange} />
         <Field label="Sobrenome" name="last_name" value={form.last_name} onChange={handleChange} />
         <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" />
-        <Field label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} />
-        <Field label="Conta PIX" name="pix_account" value={form.pix_account} onChange={handleChange} />
-        <Field label="Endereço" name="address" value={form.address} onChange={handleChange} className="md:col-span-2" />
+        <Field label="Celular" name="telefone" value={form.telefone} onChange={handleChange} type="tel" placeholder="(00) 00000-0000" />
+        <Field label="Chave PIX" name="pix_account" value={form.pix_account} onChange={handleChange} dica="Usada para receber suas comissões. Pode ser CPF, celular, e-mail ou chave aleatória." />
+        <Field label="Endereço" name="address" value={form.address} onChange={handleChange} className="md:col-span-2" dica="Rua, número, bairro e cidade. Aparece nos contratos e recibos." />
       </div>
 
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div className="md:col-span-2"><FormIntro title="Segurança da conta" description="Preencha os dois campos somente se quiser alterar a senha." /></div>
         <div>
-          <label className="block text-sm text-cx-muted mb-1">Nova senha</label>
+          <label htmlFor="settings-password" className="block text-sm text-cx-muted mb-2">Nova senha</label>
           <input
+            id="settings-password"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Deixe em branco para manter"
-            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
+            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           />
         </div>
         <div>
-          <label className="block text-sm text-cx-muted mb-1">Confirmar senha</label>
+          <label htmlFor="settings-password-confirm" className="block text-sm text-cx-muted mb-2">Repita a nova senha</label>
           <input
+            id="settings-password-confirm"
             type="password"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
+            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
           />
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50"
-      >
-        {saving ? "Salvando..." : "Salvar alterações"}
-      </button>
+      <div className="form-acoes">
+        <button type="submit" disabled={saving}>
+          {saving ? "Salvando..." : "Salvar alterações"}
+        </button>
+        {message.text && (
+          <p role={message.type === "success" ? "status" : "alert"} className="form-aviso" data-tom={message.type === "success" ? "ok" : "erro"}>
+            {message.type === "success" ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : <AlertCircle className="h-4 w-4" aria-hidden="true" />}
+            {message.text}
+          </p>
+        )}
+      </div>
     </form>
   );
 }
 
-function Field({ label, name, value, onChange, type = "text", className = "" }) {
+function Field({ label, name, value, onChange, type = "text", placeholder, dica, className = "" }) {
   return (
     <div className={className}>
       <label htmlFor={`settings-${name}`} className="block text-sm text-cx-muted mb-2">{label}</label>
@@ -199,8 +197,11 @@ function Field({ label, name, value, onChange, type = "text", className = "" }) 
         name={name}
         value={value || ""}
         onChange={onChange}
-        className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-caixa-orange/50"
+        placeholder={placeholder}
+        aria-describedby={dica ? `settings-${name}-dica` : undefined}
+        className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
       />
+      {dica && <p id={`settings-${name}-dica`} className="form-dica">{dica}</p>}
     </div>
   );
 }

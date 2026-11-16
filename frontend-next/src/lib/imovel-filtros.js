@@ -5,9 +5,13 @@
 // volume atual isso é adequado; se a carteira crescer muito, o filtro deve
 // migrar para query no Go.
 
-// O endereço vem no formato "Rua X, 123 - Bairro, Cidade/UF". A cidade é o
-// trecho depois da última vírgula, antes da barra.
+// A cidade mora em `localizacao` ("Valparaíso de Goiás - GO"). Antes ela era
+// tirada do endereço, que na prática vem como "Rua 5, Qd 9, Casa 14 -
+// Valparaíso I" — e os atalhos da vitrine viravam "Casa 14 - Valparaíso I".
+// O endereço continua como reserva, no formato "Rua X, 123 - Bairro, Cidade/UF".
 export function cidadeDoImovel(imovel) {
+  const loc = (imovel?.localizacao || "").trim();
+  if (loc) return loc.split(/\s+-\s+|\//)[0].trim();
   const end = imovel?.endereco || "";
   const parte = end.split(",").pop() || "";
   return parte.split("/")[0].trim();

@@ -1,7 +1,8 @@
 import { apiGet } from "@/lib/api-server";
 import { AluguelRowActions } from "@/components/aluguel/AluguelRowActions";
 import { PageHeader, EmptyState, Table, Thead, Th, Row, Td, formatBRL } from "@/components/ui/page";
-import { KeyRound } from "@/components/icons";
+import Link from "next/link";
+import { KeyRound, Plus } from "@/components/icons";
 
 export const metadata = { title: "Aluguéis" };
 
@@ -14,40 +15,48 @@ export default async function AlugueisPage() {
     <div className="p-6">
       <PageHeader
         title="Aluguéis"
-        subtitle={`${disponiveis} disponíveis · ${ocupados} alugados · ${alugueis.length} total`}
+        subtitle={`${ocupados} alugado${ocupados === 1 ? "" : "s"} · ${disponiveis} disponíve${disponiveis === 1 ? "l" : "is"} para alugar`}
         actionHref="/alugueis/adicionar"
         actionLabel="Adicionar imóvel"
       />
 
       {alugueis.length === 0 ? (
-        <EmptyState icon={KeyRound} title="Nenhum imóvel para aluguel" hint="Cadastre o primeiro imóvel de locação." />
+        <EmptyState
+          icon={KeyRound}
+          title="Nenhum imóvel para aluguel"
+          hint="Cadastre o primeiro imóvel de locação com valor e dia de vencimento."
+        >
+          <Link href="/alugueis/adicionar" className="lst-botao lst-botao-principal">
+            <Plus aria-hidden="true" /> Adicionar imóvel
+          </Link>
+        </EmptyState>
       ) : (
-        <Table title="Lista de imóveis em locação" className="min-w-[880px]">
+        <Table title="Imóveis em locação" className="min-w-[820px]">
           <Thead>
             <Th>Imóvel</Th>
-            <Th>Descrição</Th>
-            <Th>Quartos</Th>
-            <Th>Banheiros</Th>
-            <Th right>Valor</Th>
+            <Th>Situação</Th>
+            <Th right>Aluguel</Th>
             <Th>Vencimento</Th>
-            <Th>Status</Th>
             <Th right>Ações</Th>
           </Thead>
           <tbody>
             {alugueis.map((a) => (
               <Row key={a.id}>
-                <Td className="font-medium text-cx-text">{a.nome_imovel || "—"}</Td>
-                <Td muted className="max-w-xs truncate" title={a.descricao}>{a.descricao || "—"}</Td>
-                <Td muted>{a.quartos ?? "—"}</Td>
-                <Td muted>{a.banheiro ?? "—"}</Td>
-                <Td right className="tabular-nums">{formatBRL(a.valor_aluguel)}</Td>
-                <Td muted className="tabular-nums">{a.dia_vencimento ? `dia ${a.dia_vencimento}` : "—"}</Td>
                 <Td>
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-cx-border bg-cx-surface px-2 py-1 text-[11px] font-medium text-cx-muted">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: a.alugado ? "#fbbf24" : "#34d399" }} />
+                  <p className="font-medium text-cx-text">{a.nome_imovel || "—"}</p>
+                  <p className="max-w-xs truncate text-xs text-cx-muted" title={a.descricao}>
+                    {a.quartos ?? 0} quarto{a.quartos === 1 ? "" : "s"} · {a.banheiro ?? 0} banheiro{a.banheiro === 1 ? "" : "s"}
+                    {a.descricao ? ` · ${a.descricao}` : ""}
+                  </p>
+                </Td>
+                <Td>
+                  {/* Disponível = sem renda entrando (atenção); alugado = ok. */}
+                  <span className={`ass-selo ${a.alugado ? "ass-tom-ok" : "ass-tom-alerta"}`}>
                     {a.alugado ? "Alugado" : "Disponível"}
                   </span>
                 </Td>
+                <Td right className="whitespace-nowrap tabular-nums">{formatBRL(a.valor_aluguel)}</Td>
+                <Td muted className="whitespace-nowrap tabular-nums">{a.dia_vencimento ? `dia ${a.dia_vencimento}` : "—"}</Td>
                 <Td right><AluguelRowActions aluguel={a} /></Td>
               </Row>
             ))}

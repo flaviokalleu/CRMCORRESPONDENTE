@@ -152,7 +152,12 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	api.Static("/uploads/usuario", filepath.Join(uploadsBase, "usuario"))
 
 	authGroup := api.Group("/auth")
-	authGroup.POST("/login", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<20), authHandler.Login)
+	// LOGIN_RATE_LIMIT: tentativas de login por IP a cada 15 min (padrão 10).
+	limiteLogin := 10
+	if v, err := strconv.Atoi(os.Getenv("LOGIN_RATE_LIMIT")); err == nil && v > 0 {
+		limiteLogin = v
+	}
+	authGroup.POST("/login", middleware.RateLimit(limiteLogin, 15*time.Minute), middleware.BodyLimit(1<<20), authHandler.Login)
 	authGroup.POST("/refresh-token", middleware.BodyLimit(1<<20), authHandler.Refresh)
 	authGroup.POST("/forgot-password", middleware.RateLimit(5, 15*time.Minute), middleware.BodyLimit(1<<16), authHandler.ForgotPassword)
 	authGroup.POST("/reset-password", middleware.RateLimit(10, 15*time.Minute), middleware.BodyLimit(1<<16), authHandler.ResetPassword)
@@ -272,6 +277,31 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	publicGroup := api.Group("/public")
 	publicGroup.Use(middleware.PublicTenantScope(publicTenantID))
 	imoveisHandler.RegisterPublicRoutes(publicGroup)
+	// Contato da imobiliária da vitrine (nome e WhatsApp), lido de "Minha empresa".
+	publicGroup.GET("/empresa", func(c *gin.Context) {
+		var t models.Tenant
+		if err := db.WithContext(c.Request.Context()).First(&t, publicTenantID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Empresa não encontrada"})
+			return
+		}
+		whatsapp := ""
+		if t.Telefone != nil {
+			d := strings.Map(func(r rune) rune {
+				if r >= '0' && r <= '9' {
+					return r
+				}
+				return -1
+			}, *t.Telefone)
+			if len(d) == 10 || len(d) == 11 {
+				d = "55" + d
+			}
+			if len(d) >= 12 {
+				whatsapp = d
+			}
+		}
+		c.Header("Cache-Control", "public, max-age=300")
+		c.JSON(http.StatusOK, gin.H{"nome": t.Nome, "whatsapp": whatsapp, "logo": t.Logo})
+	})
 
 	cluster02 := api.Group("")
 	cluster02.Use(authed(), tenantScoped, liberada, plano)

@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiGet } from "@/lib/api-server";
-import ImovelCard, { formatMoeda, imovelImagemUrl } from "@/components/public/ImovelCard";
+import { formatMoeda, imovelImagemUrl } from "@/components/public/ImovelCard";
+import { ImovelCardPublico } from "@/components/public/ImovelCardPublico";
 import { JsonLd } from "@/components/public/JsonLd";
 import { jsonLdBreadcrumb, jsonLdImovel } from "@/lib/seo";
+import { linkWhatsAppPublico } from "@/lib/contato-publico";
+import { whatsappPublico } from "@/lib/contato-publico-server";
+import { ArrowLeft, Bath, BedDouble, Car, ImageOff, MapPin, MessageCircle, Maximize } from "@/components/icons";
 
 // Detalhe de um imóvel ("/imoveis/:id"). Server Component.
 // Referência de lógica: frontend/src/pages/MoveisDetailPage.jsx +
@@ -68,6 +72,9 @@ function parseImagens(imagensRaw) {
 }
 
 export default async function ImovelDetailPage({ params }) {
+  // Número do WhatsApp cadastrado em "Minha empresa" da imobiliária da vitrine.
+  const numeroWhats = await whatsappPublico();
+  const linkWhats = (texto) => linkWhatsAppPublico(texto, numeroWhats);
   const { id } = await params;
   const imovel = await getImovel(id);
 
@@ -97,16 +104,23 @@ export default async function ImovelDetailPage({ params }) {
     .filter(Boolean);
   const imagensExibidas = galeria.length > 0 ? galeria : imagemCapaUrl ? [imagemCapaUrl] : [];
 
-  const whatsappMessage = `Olá! Estou interessado no imóvel "${nome}" no valor de ${formatMoeda(valor)}.`;
-  const whatsappLink = `https://api.whatsapp.com/send/?phone=556182511308&text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
+  const whatsappLink = linkWhats(
+    `Olá! Tenho interesse no imóvel "${nome}" (${formatMoeda(valor)}). Ainda está disponível?`
+  );
+
+  // Só mostra o que existe — "N/A" em vagas/área assusta mais do que ajuda.
+  const specs = [
+    quartos ? { Icon: BedDouble, valor: quartos, rotulo: quartos === 1 ? "quarto" : "quartos" } : null,
+    banheiro ? { Icon: Bath, valor: banheiro, rotulo: banheiro === 1 ? "banheiro" : "banheiros" } : null,
+    vagasFinal ? { Icon: Car, valor: vagasFinal, rotulo: vagasFinal === 1 ? "vaga" : "vagas" } : null,
+    area ? { Icon: Maximize, valor: `${area} m²`, rotulo: "de área" } : null,
+  ].filter(Boolean);
 
   const semelhantesData = await apiGet(`/public/imoveis/${id}/semelhantes`);
   const semelhantes = Array.isArray(semelhantesData) ? semelhantesData : semelhantesData?.data || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cx-bg pb-24 lg:pb-0">
       {/* O anúncio estruturado é o que faz o Google mostrar preço e foto do
           imóvel direto no resultado da busca. */}
       <JsonLd data={jsonLdImovel(imovel)} />
@@ -117,22 +131,28 @@ export default async function ImovelDetailPage({ params }) {
           { nome: nome, url: `/imoveis/${id}` },
         ])}
       />
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <Link href="/imoveis" className="text-sm text-caixa-primary hover:underline">
-            &larr; Voltar aos imóveis
+      <div className="border-b border-cx-border bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-2">
+          <Link href="/imoveis" className="inline-flex min-h-10 items-center gap-1.5 text-sm text-cx-muted hover:text-cx-text">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Ver todos os imóveis
           </Link>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="h-80 sm:h-96 w-full bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center">
+      {/* Ordem no celular: foto → preço e contato → descrição. Antes a
+          descrição vinha antes do preço e do botão de contato. */}
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-3 lg:gap-8">
+        <div className="space-y-3 lg:col-span-2">
+          <div
+            className={`w-full overflow-hidden rounded-xl bg-cx-bg ${imagensExibidas[0] ? "aspect-video" : "h-32"}`}
+          >
             {imagensExibidas[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imagensExibidas[0]} alt={nome} className="w-full h-full object-cover" />
+              <img src={imagensExibidas[0]} alt={nome} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-gray-400">Sem imagem</span>
+              <div className="lst-foto-vazia">
+                <ImageOff aria-hidden="true" /> Fotos em breve — peça pelo WhatsApp
+              </div>
             )}
           </div>
 
@@ -144,68 +164,68 @@ export default async function ImovelDetailPage({ params }) {
                   key={i}
                   src={img}
                   alt={`${nome} - imagem ${i + 2}`}
-                  className="h-20 w-full object-cover rounded-lg"
+                  className="h-20 w-full rounded-lg object-cover"
                 />
               ))}
             </div>
           )}
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-bold text-lg text-gray-900 mb-2">Sobre o imóvel</h2>
-            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{descricao}</p>
-          </div>
         </div>
 
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-8">
-            <span className="inline-block bg-cx-orange/10 text-caixa-orange text-xs font-bold px-3 py-1 rounded-full mb-3">
-              {tipo}
-            </span>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{nome}</h1>
-            <p className="text-gray-500 mb-4">{localizacao}</p>
-            <div className="text-3xl font-bold text-caixa-primary mb-6">{formatMoeda(valor)}</div>
+        <aside className="lg:col-span-1 lg:row-span-2">
+          <div className="rounded-xl border border-cx-border bg-white p-6 lg:sticky lg:top-8">
+            <span className="ass-selo ass-tom-neutro">{tipo}</span>
+            <h1 className="mt-3 text-2xl font-bold text-cx-text">{nome}</h1>
+            <p className="mt-1 flex items-center gap-1.5 text-cx-muted">
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" /> {localizacao}
+            </p>
+            <p className="mt-4 text-3xl font-bold tabular-nums text-cx-blue">{formatMoeda(valor)}</p>
 
-            <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <div className="font-bold text-gray-900">{quartos ?? "N/A"}</div>
-                <div className="text-gray-500">Quartos</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <div className="font-bold text-gray-900">{banheiro ?? "N/A"}</div>
-                <div className="text-gray-500">Banheiros</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <div className="font-bold text-gray-900">{vagasFinal ?? "N/A"}</div>
-                <div className="text-gray-500">Vagas</div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <div className="font-bold text-gray-900">{area ? `${area}m²` : "N/A"}</div>
-                <div className="text-gray-500">Área</div>
-              </div>
-            </div>
+            {specs.length > 0 && (
+              <ul className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                {specs.map(({ Icon, valor: v, rotulo }) => (
+                  <li key={rotulo} className="flex items-center gap-2 rounded-lg bg-cx-bg p-3 text-cx-text">
+                    <Icon className="h-4 w-4 shrink-0 text-cx-muted" aria-hidden="true" />
+                    <span>
+                      <strong className="font-bold">{v}</strong> {rotulo}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center bg-[#25D366] text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Tenho interesse (WhatsApp)
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="lst-cta-whats mt-6 w-full">
+              <MessageCircle aria-hidden="true" /> Tenho interesse
             </a>
+            <p className="mt-2 text-center text-xs text-cx-muted">Você fala direto com um corretor pelo WhatsApp.</p>
           </div>
+        </aside>
+
+        <div className="rounded-xl border border-cx-border bg-white p-6 lg:col-span-2">
+          <h2 className="mb-2 text-lg font-bold text-cx-text">Sobre o imóvel</h2>
+          <p className="whitespace-pre-line leading-relaxed text-cx-muted">{descricao}</p>
         </div>
       </div>
 
       {semelhantes.length > 0 && (
         <div className="max-w-6xl mx-auto px-4 pb-12">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Imóveis semelhantes</h2>
+          <h2 className="mb-4 text-xl font-bold text-cx-text">Imóveis parecidos</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {semelhantes.slice(0, 4).map((item) => (
-              <ImovelCard key={item.id} imovel={item} />
+              <ImovelCardPublico key={item.id} imovel={item} />
             ))}
           </div>
         </div>
       )}
+      {/* Celular: preço e "Tenho interesse" sempre à mão enquanto rola. */}
+      <div className="lst-barra-fixa">
+        <div className="min-w-0">
+          <p className="truncate text-xs text-cx-muted">{nome}</p>
+          <p className="text-lg font-bold tabular-nums text-cx-text">{formatMoeda(valor)}</p>
+        </div>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="lst-cta-whats">
+          <MessageCircle aria-hidden="true" /> Tenho interesse
+        </a>
+      </div>
     </div>
   );
 }

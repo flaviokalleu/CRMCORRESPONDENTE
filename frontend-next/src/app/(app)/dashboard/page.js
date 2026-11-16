@@ -11,6 +11,7 @@ import { FluxoCaixaCard } from "@/components/dashboard/FluxoCaixaCard";
 import { PortfolioCard } from "@/components/dashboard/PortfolioCard";
 import { RankingEquipe } from "@/components/dashboard/RankingEquipe";
 import { BlocoCarteira, BlocoRitmo, PainelTaxas } from "@/components/dashboard/PaineisPapel";
+import { PrimeirosPassos } from "@/components/dashboard/PrimeirosPassos";
 
 export const metadata = { title: "Dashboard gerencial" };
 
@@ -120,6 +121,7 @@ export default async function DashboardPage({ searchParams }) {
   const sla = clampInt(query?.sla, 7, 1, 90);
   const filtros = { ...period, responsavel, meta, sla };
 
+
   const scoped = new URLSearchParams();
   if (responsavel) scoped.set("responsavel", responsavel);
   const scopedSuffix = scoped.size ? `?${scoped.toString()}` : "";
@@ -185,6 +187,8 @@ export default async function DashboardPage({ searchParams }) {
   const responsavelNome = teamMap.get(responsavel)?.nome ?? "Toda a equipe";
 
   const total = main.totalCount ?? main.totalClientes ?? 0;
+  // Sem nenhum cliente (e sem filtro de responsável), números e gráficos
+  // seriam só zeros: no lugar, um convite para o primeiro cadastro.
   const aguardando = main.totalClientesAguardandoAprovacao ?? 0;
   const filaClientes = main.clientesAguardandoAprovacao ?? [];
   const aprovados = analytics?.clientesAprovados ?? 0;
@@ -210,10 +214,10 @@ export default async function DashboardPage({ searchParams }) {
   const funilHref = clientListHref({ filtros, view: "kanban" });
 
   const destaque = slaResumo.vencidos > 0
-    ? `${fmt(slaResumo.vencidos)} ${slaResumo.vencidos === 1 ? "caso ultrapassou" : "casos ultrapassaram"} o SLA de ${sla} dias.`
+    ? `${fmt(slaResumo.vencidos)} ${slaResumo.vencidos === 1 ? "cliente passou" : "clientes passaram"} do prazo de ${sla} dias.`
     : aguardando > 0
-      ? `${fmt(aguardando)} ${aguardando === 1 ? "cliente pede" : "clientes pedem"} ação na fila, todos dentro do SLA.`
-      : "Fila operacional em dia — nenhuma análise aguardando ação.";
+      ? `${fmt(aguardando)} ${aguardando === 1 ? "cliente pede" : "clientes pedem"} retorno, todos dentro do prazo.`
+      : "Tudo em dia — nenhum cliente esperando retorno.";
 
   const acoes = isCorrespondente
     ? [{ label: "Abrir fila", href: filaHref, icone: "fila", primaria: true }, { label: "Novo cliente", href: "/clientes/adicionar", icone: "adicionar" }]
@@ -223,14 +227,14 @@ export default async function DashboardPage({ searchParams }) {
 
   const vitais = [
     {
-      rotulo: isCorretor ? "Minha carteira" : "Carteira no escopo",
+      rotulo: isCorretor ? "Minha carteira" : "Clientes na carteira",
       valor: fmt(total),
       detalhe: responsavelNome,
       href: carteiraHref,
       icone: "carteira",
     },
     {
-      rotulo: "Entradas no período",
+      rotulo: "Novos no período",
       valor: fmt(totalPeriodo),
       detalhe: period.label,
       href: carteiraHref,
@@ -238,7 +242,7 @@ export default async function DashboardPage({ searchParams }) {
       tom: "info",
     },
     {
-      rotulo: "Aprovação das decisões",
+      rotulo: "Taxa de aprovação",
       valor: fmtPct(taxaAprovacao),
       detalhe: decisoes ? `${fmt(aprovados)} de ${fmt(decisoes)} decisões` : "sem decisões concluídas",
       href: funilHref,
@@ -246,7 +250,7 @@ export default async function DashboardPage({ searchParams }) {
       tom: taxaAprovacao == null ? "info" : taxaAprovacao >= meta ? "bom" : "atencao",
     },
     {
-      rotulo: "Resolução do período",
+      rotulo: "Casos concluídos",
       valor: fmtPct(taxaResolucao),
       detalhe: `${fmt(aprovados + reprovados)} de ${fmt(totalPeriodo)} entradas`,
       href: funilHref,
@@ -254,7 +258,7 @@ export default async function DashboardPage({ searchParams }) {
       tom: "info",
     },
     {
-      rotulo: "SLA vencido",
+      rotulo: "Fora do prazo",
       valor: fmt(slaResumo.vencidos),
       detalhe: `${fmt(aguardando)} na fila atual`,
       href: "#alertas",
@@ -279,7 +283,8 @@ export default async function DashboardPage({ searchParams }) {
             <h1>Dashboard</h1>
             <p>{saudacao}, {user.first_name || "bem-vindo"}! {dataFormatada} · atualizado às {horaAtualizada}.</p>
           </div>
-          <div className="dash-actions">
+          {/* Sem clientes, o PainelVazio já traz a ação principal: uma só por tela. */}
+          {(responsavel || total > 0) && <div className="dash-actions">
             {acoesOrdenadas.map(({ label, href, icone, primaria }) => {
               const Icone = ICONE_ACAO[icone] || Plus;
               return (
@@ -288,9 +293,15 @@ export default async function DashboardPage({ searchParams }) {
                 </Link>
               );
             })}
-          </div>
+          </div>}
         </section>
 
+        {/* Imobiliária nova: o que fazer primeiro (some quando tudo estiver feito). */}
+        {isAdmin && <PrimeirosPassos tenantId={user.tenant_id} />}
+
+        {!responsavel && total === 0 ? (
+          <PainelVazio podeCadastrar={!isCorrespondente} />
+        ) : (<>
         {/* Indicadores: operação e metas, 4 por linha (acima dos gráficos) */}
         <KpisOperacao main={main} propostas={propostasData == null ? null : asList(propostasData)} total={total} carteiraHref={carteiraHref} responsavelNome={responsavelNome} />
         <MetasGerenciais aprovacao={taxaAprovacao} resolucao={taxaResolucao} meta={meta} slaResumo={slaResumo} alertas={activeAlerts} totalPeriodo={totalPeriodo} />
@@ -298,7 +309,7 @@ export default async function DashboardPage({ searchParams }) {
         <p role="status" className={`dash-alert dash-alert-${tomDestaque}`}>
           <IconeDestaque className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{destaque}</span>
-          {activeAlerts > 0 ? <a href="#alertas">Ver fila de atenção</a> : null}
+          {activeAlerts > 0 ? <a href="#alertas">Ver quem espera retorno</a> : null}
         </p>
 
         {/* Gráficos grandes, no painel escuro */}
@@ -390,9 +401,29 @@ export default async function DashboardPage({ searchParams }) {
           </section>
         ) : null}
 
+        </>)}
+
         <BannerFinanciamento />
       </div>
     </div>
+  );
+}
+
+// Painel ainda sem clientes: explica o que vai aparecer e oferece UMA ação.
+function PainelVazio({ podeCadastrar }) {
+  return (
+    <section className="dash-vazio crm-card" aria-labelledby="dash-vazio-titulo">
+      <h2 id="dash-vazio-titulo">Seu painel ganha vida com o primeiro cliente</h2>
+      <p>
+        Assim que você cadastrar clientes, aparecem aqui quantos estão em atendimento, quem espera retorno,
+        a taxa de aprovação e a evolução mês a mês.
+      </p>
+      {podeCadastrar && (
+        <Link href="/clientes/adicionar" className="cx-btn cx-btn-primary">
+          <Plus className="h-4 w-4" aria-hidden="true" /> Cadastrar primeiro cliente
+        </Link>
+      )}
+    </section>
   );
 }
 

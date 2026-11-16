@@ -118,7 +118,7 @@ export function EsteiraResultado({
           </ul>
 
           <div className="mt-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3">
-            <p className="text-xs font-bold uppercase tracking-[0.06em] text-emerald-300">Aprovação das decisões</p>
+            <p className="text-xs font-bold uppercase tracking-[0.06em] text-emerald-300">Taxa de aprovação</p>
             <p className="font-tabular mt-1 text-2xl font-bold text-white">{fmtPct(aprovacaoDecidida)}</p>
             <p className="mt-0.5 text-xs text-slate-400">
               {decisoes > 0 ? `${fmt(aprovados)} de ${fmt(decisoes)} decisões concluídas` : "Sem decisão concluída no período"}

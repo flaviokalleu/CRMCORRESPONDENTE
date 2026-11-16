@@ -16,10 +16,18 @@ export const SITUACAO_MAP = {
   alugado: { label: "Alugado", tone: "neutral" },
 };
 
+// Tom → classe de semáforo do crm-design.css (seção "Assinatura").
+export const TONE_CLASSE = {
+  positive: "ass-tom-ok",
+  attention: "ass-tom-alerta",
+  neutral: "ass-tom-neutro",
+  negative: "ass-tom-perigo",
+};
+
 export function situacaoInfo(value) {
   const key = (value || "").toString().toLowerCase();
   const meta = SITUACAO_MAP[key] || { label: value || "—", tone: "neutral" };
-  return { ...meta, dot: TONE_DOT[meta.tone] };
+  return { ...meta, dot: TONE_DOT[meta.tone], tom: TONE_CLASSE[meta.tone] };
 }
 
 // Categorias comuns — usadas como fallback no filtro quando os dados não trazem

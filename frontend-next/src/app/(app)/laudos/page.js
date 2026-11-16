@@ -10,10 +10,11 @@ function formatDate(value) {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
 }
 
+// Semáforo com os tokens de status (crm-design.css › Shell e configurações).
 const STATUS = {
-  vencido: { label: "Vencido", dot: "#f87171" },
-  vencendo: { label: "Vencendo", dot: "#fbbf24" },
-  vigente: { label: "Vigente", dot: "#34d399" },
+  vencido: { label: "Vencido", tom: "status-perigo" },
+  vencendo: { label: "Vence em breve", tom: "status-alerta" },
+  vigente: { label: "Válido", tom: "status-ok" },
 };
 
 export default async function LaudosPage() {
@@ -22,26 +23,30 @@ export default async function LaudosPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Laudos" subtitle="Gestão de laudos de avaliação imobiliária." />
+      <PageHeader title="Laudos" subtitle="Laudos de avaliação dos imóveis financiados: valor pedido, valor aprovado e validade." />
 
       {!data ? (
-        <EmptyState icon={FileBarChart2} title="Não foi possível carregar os laudos" />
+        <EmptyState icon={FileBarChart2} title="Não foi possível carregar os laudos" hint="Recarregue a página em alguns instantes." />
       ) : laudos.length === 0 ? (
-        <EmptyState icon={FileBarChart2} title="Nenhum laudo encontrado" />
+        <EmptyState
+          icon={FileBarChart2}
+          title="Nenhum laudo por aqui ainda"
+          hint="Quando o banco avaliar um imóvel, o laudo aparece aqui com o valor aprovado e a data de validade. A coluna Situação mostra quais estão perto de vencer."
+        />
       ) : (
         <Table title="Lista de laudos" className="min-w-[900px]">
           <Thead>
             <Th>Parceiro</Th>
             <Th>Tipo</Th>
             <Th>Endereço</Th>
-            <Th right>Solicitado</Th>
-            <Th right>Liberado</Th>
-            <Th>Vencimento</Th>
-            <Th>Status</Th>
+            <Th right>Valor pedido</Th>
+            <Th right>Valor aprovado</Th>
+            <Th>Válido até</Th>
+            <Th>Situação</Th>
           </Thead>
           <tbody>
             {laudos.map((l) => {
-              const st = STATUS[l.status] || { label: l.status || "—", dot: "#94a3b8" };
+              const st = STATUS[l.status] || { label: l.status || "—", tom: "" };
               return (
                 <Row key={l.id}>
                   <Td className="font-medium text-cx-text">{l.parceiro}</Td>
@@ -51,10 +56,7 @@ export default async function LaudosPage() {
                   <Td right className="tabular-nums">{formatBRL(l.valor_liberado)}</Td>
                   <Td muted className="tabular-nums">{formatDate(l.vencimento)}</Td>
                   <Td>
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-cx-border bg-cx-surface px-2 py-1 text-[11px] font-medium text-cx-muted">
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
-                      {st.label}
-                    </span>
+                    <span className={`status-selo ${st.tom}`}>{st.label}</span>
                   </Td>
                 </Row>
               );

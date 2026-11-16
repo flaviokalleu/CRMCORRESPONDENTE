@@ -1,0 +1,90 @@
+- generic [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - region "Webba CRM" [ref=f6e3]:
+      - generic [ref=f6e6]:
+        - link "Webba CRM" [ref=f6e7] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f6e11]: Gestão imobiliária para corretores e correspondentes
+      - tabpanel [ref=f6e19]:
+        - generic [ref=f6e20]:
+          - generic [ref=f6e25]:
+            - generic [ref=f6e26]: Clientes
+            - generic [ref=f6e27]: Funil, documentos e aprovação de crédito.
+          - generic [ref=f6e28]: Mariana Alves
+          - generic [ref=f6e29]: Apartamento 2 quartos · Valparaíso de Goiás
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: MCMV
+            - generic [ref=f6e32]: Em atendimento
+          - list [ref=f6e34]:
+            - listitem [ref=f6e35]:
+              - generic [ref=f6e36]: 28/06
+              - generic [ref=f6e37]:
+                - generic [ref=f6e38]: Documentos conferidos
+                - generic [ref=f6e39]: RG, CPF e comprovante de renda.
+            - listitem [ref=f6e40]:
+              - generic [ref=f6e41]: 25/06
+              - generic [ref=f6e42]:
+                - generic [ref=f6e43]: Simulação enviada
+                - generic [ref=f6e44]: Parcela estimada de R$ 1.180.
+          - generic [ref=f6e45]: Aprovação · 12 jul
+          - generic [ref=f6e49]: 12 novos clientes este mês
+      - generic [ref=f6e53]:
+        - heading [level=1] [ref=f6e54]:
+          - text: Do primeiro contato
+          - emphasis [ref=f6e55]: à chave na mão.
+        - paragraph [ref=f6e56]: Gerencie clientes, imóveis, propostas e a agenda da sua equipe em um só lugar.
+      - generic [ref=f6e57]:
+        - tablist "Módulos" [ref=f6e58]:
+          - tab "Clientes" [selected] [ref=f6e59] [cursor=pointer]
+          - tab "Imóveis" [ref=f6e65] [cursor=pointer]
+          - tab "Propostas" [ref=f6e70] [cursor=pointer]
+          - tab "Agenda" [ref=f6e75] [cursor=pointer]
+        - button "Pausar apresentação" [ref=f6e80] [cursor=pointer]
+    - generic [ref=f6e83]:
+      - generic [ref=f6e85]:
+        - heading "Teste grátis por 7 dias" [level=2] [ref=f6e89]
+        - paragraph [ref=f6e90]: Sem cartão de crédito. Você só paga se decidir continuar.
+        - generic [ref=f6e91]:
+          - generic [ref=f6e92]:
+            - generic [ref=f6e93]: Nome da imobiliária
+            - textbox "Nome da imobiliária" [active] [invalid] [ref=f6e95]:
+              - /placeholder: "Ex.: Imobiliária Central"
+            - paragraph [ref=f6e136]: Informe o nome da imobiliária.
+          - generic [ref=f6e96]:
+            - generic [ref=f6e97]: Seu nome e sobrenome
+            - textbox "Seu nome e sobrenome" [invalid] [ref=f6e99]:
+              - /placeholder: "Ex.: Maria Souza"
+            - paragraph [ref=f6e137]: Informe nome e sobrenome.
+          - generic [ref=f6e100]:
+            - generic [ref=f6e101]: E-mail
+            - textbox "E-mail" [invalid] [ref=f6e103]:
+              - /placeholder: seu@email.com.br
+            - paragraph [ref=f6e138]: Confira o e-mail.
+          - generic [ref=f6e104]:
+            - generic [ref=f6e105]: WhatsApp (opcional)
+            - textbox "WhatsApp (opcional)" [ref=f6e107]:
+              - /placeholder: (61) 99999-9999
+          - generic [ref=f6e108]:
+            - generic [ref=f6e109]: Crie uma senha
+            - generic [ref=f6e110]:
+              - textbox "Crie uma senha" [invalid] [ref=f6e111]:
+                - /placeholder: Pelo menos 6 caracteres
+              - button "Mostrar senha" [ref=f6e112]
+            - paragraph [ref=f6e139]: Use pelo menos 6 caracteres.
+          - paragraph [ref=f6e115]:
+            - text: Plano
+            - strong [ref=f6e116]: Professional
+            - text: · R$ 197/mês depois do teste.
+            - button "Trocar" [ref=f6e117] [cursor=pointer]
+          - button "Começar teste grátis" [ref=f6e118]
+          - paragraph [ref=f6e120]: Ao criar a conta você concorda com o uso dos seus dados para prestar o serviço, conforme a LGPD.
+        - paragraph [ref=f6e121]:
+          - text: Já tem conta?
+          - link "Entrar" [ref=f6e122] [cursor=pointer]:
+            - /url: /login
+      - generic [ref=f6e123]:
+        - generic [ref=f6e124]: © 2026 Webba CRM
+        - link "Voltar ao site" [ref=f6e125] [cursor=pointer]:
+          - /url: /
+  - button "Open Next.js Dev Tools" [ref=f6e131] [cursor=pointer]
+  - alert [ref=f6e140]

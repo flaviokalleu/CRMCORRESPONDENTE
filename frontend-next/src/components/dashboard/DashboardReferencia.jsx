@@ -37,10 +37,10 @@ function PropertyPhoto({ path, name }) {
 // KPIs da operação no formato MetricCard do kit (4 por linha).
 export function KpisOperacao({ main, propostas, total, carteiraHref, responsavelNome }) {
   const kpis = [
-    { title: "Carteira no escopo", value: total ?? 0, icon: UsersRound, detail: responsavelNome, href: carteiraHref },
-    { title: "Leads no mês", value: main.clientesEsteMes ?? 0, icon: Users, detail: "Novos clientes cadastrados", growth: main.crescimentoMensal, href: "/clientes/lista" },
-    { title: "Em atendimento", value: main.clientesPendentes ?? 0, icon: Funnel, detail: "Clientes pendentes na carteira", href: "/clientes/lista?view=kanban" },
-    { title: "Propostas cadastradas", value: propostas == null ? "—" : propostas.length, icon: FileText, detail: "Propostas da sua operação", href: "/propostas" },
+    { title: "Clientes na carteira", value: total ?? 0, icon: UsersRound, detail: responsavelNome, href: carteiraHref },
+    { title: "Novos clientes no mês", value: main.clientesEsteMes ?? 0, icon: Users, detail: "Cadastrados este mês", growth: main.crescimentoMensal, href: "/clientes/lista" },
+    { title: "Em atendimento", value: main.clientesPendentes ?? 0, icon: Funnel, detail: "Ainda sem decisão do banco", href: "/clientes/lista?view=kanban" },
+    { title: "Propostas", value: propostas == null ? "—" : propostas.length, icon: FileText, detail: "Feitas pela equipe", href: "/propostas" },
   ];
   return (
     <div className="ref-kpis">
@@ -85,7 +85,7 @@ export function ListasOperacao({ imoveis, tarefas, recentes }) {
 
   return (
     <div className="ref-lists">
-      <Panel title="Leads recentes" href="/clientes/lista">
+      <Panel title="Clientes recentes" href="/clientes/lista">
         {recentes?.length ? recentes.slice(0, 5).map((client) => (
           <Link href={`/clientes/lista?search=${encodeURIComponent(client.nome)}`} className="ref-client-row" key={client.id}>
             <span className="ref-avatar">{client.nome?.split(/\s+/).slice(0, 2).map((s) => s[0]).join("")}</span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  Users, CheckCircle2, Clock3, Percent, Wallet, TrendingUp, TrendingDown,
+  Users, CheckCircle2, Clock3, Wallet, TrendingUp, TrendingDown,
   Inbox, AlertTriangle, RefreshCw, Lightbulb, ExternalLink, Download, Plus,
   FileCheck2,
 } from "@/components/icons";
@@ -23,6 +23,9 @@ import { SerieTemporalChart, RoscaChart, FunilChart, RankingBars } from "@/compo
 const numeroPt = new Intl.NumberFormat("pt-BR");
 const moedaPt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+// A API manda percentuais como 8.33 — exibir no padrão brasileiro ("8,3%").
+const pctPt = (v) => `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(Number(v) || 0)}%`;
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 // Agrupa um mapa {chave: contagem} em até `max` fatias por valor decrescente,
 // somando o restante em "Outros" — evita o 6º matiz, que a paleta categórica
@@ -202,62 +205,104 @@ export function RelatoriosDashboard({ dados, loadError }) {
 
   const recomendacoes = dados.recomendacoes || [];
 
+  // Títulos que dizem a conclusão (o gráfico vira a prova, não a pergunta).
+  const ultimoMes = Array.isArray(dados.tendencias) ? dados.tendencias[dados.tendencias.length - 1] : null;
+  const mesAtual = MESES[new Date().getMonth()];
+  const origemTop = origens.find((o) => o.label !== "Outros");
+  const imovelTop = tiposImovel.find((o) => o.label !== "Outros");
+  const docTop = documentos.slice().sort((a, b) => (b.valor || 0) - (a.valor || 0))[0];
+  const titulos = {
+    evolucao: ultimoMes
+      ? `${numeroPt.format(ultimoMes.total || 0)} ${ultimoMes.total === 1 ? "cliente novo" : "clientes novos"} em ${mesAtual}`
+      : "Novos clientes por mês",
+    origem: origemTop ? `Maior origem: ${origemTop.label} (${pct(origemTop.valor, total)}%)` : "Clientes por origem",
+    funil: geral.aprovados > 0
+      ? `1 em cada ${Math.max(1, Math.round(total / geral.aprovados))} clientes foi aprovado`
+      : "Nenhum cliente aprovado ainda",
+    imovel: imovelTop ? `Mais procurado: ${imovelTop.label}` : "Interesse por tipo de imóvel",
+    documentos: docTop && docTop.valor > 0
+      ? `${docTop.label}: ${docTop.valor}% completos`
+      : "Nenhum cliente com documentos completos",
+    profissao: profissoes[0] ? `Profissão mais comum: ${profissoes[0].label}` : "Clientes por profissão",
+  };
+
   return (
     <div className="space-y-4">
       <Cabecalho />
 
+      {/* "O que fazer agora" no topo: as recomendações que o backend já
+          calcula (Recomendacoes em analytics.go) são a parte acionável da
+          tela — antes ficavam no fim, depois de seis gráficos. */}
+      {recomendacoes.length > 0 && (
+        <section className="rel-agora" aria-labelledby="rel-agora">
+          <Lightbulb className="mt-0.5 size-5 shrink-0 text-cx-blue" aria-hidden="true" />
+          <div className="min-w-0">
+            <h2 id="rel-agora">O que fazer agora</h2>
+            <ul>{recomendacoes.map((r) => <li key={r}>{r}</li>)}</ul>
+          </div>
+        </section>
+      )}
+
       {/* Cartões de indicador — todos vêm de `geral`. A variação percentual
           (única do painel) é derivada de `tendencias` e só aparece quando há
           dois meses de dado real para comparar. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={Users} badgeClassName="bg-cx-blue-soft text-cx-blue" valor={numeroPt.format(geral.total)} label="Total de clientes">
           {variacao && (
-            <p className={cn("mt-1 flex items-center gap-1 text-[11px] font-semibold", variacao.positivo ? "text-wb-good" : "text-wb-bad")}>
+            <p className={cn("mt-1 flex items-center gap-1 text-xs font-semibold", variacao.positivo ? "text-wb-good" : "text-wb-bad")}>
               {variacao.positivo ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
               {variacao.novo ? "novo este mês" : `${variacao.positivo ? "+" : ""}${variacao.valor}% vs. mês anterior`}
             </p>
           )}
         </StatCard>
         <StatCard icon={CheckCircle2} soft={TONE_SOFT.positive} ink={TONE_INK.positive} valor={numeroPt.format(geral.aprovados)} label="Aprovados">
-          <p className="mt-1 text-[11px] text-cx-muted">{geral.taxaAprovacao}% de taxa de aprovação</p>
+          <p className="mt-1 text-xs text-cx-muted">{pctPt(geral.taxaAprovacao)} dos clientes</p>
         </StatCard>
-        <StatCard icon={Clock3} soft={TONE_SOFT.attention} ink={TONE_INK.attention} valor={numeroPt.format(geral.pendentes)} label="Pendentes">
-          <p className="mt-1 text-[11px] text-cx-muted">{pct(geral.pendentes, geral.total)}% da carteira</p>
-        </StatCard>
-        <StatCard icon={Percent} soft={TONE_SOFT.neutral} ink={TONE_INK.neutral} valor={`${geral.taxaAprovacao}%`} label="Taxa de aprovação">
-          <p className="mt-1 text-[11px] text-cx-muted">{geral.taxaReprovacao}% de reprovação</p>
+        <StatCard icon={Clock3} soft={TONE_SOFT.attention} ink={TONE_INK.attention} valor={numeroPt.format(geral.pendentes)} label="Em análise">
+          <p className="mt-1 text-xs text-cx-muted">{pct(geral.pendentes, geral.total)}% da carteira</p>
         </StatCard>
         <StatCard icon={Wallet} soft={TONE_SOFT.neutral} ink={TONE_INK.neutral} valor={moedaPt.format(geral.rendaMedia || 0)} label="Renda média">
-          <p className="mt-1 text-[11px] text-cx-muted">{numeroPt.format(geral.clientesComRenda || 0)} com renda informada</p>
+          <p className="mt-1 text-xs text-cx-muted">{numeroPt.format(geral.clientesComRenda || 0)} com renda informada</p>
         </StatCard>
       </div>
 
       {/* Painéis — grade de 3 colunas no desktop, empilhado no celular. */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="ring-cx-border bg-cx-surface p-4 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-cx-text">Evolução de clientes</h2>
-          <p className="text-xs text-cx-muted">Novos cadastros por mês, últimos 12 meses.</p>
+          <div>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.evolucao}</h2>
+            <p className="text-xs text-cx-muted">Novos cadastros por mês, últimos 12 meses.</p>
+          </div>
           <div className="mt-3">
             <SerieTemporalChart tendencias={dados.tendencias} />
           </div>
         </Card>
 
         <Card className="ring-cx-border bg-cx-surface p-4">
-          <h2 className="text-sm font-semibold text-cx-text">Clientes por origem</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.origem}</h2>
+            <p className="text-xs text-cx-muted">De onde vieram os clientes.</p>
+          </div>
           <div className="mt-3">
             <RoscaChart dados={origens} totalLabel="clientes" vazioMsg="O campo de origem ainda não tem dados." />
           </div>
         </Card>
 
         <Card className="ring-cx-border bg-cx-surface p-4">
-          <h2 className="text-sm font-semibold text-cx-text">Funil de conversão</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.funil}</h2>
+            <p className="text-xs text-cx-muted">Do cadastro à aprovação do financiamento.</p>
+          </div>
           <div className="mt-4">
             <FunilChart etapas={funil} />
           </div>
         </Card>
 
         <Card className="ring-cx-border bg-cx-surface p-4">
-          <h2 className="text-sm font-semibold text-cx-text">Interesse por tipo de imóvel</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.imovel}</h2>
+            <p className="text-xs text-cx-muted">Tipo de imóvel que os clientes procuram.</p>
+          </div>
           <div className="mt-3">
             <RoscaChart dados={tiposImovel} totalLabel="clientes" vazioMsg="O campo de tipo de imóvel ainda não tem dados." />
           </div>
@@ -265,14 +310,14 @@ export function RelatoriosDashboard({ dados, loadError }) {
 
         <Card className="ring-cx-border bg-cx-surface p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-cx-text">Completude de documentos</h2>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.documentos}</h2>
             <FileCheck2 className="size-4 text-cx-muted" aria-hidden="true" />
           </div>
           <Table className="mt-2">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="px-0! text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase">Documento</TableHead>
-                <TableHead className="px-0! text-right text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase">Completo</TableHead>
+                <TableHead className="px-0! text-xs font-semibold tracking-wide text-cx-muted uppercase">Documento</TableHead>
+                <TableHead className="px-0! text-right text-xs font-semibold tracking-wide text-cx-muted uppercase">Completos</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -287,38 +332,16 @@ export function RelatoriosDashboard({ dados, loadError }) {
         </Card>
 
         <Card className="ring-cx-border bg-cx-surface p-4 lg:col-span-3">
-          <h2 className="text-sm font-semibold text-cx-text">Clientes por profissão</h2>
-          <p className="text-xs text-cx-muted">Top {profissoes.length || 0} profissões mais frequentes na carteira.</p>
+          <div>
+            <h2 className="text-sm font-semibold text-cx-text">{titulos.profissao}</h2>
+            <p className="text-xs text-cx-muted">Top {profissoes.length || 0} profissões mais frequentes na carteira.</p>
+          </div>
           <div className="mt-3">
             <RankingBars itens={profissoes} />
           </div>
         </Card>
       </div>
 
-      {/* Recomendações — o backend já calcula (Recomendacoes(a) em
-          analytics.go); a página antiga nunca mostrava. */}
-      <div className="flex flex-col gap-3 rounded-xl border border-cx-blue/20 bg-cx-blue-soft p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-cx-blue" aria-hidden="true" />
-          <div className="min-w-0 text-sm text-cx-text">
-            {recomendacoes.length > 0 ? (
-              <ul className="list-disc space-y-1 pl-4">
-                {recomendacoes.map((r) => <li key={r}>{r}</li>)}
-              </ul>
-            ) : (
-              <p>Nenhuma recomendação no momento — os indicadores da carteira estão dentro do esperado.</p>
-            )}
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          nativeButton={false}
-          render={<a href="/api/backend/report/relatorio" target="_blank" rel="noreferrer" />}
-          className="shrink-0 gap-2 border-cx-border bg-cx-surface text-cx-blue hover:bg-cx-bg"
-        >
-          Ver relatório completo <ExternalLink className="size-4" />
-        </Button>
-      </div>
     </div>
   );
 }

@@ -1,17 +1,25 @@
 import Link from "next/link";
 import { apiGet } from "@/lib/api-server";
-import ImovelCard from "@/components/public/ImovelCard";
+import { ArrowLeft, MessageCircle, Search, SearchX } from "@/components/icons";
+import { ImovelCardPublico } from "@/components/public/ImovelCardPublico";
+import { opcoesDeFiltro } from "@/lib/imovel-filtros";
+import { linkWhatsAppPublico } from "@/lib/contato-publico";
+import { whatsappPublico } from "@/lib/contato-publico-server";
 
 // Busca de imóveis ("/busca?busca=termo"). Server Component — o termo vem
-// via query string (GET), então dá para buscar direto no servidor sem
-// precisar de "use client"/fetch client-side (mais simples e melhor p/ SEO).
-// Referência de lógica: frontend/src/components/Busca.jsx
-// (`GET ${VITE_API_URL}/imoveis/busca?busca=...`).
+// via query string (GET), então dá para buscar direto no servidor.
+//
+// Mesmo cartão da vitrine (/imoveis), para a pessoa reconhecer o que vê.
+// Sem termo ou sem resultado, a tela não fica em branco: sugere atalhos
+// (tipos e cidades que existem na carteira) e o WhatsApp.
 export const metadata = {
   title: "Buscar imóveis",
 };
 
 export default async function BuscaPage({ searchParams }) {
+  // Número do WhatsApp cadastrado em "Minha empresa" da imobiliária da vitrine.
+  const numeroWhats = await whatsappPublico();
+  const linkWhats = (texto) => linkWhatsAppPublico(texto, numeroWhats);
   const { busca = "" } = await searchParams;
   const termo = String(busca || "").trim();
 
@@ -21,48 +29,100 @@ export default async function BuscaPage({ searchParams }) {
     imoveis = Array.isArray(data) ? data : data?.data || [];
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <Link href="/" className="text-sm text-caixa-primary hover:underline">
-            &larr; Voltar
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-1 mb-4">Resultados da Busca</h1>
+  let sugestoes = { tipos: [], cidades: [] };
+  if (imoveis.length === 0) {
+    const todos = await apiGet("/public/imoveis");
+    sugestoes = opcoesDeFiltro(Array.isArray(todos) ? todos : todos?.data || []);
+  }
 
-          <form action="/busca" method="GET" className="flex gap-2 max-w-lg">
-            <input
-              type="text"
-              name="busca"
-              defaultValue={termo}
-              placeholder="Buscar por nome ou localização..."
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-caixa-primary focus:border-caixa-primary"
-            />
-            <button
-              type="submit"
-              className="bg-caixa-primary text-white px-5 py-2 rounded-lg font-semibold hover:opacity-90"
-            >
+  return (
+    <div className="min-h-screen bg-cx-bg text-cx-text">
+      <header className="border-b border-cx-border bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6">
+          <Link href="/imoveis" className="inline-flex min-h-10 items-center gap-1.5 text-sm text-cx-muted hover:text-cx-text">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Ver todos os imóveis
+          </Link>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            {termo ? `Resultados para “${termo}”` : "Buscar imóveis"}
+          </h1>
+          {termo && (
+            <p className="mt-1 text-sm text-cx-muted">
+              {imoveis.length} {imoveis.length === 1 ? "imóvel encontrado" : "imóveis encontrados"}.
+            </p>
+          )}
+
+          <form action="/busca" method="GET" role="search" className="mt-4 flex max-w-xl gap-2">
+            <label className="lst-busca">
+              <Search aria-hidden="true" />
+              <input
+                type="search"
+                name="busca"
+                defaultValue={termo}
+                placeholder="Bairro, rua ou nome do imóvel"
+                aria-label="Buscar imóveis"
+                autoFocus={!termo}
+                className="cx-input"
+              />
+            </label>
+            <button type="submit" className="lst-botao lst-botao-principal">
               Buscar
             </button>
           </form>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {!termo ? (
-          <p className="text-center text-gray-500 py-12">Digite um termo para buscar imóveis.</p>
-        ) : imoveis.length === 0 ? (
-          <p className="text-center text-gray-500 py-12">
-            Nenhum resultado encontrado para &quot;{termo}&quot;.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main id="conteudo" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {imoveis.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {imoveis.map((imovel) => (
-              <ImovelCard key={imovel.id} imovel={imovel} />
+              <ImovelCardPublico key={imovel.id} imovel={imovel} />
             ))}
           </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-cx-border bg-white px-6 py-12 text-center">
+            <SearchX className="mx-auto h-8 w-8 text-cx-muted" aria-hidden="true" />
+            <p className="mt-3 font-semibold">
+              {termo ? `Nada encontrado para “${termo}”` : "Digite um bairro, rua ou o nome do imóvel"}
+            </p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-cx-muted">
+              {termo ? "Tente uma palavra mais curta ou escolha um atalho:" : "Ou comece por um destes atalhos:"}
+            </p>
+
+            {(sugestoes.tipos.length > 0 || sugestoes.cidades.length > 0) && (
+              <nav aria-label="Atalhos" className="mt-4 flex flex-wrap justify-center gap-2">
+                {sugestoes.tipos.map((t) => (
+                  <Link key={t} href={`/imoveis?tipo=${encodeURIComponent(t)}`} className="lst-filtro">
+                    {t}
+                  </Link>
+                ))}
+                {sugestoes.cidades.map((c) => (
+                  <Link key={c} href={`/imoveis?cidade=${encodeURIComponent(c)}`} className="lst-filtro">
+                    {c}
+                  </Link>
+                ))}
+              </nav>
+            )}
+
+            <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+              <a
+                href={linkWhats(
+                  termo
+                    ? `Olá! Procurei por "${termo}" no site e não achei. Podem me ajudar?`
+                    : "Olá! Estou procurando um imóvel. Podem me ajudar?"
+                )}
+                target="_blank"
+                rel="noreferrer"
+                className="lst-cta-whats"
+              >
+                <MessageCircle aria-hidden="true" /> Pedir ajuda no WhatsApp
+              </a>
+              <Link href="/imoveis" className="lst-botao">
+                Ver todos os imóveis
+              </Link>
+            </div>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

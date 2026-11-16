@@ -48,14 +48,22 @@ func (r *Repository) FindTokenByRefresh(ctx context.Context, refresh string) (*m
 	return &t, nil
 }
 
-// ReplaceUserSession implementa "1 sessão por usuário": remove tokens antigos e
-// cria o novo, tudo em transação. Ver 01-spec §4.1 e gotcha §7.3.
+// MaxSessoesPorUsuario: aparelhos conectados ao mesmo tempo (celular,
+// computador, tablet…). Antes era 1, e entrar pelo celular derrubava o
+// computador. Ao passar do limite, saem as sessões mais antigas.
+const MaxSessoesPorUsuario = 5
+
+// ReplaceUserSession grava a nova sessão e mantém só as MaxSessoesPorUsuario
+// mais recentes do usuário. (Nome mantido por compatibilidade; a troca de
+// senha continua derrubando todas, em reset.go.)
 func (r *Repository) ReplaceUserSession(ctx context.Context, tok *models.Token) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("user_id = ?", tok.UserID).Delete(&models.Token{}).Error; err != nil {
+		if err := tx.Create(tok).Error; err != nil {
 			return err
 		}
-		return tx.Create(tok).Error
+		return tx.Exec(`DELETE FROM tokens WHERE user_id = ? AND id NOT IN (
+			SELECT id FROM tokens WHERE user_id = ? ORDER BY updated_at DESC, id DESC LIMIT ?)`,
+			tok.UserID, tok.UserID, MaxSessoesPorUsuario).Error
 	})
 }
 

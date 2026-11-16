@@ -181,7 +181,7 @@ export default function PortalInquilinoPage() {
             </button>
           </form>
 
-          <p className="text-center text-gray-400 text-xs mt-6">CRM IMOB - Gestão Imobiliária</p>
+          <p className="text-center text-gray-400 text-xs mt-6">Portal do inquilino</p>
         </div>
       </div>
     );
@@ -467,7 +467,7 @@ export default function PortalInquilinoPage() {
         </div>
       )}
 
-      <footer className="text-center py-6 text-gray-400 text-xs">CRM IMOB - Portal do Inquilino</footer>
+      <footer className="text-center py-6 text-gray-400 text-xs">Portal do inquilino · Webba CRM</footer>
     </div>
   );
 }

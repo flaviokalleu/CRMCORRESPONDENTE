@@ -1,16 +1,14 @@
 import { AddClienteForm } from "@/components/AddClienteForm";
+import { PageHeader } from "@/components/ui/page";
 
-export const metadata = { title: "Adicionar Cliente" };
+export const metadata = { title: "Cadastrar cliente" };
 
 // Server Component: só renderiza o cabeçalho e delega o formulário (estado +
-// POST via proxy) para o Client Component. Ver frontend/src/components/AddCliente.jsx
-// e ClientForm.jsx para a versão completa (com seleção venda/aluguel, cônjuge,
-// dependentes e upload de documentos) que ainda não foi portada.
+// POST multipart via proxy) para o Client Component ClienteForm.
 export default function AdicionarClientePage() {
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold text-cx-text mb-1">Adicionar Cliente</h1>
-      <p className="text-sm text-cx-muted mb-6">Cadastro completo — dados pessoais, renda, cônjuge, fiador e documentos.</p>
+    <div>
+      <PageHeader title="Cadastrar cliente" subtitle="Só nome, e-mail, telefone e CPF são obrigatórios. O resto pode ficar para depois." />
       <AddClienteForm />
     </div>
   );

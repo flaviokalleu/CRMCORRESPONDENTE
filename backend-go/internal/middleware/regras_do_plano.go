@@ -18,6 +18,7 @@ func RegrasDoPlano(db *gorm.DB) gin.HandlerFunc {
 	pagamentos := RequireFeature(db, "has_pagamentos")
 	regras := map[string]gin.HandlerFunc{
 		"POST /api/clientes":       RequireLimit(db, "clientes"),
+		"POST /api/imoveis":        RequireLimit(db, "imoveis"),
 		"POST /api/imoveis/":       RequireLimit(db, "imoveis"),
 		"POST /api/alugueis":       RequireLimit(db, "alugueis"),
 		"POST /api/corretor":       RequireLimit(db, "usuarios"),

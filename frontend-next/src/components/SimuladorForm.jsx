@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Building2, Check, Percent, RotateCcw, Table2 } from "@/components/icons";
+import { FormField, focarPrimeiroErro } from "@/components/ui/form-field";
+import { MoneyInput } from "@/components/ui/money-input";
+import { maskMoney as mascararDigitos, parseMoney } from "@/lib/masks";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -15,19 +18,9 @@ const formatNumber = (value, digits) =>
 
 const formatPercent = (value) => `${formatNumber(value, 2)}%`;
 
-// Máscara de moeda no padrão brasileiro: o usuário digita só dígitos e eles
-// entram pela direita em centavos (12 → 0,12 → 1,23 → 12,34), que é como o
-// simulador da Caixa e a maioria dos bancos se comporta. Guardamos o valor em
-// state como number; a máscara é só apresentação.
-const digitsToNumber = (str) => {
-  const digits = String(str).replace(/\D/g, "");
-  return digits ? Number(digits) / 100 : 0;
-};
-
-const maskMoney = (value) =>
-  new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    value || 0,
-  );
+// Máscara de moeda pt-BR (@/lib/masks): dígitos entram pela direita em
+// centavos (12 → 0,12 → 1,23). O state guarda number; a máscara é só tela.
+const numeroParaMascara = (value) => (value > 0 ? mascararDigitos(String(Math.round(value * 100))) : "");
 
 const PRAZOS_RAPIDOS = [120, 180, 240, 300, 360, 420];
 
@@ -50,32 +43,37 @@ export function SimuladorForm() {
   const [valorImovel, setValorImovel] = useState(0);
   const [valorEntrada, setValorEntrada] = useState(0);
   const [prazoMeses, setPrazoMeses] = useState("360");
-  const [taxaJurosAnual, setTaxaJurosAnual] = useState("9.37");
+  const [taxaJurosAnual, setTaxaJurosAnual] = useState("9,37");
   const [sistema, setSistema] = useState("SAC");
 
   const [resultado, setResultado] = useState(null);
   const [showTabela, setShowTabela] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Erros só aparecem depois que a pessoa tenta avançar (não grita antes).
+  const [tentou, setTentou] = useState(false);
 
   const valorFinanciado = Math.max(0, valorImovel - valorEntrada);
   const percentualEntrada = valorImovel > 0 ? (valorEntrada / valorImovel) * 100 : 0;
   const prazoNum = parseInt(prazoMeses, 10) || 0;
-  const taxaNum = parseFloat(taxaJurosAnual) || 0;
+  const taxaNum = parseFloat(String(taxaJurosAnual).replace(",", ".")) || 0;
 
-  // Validação por etapa: o botão "Continuar" só libera quando a etapa atual
-  // está consistente, então erro de digitação aparece antes de gastar um POST.
-  const erroEtapa1 = useMemo(() => {
-    if (valorImovel <= 0) return "Informe o valor do imóvel.";
-    if (valorEntrada >= valorImovel) return "A entrada precisa ser menor que o valor do imóvel.";
-    return "";
+  // Validação por etapa, campo a campo. O botão fica sempre ativo: ao tocar
+  // com algo faltando, o erro aparece embaixo do campo e o foco vai até ele.
+  const errosEtapa1 = useMemo(() => {
+    const e = {};
+    if (valorImovel <= 0) e["valor-imovel"] = "Informe o valor do imóvel.";
+    else if (valorEntrada >= valorImovel) e["valor-entrada"] = "A entrada precisa ser menor que o valor do imóvel.";
+    return e;
   }, [valorImovel, valorEntrada]);
 
-  const erroEtapa2 = useMemo(() => {
-    if (prazoNum < 12 || prazoNum > 420) return "O prazo deve ficar entre 12 e 420 meses.";
-    if (taxaNum <= 0) return "Informe uma taxa de juros maior que zero.";
-    return "";
+  const errosEtapa2 = useMemo(() => {
+    const e = {};
+    if (prazoNum < 12 || prazoNum > 420) e.prazo = "O prazo deve ficar entre 12 e 420 meses (1 a 35 anos).";
+    if (taxaNum <= 0) e.taxa = "Informe os juros ao ano. Exemplo: 9,37";
+    return e;
   }, [prazoNum, taxaNum]);
+  const erroVisivel = (id) => (tentou ? (etapa === 1 ? errosEtapa1 : errosEtapa2)[id] : undefined);
 
   const setEntradaPorPercentual = (pct) => {
     setValorEntrada(Math.round(valorImovel * (pct / 100) * 100) / 100);
@@ -115,19 +113,20 @@ export function SimuladorForm() {
     setResultado(null);
     setShowTabela(false);
     setError("");
+    setTentou(false);
     setEtapa(1);
   };
 
   const avancar = () => {
-    if (etapa === 1) {
-      if (erroEtapa1) return;
-      setEtapa(2);
+    const erros = etapa === 1 ? errosEtapa1 : errosEtapa2;
+    if (Object.keys(erros).length) {
+      setTentou(true);
+      focarPrimeiroErro(erros, etapa === 1 ? ["valor-imovel", "valor-entrada"] : ["prazo", "taxa"]);
       return;
     }
-    if (etapa === 2) {
-      if (erroEtapa2) return;
-      calcular();
-    }
+    setTentou(false);
+    if (etapa === 1) setEtapa(2);
+    else calcular();
   };
 
   return (
@@ -141,13 +140,18 @@ export function SimuladorForm() {
       </header>
 
       <Stepper etapaAtual={etapa} />
+      <p className="crm-step-label" aria-live="polite">
+        Etapa {etapa} de 3 · {ETAPAS[etapa - 1].titulo}
+      </p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <section className="lg:col-span-2">
           {etapa === 1 && (
             <Card titulo="Sobre o imóvel" icone={Building2} passo="Etapa 1 de 3">
               <MoneyField
+                id="valor-imovel"
                 label="Valor do imóvel"
+                error={erroVisivel("valor-imovel")}
                 value={valorImovel}
                 onChange={(v) => {
                   setValorImovel(v);
@@ -158,7 +162,9 @@ export function SimuladorForm() {
               />
 
               <MoneyField
+                id="valor-entrada"
                 label="Valor de entrada"
+                error={erroVisivel("valor-entrada")}
                 value={valorEntrada}
                 onChange={setValorEntrada}
                 hint={
@@ -170,12 +176,13 @@ export function SimuladorForm() {
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-cx-muted">Ajustar entrada</span>
+                  <label htmlFor="entrada-pct" className="text-sm font-semibold text-cx-text">Ajustar entrada</label>
                   <span className="font-tabular text-xs text-cx-muted">
                     {formatNumber(percentualEntrada, 0)}%
                   </span>
                 </div>
                 <input
+                  id="entrada-pct"
                   type="range"
                   min="0"
                   max="90"
@@ -183,9 +190,9 @@ export function SimuladorForm() {
                   disabled={valorImovel <= 0}
                   value={Math.min(90, Math.round(percentualEntrada))}
                   onChange={(e) => setEntradaPorPercentual(Number(e.target.value))}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-cx-bg accent-cx-orange disabled:cursor-not-allowed disabled:opacity-40"
+                  className="w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                 />
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="crm-choices mt-2">
                   {[10, 20, 30, 50].map((pct) => (
                     <Chip
                       key={pct}
@@ -206,25 +213,21 @@ export function SimuladorForm() {
           {etapa === 2 && (
             <Card titulo="Condições do financiamento" icone={Percent} passo="Etapa 2 de 3">
               <div>
-                <label className={labelClass} htmlFor="prazo">
-                  Prazo
-                </label>
-                <div className="relative">
-                  <input
-                    id="prazo"
-                    type="number"
-                    inputMode="numeric"
-                    min="12"
-                    max="420"
-                    value={prazoMeses}
-                    onChange={(e) => setPrazoMeses(e.target.value)}
-                    className={`${inputClass} pr-16`}
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cx-muted">
-                    meses
-                  </span>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <FormField id="prazo" label="Prazo" error={erroVisivel("prazo")} semClonar>
+                  <div className="crm-suffix">
+                    <input
+                      id="prazo"
+                      type="text"
+                      inputMode="numeric"
+                      value={prazoMeses}
+                      onChange={(e) => setPrazoMeses(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                      aria-invalid={erroVisivel("prazo") ? true : undefined}
+                      aria-describedby={erroVisivel("prazo") ? "prazo-erro" : undefined}
+                    />
+                    <span aria-hidden="true">meses</span>
+                  </div>
+                </FormField>
+                <div className="crm-choices mt-2">
                   {PRAZOS_RAPIDOS.map((p) => (
                     <Chip key={p} ativo={prazoNum === p} onClick={() => setPrazoMeses(String(p))}>
                       {p / 12} anos
@@ -233,41 +236,35 @@ export function SimuladorForm() {
                 </div>
               </div>
 
-              <div>
-                <label className={labelClass} htmlFor="taxa">
-                  Taxa de juros anual
-                </label>
-                <div className="relative">
+              <FormField id="taxa" label="Juros ao ano" hint="Use a taxa que o banco informou. Exemplo: 9,37" error={erroVisivel("taxa")} semClonar>
+                <div className="crm-suffix">
                   <input
                     id="taxa"
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    step="0.01"
-                    min="0"
                     value={taxaJurosAnual}
-                    onChange={(e) => setTaxaJurosAnual(e.target.value)}
-                    className={`${inputClass} pr-16`}
+                    onChange={(e) => setTaxaJurosAnual(e.target.value.replace(/[^\d,.]/g, ""))}
+                    aria-invalid={erroVisivel("taxa") ? true : undefined}
+                    aria-describedby={erroVisivel("taxa") ? "taxa-erro taxa-dica" : "taxa-dica"}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cx-muted">
-                    % a.a.
-                  </span>
+                  <span aria-hidden="true">% ao ano</span>
                 </div>
-              </div>
+              </FormField>
 
               <div>
-                <span className={labelClass}>Sistema de amortização</span>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <p className="mb-2 text-sm font-semibold text-cx-text">Como as parcelas mudam</p>
+                <div className="crm-options" role="radiogroup">
                   <SistemaOption
                     ativo={sistema === "SAC"}
                     onClick={() => setSistema("SAC")}
-                    titulo="SAC"
-                    descricao="Parcelas decrescentes. Paga menos juros no total."
+                    titulo="Parcelas que diminuem (SAC)"
+                    descricao="Começa mais alta e cai todo mês. Paga menos juros no total."
                   />
                   <SistemaOption
                     ativo={sistema === "PRICE"}
                     onClick={() => setSistema("PRICE")}
-                    titulo="PRICE"
-                    descricao="Parcela fixa do começo ao fim. Previsível."
+                    titulo="Parcelas iguais (PRICE)"
+                    descricao="O mesmo valor do começo ao fim. Mais fácil de planejar."
                   />
                 </div>
               </div>
@@ -339,10 +336,10 @@ export function SimuladorForm() {
                               <td className="font-tabular px-3 py-2 text-right font-medium text-cx-text">
                                 {formatCurrency(p.parcela)}
                               </td>
-                              <td className="font-tabular px-3 py-2 text-right text-emerald-700">
+                              <td className="font-tabular px-3 py-2 text-right">
                                 {formatCurrency(p.amortizacao)}
                               </td>
-                              <td className="font-tabular px-3 py-2 text-right text-red-700">
+                              <td className="font-tabular px-3 py-2 text-right">
                                 {formatCurrency(p.juros)}
                               </td>
                               <td className="font-tabular px-3 py-2 text-right">
@@ -381,8 +378,9 @@ export function SimuladorForm() {
               <button
                 type="button"
                 onClick={avancar}
-                disabled={loading || (etapa === 1 ? !!erroEtapa1 : !!erroEtapa2)}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                disabled={loading}
+                aria-busy={loading || undefined}
+                className="cx-btn cx-btn-primary flex-1 sm:flex-none"
               >
                 {loading ? "Calculando..." : etapa === 2 ? "Simular" : "Continuar"}
                 {!loading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
@@ -402,7 +400,7 @@ export function SimuladorForm() {
                 <button
                   type="button"
                   onClick={recomecar}
-                  className="inline-flex items-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark"
+                  className="cx-btn cx-btn-primary"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   Nova simulação
@@ -411,9 +409,9 @@ export function SimuladorForm() {
             )}
           </div>
 
-          {(error || (etapa === 1 && erroEtapa1 && valorImovel > 0) || (etapa === 2 && erroEtapa2)) && (
-            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error || (etapa === 1 ? erroEtapa1 : erroEtapa2)}
+          {error && (
+            <p className="crm-alert mt-3" data-tom="erro" role="alert">
+              {error}
             </p>
           )}
         </section>
@@ -437,7 +435,7 @@ export function SimuladorForm() {
                   label="Prazo"
                   valor={prazoNum ? `${prazoNum} meses (${formatNumber(prazoNum / 12, 0)} anos)` : "—"}
                 />
-                <ResumoLinha label="Juros" valor={taxaNum ? `${formatNumber(taxaNum, 2)}% a.a.` : "—"} />
+                <ResumoLinha label="Juros" valor={taxaNum ? `${formatNumber(taxaNum, 2)}% ao ano` : "—"} />
                 <ResumoLinha label="Sistema" valor={sistema} />
               </>
             )}
@@ -451,9 +449,6 @@ export function SimuladorForm() {
 
 /* ---------- Peças de UI ---------- */
 
-const inputClass =
-  "w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text placeholder-[#9aa6b4] outline-none focus:border-cx-blue focus:ring-2 focus:ring-cx-blue/20";
-const labelClass = "mb-1.5 block text-xs font-medium text-cx-muted";
 
 function Stepper({ etapaAtual }) {
   return (
@@ -482,7 +477,7 @@ function Stepper({ etapaAtual }) {
                 >
                   {e.titulo}
                 </span>
-                <span className="block truncate text-[0.65rem] text-cx-muted">{e.descricao}</span>
+                <span className="block truncate text-xs text-cx-muted">{e.descricao}</span>
               </span>
             </div>
             {i < ETAPAS.length - 1 && (
@@ -504,7 +499,7 @@ function Card({ titulo, icone: Icone, passo, children }) {
         </span>
         <div>
           <h2 className="text-sm font-semibold text-cx-text">{titulo}</h2>
-          <p className="text-[0.7rem] text-cx-muted">{passo}</p>
+          <p className="text-xs text-cx-muted">{passo}</p>
         </div>
       </div>
       {children}
@@ -512,40 +507,22 @@ function Card({ titulo, icone: Icone, passo, children }) {
   );
 }
 
-function MoneyField({ label, value, onChange, hint, autoFocus, destaque }) {
+function MoneyField({ id, label, value, onChange, hint, error, autoFocus, destaque }) {
   return (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-cx-muted">
-          R$
-        </span>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoFocus={autoFocus}
-          value={maskMoney(value)}
-          onChange={(e) => onChange(digitsToNumber(e.target.value))}
-          className={`${inputClass} font-tabular pl-10 ${destaque ? "py-3 text-lg font-semibold" : ""}`}
-        />
-      </div>
-      {hint && <p className="mt-1.5 text-[0.7rem] text-cx-muted">{hint}</p>}
-    </div>
+    <FormField id={id} label={label} hint={hint} error={error}>
+      <MoneyInput
+        grande={destaque}
+        autoFocus={autoFocus}
+        value={numeroParaMascara(value)}
+        onChange={(v) => onChange(parseMoney(v))}
+      />
+    </FormField>
   );
 }
 
 function Chip({ children, ativo, disabled, onClick }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        ativo
-          ? "border-cx-orange bg-cx-orange text-cx-text"
-          : "border-cx-border bg-cx-surface text-cx-muted hover:bg-cx-bg"
-      }`}
-    >
+    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={!!ativo} className="crm-choice">
       {children}
     </button>
   );
@@ -553,27 +530,12 @@ function Chip({ children, ativo, disabled, onClick }) {
 
 function SistemaOption({ ativo, onClick, titulo, descricao }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={ativo}
-      className={`rounded-xl border p-3 text-left transition-colors ${
-        ativo
-          ? "border-cx-orange bg-cx-blue-soft"
-          : "border-cx-border bg-cx-bg hover:bg-cx-surface"
-      }`}
-    >
-      <span className="flex items-center gap-2 text-sm font-semibold text-cx-text">
-        <span
-          className={`grid h-4 w-4 place-items-center rounded-full ring-1 ${
-            ativo ? "bg-cx-orange ring-cx-orange" : "ring-cx-border"
-          }`}
-        >
-          {ativo && <Check className="h-2.5 w-2.5 text-cx-text" aria-hidden="true" />}
-        </span>
-        {titulo}
+    <button type="button" role="radio" onClick={onClick} aria-checked={ativo} className="crm-option">
+      <span className="crm-option-mark">{ativo && <Check aria-hidden="true" />}</span>
+      <span>
+        <span className="crm-option-title">{titulo}</span>
+        <span className="crm-option-desc">{descricao}</span>
       </span>
-      <span className="mt-1 block text-[0.7rem] leading-relaxed text-cx-muted">{descricao}</span>
     </button>
   );
 }

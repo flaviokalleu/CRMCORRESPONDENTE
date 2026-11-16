@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 // Client Component: formulário de vínculo inquilino + imóvel + proprietário
 // (com upload opcional de documentos). Referência de lógica:
 // frontend/src/components/ListaContratos.jsx (vincularContrato).
-export function ContratoVincularForm({ opcoes }) {
+export function ContratoVincularForm({ opcoes, onSalvo }) {
   const router = useRouter();
   const [selectedInquilino, setSelectedInquilino] = useState("");
   const [selectedImovel, setSelectedImovel] = useState("");
@@ -57,6 +57,7 @@ export function ContratoVincularForm({ opcoes }) {
       setSelectedImovel("");
       setSelectedProprietario("");
       router.refresh();
+      onSalvo?.();
     } catch (e2) {
       setErr(e2.message || "Erro ao salvar contrato");
     } finally {
@@ -67,8 +68,9 @@ export function ContratoVincularForm({ opcoes }) {
   return (
     <form onSubmit={handleSubmit} className="crm-form grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm text-cx-muted mb-1">Inquilino</label>
+        <label htmlFor="contrato-inquilino" className="block text-sm text-cx-muted mb-1">Inquilino</label>
         <select
+          id="contrato-inquilino"
           value={selectedInquilino}
           onChange={(e) => setSelectedInquilino(e.target.value)}
           className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
@@ -83,8 +85,9 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-cx-muted mb-1">Imóvel</label>
+        <label htmlFor="contrato-imovel" className="block text-sm text-cx-muted mb-1">Imóvel</label>
         <select
+          id="contrato-imovel"
           value={selectedImovel}
           onChange={(e) => setSelectedImovel(e.target.value)}
           className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
@@ -99,8 +102,9 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-cx-muted mb-1">Proprietário</label>
+        <label htmlFor="contrato-proprietario" className="block text-sm text-cx-muted mb-1">Proprietário</label>
         <select
+          id="contrato-proprietario"
           value={selectedProprietario}
           onChange={(e) => setSelectedProprietario(e.target.value)}
           className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text"
@@ -115,13 +119,14 @@ export function ContratoVincularForm({ opcoes }) {
       </div>
 
       <div>
-        <label className="block text-sm text-cx-muted mb-1">Documentação</label>
+        <label htmlFor="contrato-docs" className="block text-sm text-cx-muted mb-1">Contrato assinado e documentos (opcional)</label>
         <input
+          id="contrato-docs"
           type="file"
           multiple
           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
           onChange={(e) => setArquivos(Array.from(e.target.files || []))}
-          className="w-full text-sm text-cx-muted file:mr-3 file:rounded-md file:border-0 file:bg-orange-500 file:px-3 file:py-1.5 file:text-white file:text-sm"
+          className="w-full text-sm text-cx-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cx-blue-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-cx-blue"
         />
       </div>
 
@@ -129,15 +134,15 @@ export function ContratoVincularForm({ opcoes }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange disabled:opacity-60"
+          className="cx-btn cx-btn-primary"
         >
-          {saving ? "Salvando..." : "Vincular contrato"}
+          {saving ? "Salvando..." : "Salvar contrato"}
         </button>
         {arquivos.length > 0 && <span className="text-sm text-cx-muted">{arquivos.length} arquivo(s)</span>}
       </div>
 
-      {msg && <p className="md:col-span-2 text-sm text-green-700">{msg}</p>}
-      {err && <p className="md:col-span-2 text-sm text-red-700">{err}</p>}
+      {msg && <p role="status" className="md:col-span-2 form-aviso" data-tom="ok">{msg}</p>}
+      {err && <p role="alert" className="md:col-span-2 form-aviso" data-tom="erro">{err}</p>}
     </form>
   );
 }

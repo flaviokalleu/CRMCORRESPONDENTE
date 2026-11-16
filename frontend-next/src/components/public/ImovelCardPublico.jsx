@@ -32,7 +32,8 @@ export function ImovelCardPublico({ imovel }) {
       href={`/imoveis/${imovel.id}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-cx-border bg-white transition-shadow hover:shadow-lg"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-cx-bg">
+      {/* Sem foto: faixa baixa em vez de um quadro vazio do tamanho de uma foto. */}
+      <div className={`relative overflow-hidden bg-cx-bg ${capa ? "aspect-4/3" : "h-24"}`}>
         {capa ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -41,16 +42,16 @@ export function ImovelCardPublico({ imovel }) {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="grid h-full place-items-center text-cx-border">
-            <ImageOff className="h-10 w-10" aria-hidden="true" />
+          <div className="lst-foto-vazia">
+            <ImageOff aria-hidden="true" /> Fotos em breve
           </div>
         )}
 
-        <span className="absolute left-2.5 top-2.5 rounded-md bg-cx-blue px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-white">
+        <span className="absolute left-2.5 top-2.5 rounded-md bg-cx-blue px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
           {imovel.tipo || "Imóvel"}
         </span>
         {imovel.exclusivo && (
-          <span className="absolute right-2.5 top-2.5 rounded-md bg-cx-orange px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-white">
+          <span className="absolute right-2.5 top-2.5 rounded-md bg-cx-orange px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
             Exclusivo
           </span>
         )}

@@ -2,43 +2,52 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { toast } from "sonner";
+import { Save } from "@/components/icons";
+import { PageHeader } from "@/components/ui/page";
+import { FormField, FormAlert, focarPrimeiroErro } from "@/components/ui/form-field";
+import { MoneyInput } from "@/components/ui/money-input";
+import { FormActions } from "@/components/ui/form-actions";
+import { Dropzone } from "@/components/ui/dropzone";
+import { parseMoney, soDigitos } from "@/lib/masks";
 
-// Client Component: cadastro de imóvel para aluguel. Referência de lógica:
-// frontend/src/components/AddAluguelForm.jsx. Envia multipart/form-data via
-// proxy `/api/backend/alugueis` (nunca axios, nunca chamada direta ao Go).
+// Client Component: cadastro de imóvel para aluguel. Envia multipart/form-data
+// via proxy `/api/backend/alugueis` (nunca chamada direta ao Go). O backend
+// aceita valor_aluguel em pt-BR ("1.500,00" — parseCurrencyValue).
+const VAZIO = { nome_imovel: "", descricao: "", valor_aluguel: "", quartos: "", banheiro: "", dia_vencimento: "" };
+const ORDEM = ["nome_imovel", "descricao", "valor_aluguel", "dia_vencimento"];
+
 export default function AddAluguelPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    nome_imovel: "",
-    descricao: "",
-    valor_aluguel: "",
-    quartos: "",
-    banheiro: "",
-    dia_vencimento: "",
-  });
-  const [fotoCapa, setFotoCapa] = useState(null);
-  const [fotosAdicionais, setFotosAdicionais] = useState(null);
+  const [formData, setFormData] = useState(VAZIO);
+  const [fotoCapa, setFotoCapa] = useState([]);
+  const [fotosAdicionais, setFotosAdicionais] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [erros, setErros] = useState({});
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  const set = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError("");
-  }
+    setErros((p) => (p[name] ? { ...p, [name]: undefined } : p));
+  };
+  const onText = (e) => set(e.target.name, e.target.value);
+  const onNumero = (max) => (e) => set(e.target.name, soDigitos(e.target.value).slice(0, max));
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    setSuccess(false);
 
-    if (!formData.nome_imovel.trim()) return setError("Nome do imóvel é obrigatório");
-    if (!formData.descricao.trim()) return setError("Descrição é obrigatória");
-    if (!formData.valor_aluguel) return setError("Valor do aluguel é obrigatório");
-
-    setLoading(true);
+    const novos = {};
+    if (!formData.nome_imovel.trim()) novos.nome_imovel = "Escreva um nome ou o endereço do imóvel.";
+    if (!formData.descricao.trim()) novos.descricao = "Conte um pouco sobre o imóvel.";
+    if (parseMoney(formData.valor_aluguel) <= 0) novos.valor_aluguel = "Informe o valor do aluguel.";
+    const dia = Number(formData.dia_vencimento);
+    if (formData.dia_vencimento && (dia < 1 || dia > 31)) novos.dia_vencimento = "Use um dia entre 1 e 31.";
+    if (Object.keys(novos).length) {
+      setErros(novos);
+      focarPrimeiroErro(novos, ORDEM);
+      return;
+    }
 
     const fd = new FormData();
     fd.append("nome_imovel", formData.nome_imovel);
@@ -47,165 +56,72 @@ export default function AddAluguelPage() {
     fd.append("quartos", formData.quartos);
     fd.append("banheiro", formData.banheiro);
     fd.append("dia_vencimento", formData.dia_vencimento);
-    if (fotoCapa) fd.append("foto_capa", fotoCapa);
-    if (fotosAdicionais) {
-      Array.from(fotosAdicionais).forEach((file) => fd.append("fotos_adicionais", file));
-    }
+    if (fotoCapa[0]) fd.append("foto_capa", fotoCapa[0]);
+    fotosAdicionais.forEach((file) => fd.append("fotos_adicionais", file));
 
+    setLoading(true);
     try {
-      const res = await fetch("/api/backend/alugueis", {
-        method: "POST",
-        body: fd,
-      });
+      const res = await fetch("/api/backend/alugueis", { method: "POST", body: fd });
       const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || "Erro ao cadastrar imóvel. Tente novamente.");
-      }
-      setSuccess(true);
-      setFormData({ nome_imovel: "", descricao: "", valor_aluguel: "", quartos: "", banheiro: "", dia_vencimento: "" });
-      setFotoCapa(null);
-      setFotosAdicionais(null);
+      if (!res.ok) throw new Error(data?.error || "Não foi possível cadastrar o imóvel. Tente de novo.");
+      toast.success("Imóvel para aluguel cadastrado.", {
+        action: { label: "Cadastrar outro", onClick: () => router.push("/alugueis/adicionar") },
+        duration: 8000,
+      });
       router.push("/alugueis");
       router.refresh();
     } catch (err) {
       setError(err.message);
+      (document.getElementById("conteudo") || window).scrollTo({ top: 0, behavior: "smooth" }); // a página rola dentro do <main> do layout
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="p-6 max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-cx-text">Cadastrar imóvel para aluguel</h1>
-        <Link href="/alugueis" className="text-sm text-cx-muted hover:text-cx-text">
-          Voltar
-        </Link>
-      </div>
+    <div>
+      <PageHeader title="Cadastrar imóvel para aluguel" subtitle="Nome, descrição e valor são obrigatórios. Fotos podem ficar para depois." />
 
-      <form onSubmit={handleSubmit} className="crm-form space-y-4">
-        <div>
-          <label className="block text-sm text-cx-muted mb-1">Nome / Endereço *</label>
-          <input
-            type="text"
-            name="nome_imovel"
-            value={formData.nome_imovel}
-            onChange={handleChange}
-            required
-            placeholder="Apartamento Rua das Flores, 123"
-            className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-          />
+      <form onSubmit={handleSubmit} noValidate className="crm-form crm-card mx-auto max-w-3xl space-y-5">
+        {error && <FormAlert titulo="Não deu para salvar">{error}</FormAlert>}
+
+        <FormField id="nome_imovel" label="Nome ou endereço" required error={erros.nome_imovel}>
+          <input name="nome_imovel" value={formData.nome_imovel} onChange={onText} placeholder="Ex.: Apartamento Rua das Flores, 123" />
+        </FormField>
+
+        <FormField id="descricao" label="Descrição" required error={erros.descricao}>
+          <textarea name="descricao" value={formData.descricao} onChange={onText} rows={4}
+            placeholder="Onde fica, como é, o que tem de bom…" />
+        </FormField>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField id="valor_aluguel" label="Valor do aluguel por mês" required error={erros.valor_aluguel}>
+            <MoneyInput value={formData.valor_aluguel} onChange={(v) => set("valor_aluguel", v)} placeholder="1.500,00" />
+          </FormField>
+          <FormField id="dia_vencimento" label="Dia do vencimento (1 a 31)" optional error={erros.dia_vencimento}
+            hint="Dia do mês em que o inquilino paga.">
+            <input name="dia_vencimento" inputMode="numeric" value={formData.dia_vencimento} onChange={onNumero(2)} placeholder="Ex.: 10" />
+          </FormField>
+          <FormField id="quartos" label="Quartos" optional>
+            <input name="quartos" inputMode="numeric" value={formData.quartos} onChange={onNumero(2)} placeholder="Ex.: 3" />
+          </FormField>
+          <FormField id="banheiro" label="Banheiros" optional>
+            <input name="banheiro" inputMode="numeric" value={formData.banheiro} onChange={onNumero(2)} placeholder="Ex.: 2" />
+          </FormField>
         </div>
 
-        <div>
-          <label className="block text-sm text-cx-muted mb-1">Descrição *</label>
-          <textarea
-            name="descricao"
-            value={formData.descricao}
-            onChange={handleChange}
-            required
-            rows={4}
-            placeholder="Descreva o imóvel: localização, características, diferenciais..."
-            className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Valor do aluguel *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="valor_aluguel"
-              value={formData.valor_aluguel}
-              onChange={handleChange}
-              required
-              placeholder="1500.00"
-              className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-            />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="crm-field">
+            <p className="crm-field-label">Foto de capa</p>
+            <Dropzone id="foto_capa" imagem accept="image/*" files={fotoCapa} onChange={setFotoCapa} texto="Toque para escolher a foto principal" />
           </div>
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Quartos</label>
-            <input
-              type="number"
-              min="0"
-              max="10"
-              name="quartos"
-              value={formData.quartos}
-              onChange={handleChange}
-              placeholder="3"
-              className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Banheiros</label>
-            <input
-              type="number"
-              min="0"
-              max="10"
-              name="banheiro"
-              value={formData.banheiro}
-              onChange={handleChange}
-              placeholder="2"
-              className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Dia vencimento</label>
-            <input
-              type="number"
-              min="1"
-              max="31"
-              name="dia_vencimento"
-              value={formData.dia_vencimento}
-              onChange={handleChange}
-              placeholder="10"
-              className="w-full rounded-md border border-cx-border bg-cx-surface px-3 py-2 text-cx-text placeholder-[#9aa6b4] focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-            />
+          <div className="crm-field">
+            <p className="crm-field-label">Mais fotos</p>
+            <Dropzone id="fotos_adicionais" imagem multiple accept="image/*" files={fotosAdicionais} onChange={setFotosAdicionais} texto="Toque para escolher várias fotos" />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Foto de capa</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setFotoCapa(e.target.files[0] || null)}
-              className="w-full text-sm text-cx-muted file:mr-3 file:rounded-md file:border-0 file:bg-orange-500 file:px-3 file:py-1.5 file:text-white file:text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-cx-muted mb-1">Fotos adicionais</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => setFotosAdicionais(e.target.files)}
-              className="w-full text-sm text-cx-muted file:mr-3 file:rounded-md file:border-0 file:bg-orange-500 file:px-3 file:py-1.5 file:text-white file:text-sm"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700">
-            Imóvel cadastrado com sucesso!
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-orange-500 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange disabled:opacity-50"
-        >
-          {loading ? "Cadastrando..." : "Cadastrar imóvel"}
-        </button>
+        <FormActions loading={loading} icon={Save} submitLabel="Cadastrar imóvel" loadingLabel="Cadastrando…" cancelHref="/alugueis" />
       </form>
     </div>
   );

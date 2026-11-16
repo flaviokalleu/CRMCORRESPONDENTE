@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, SearchX } from "@/components/icons";
+import { ArrowLeft, MessageCircle, Search, SearchX } from "@/components/icons";
+import { linkWhatsAppPublico } from "@/lib/contato-publico";
+import { whatsappPublico } from "@/lib/contato-publico-server";
 import { apiGet } from "@/lib/api-server";
 import { ImovelCardPublico } from "@/components/public/ImovelCardPublico";
 import { WhatsAppFlutuante } from "@/components/public/WhatsAppFlutuante";
@@ -21,6 +23,9 @@ export const metadata = {
 // topo da landing levava a um beco sem saída. Agora ela honra cidade, tipo,
 // teto de preço e quartos, mostra o que está filtrado e deixa remover um a um.
 export default async function ImoveisPublicosPage({ searchParams }) {
+  // Número do WhatsApp cadastrado em "Minha empresa" da imobiliária da vitrine.
+  const numeroWhats = await whatsappPublico();
+  const linkWhats = (texto) => linkWhatsAppPublico(texto, numeroWhats);
   const sp = await searchParams;
   const filtros = {
     finalidade: sp?.finalidade || "venda",
@@ -77,6 +82,25 @@ export default async function ImoveisPublicosPage({ searchParams }) {
                 }.`}
           </p>
 
+          {/* Busca sempre visível: quem sabe o bairro ou a rua vai direto. */}
+          {!buscandoAluguel && (
+            <form action="/busca" method="GET" role="search" className="mt-4 flex max-w-xl gap-2">
+              <label className="lst-busca">
+                <Search aria-hidden="true" />
+                <input
+                  type="search"
+                  name="busca"
+                  placeholder="Bairro, rua ou nome do imóvel"
+                  aria-label="Buscar imóveis"
+                  className="cx-input"
+                />
+              </label>
+              <button type="submit" className="lst-botao lst-botao-principal">
+                Buscar
+              </button>
+            </form>
+          )}
+
           {ativos.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {ativos.map((f) => (
@@ -101,16 +125,13 @@ export default async function ImoveisPublicosPage({ searchParams }) {
           os cortes mais comuns já prontos. */}
       {!buscandoAluguel && (
         <div className="border-b border-cx-border bg-white">
-          <div className="mx-auto flex max-w-6xl flex-wrap gap-2 px-4 pb-4 sm:px-6">
+          <nav aria-label="Atalhos" className="lst-filtros mx-auto max-w-6xl px-4 py-3 sm:px-6">
             {tipos.map((t) => (
               <Link
                 key={t}
-                href={`/imoveis?tipo=${encodeURIComponent(t)}`}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  filtros.tipo === t
-                    ? "border-cx-orange bg-cx-orange text-white"
-                    : "border-cx-border text-cx-text hover:border-cx-blue"
-                }`}
+                href={filtros.tipo === t ? "/imoveis" : `/imoveis?tipo=${encodeURIComponent(t)}`}
+                className="lst-filtro"
+                aria-current={filtros.tipo === t ? "page" : undefined}
               >
                 {t}
               </Link>
@@ -118,17 +139,14 @@ export default async function ImoveisPublicosPage({ searchParams }) {
             {cidades.map((c) => (
               <Link
                 key={c}
-                href={`/imoveis?cidade=${encodeURIComponent(c)}`}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  filtros.cidade === c
-                    ? "border-cx-orange bg-cx-orange text-white"
-                    : "border-cx-border text-cx-text hover:border-cx-blue"
-                }`}
+                href={filtros.cidade === c ? "/imoveis" : `/imoveis?cidade=${encodeURIComponent(c)}`}
+                className="lst-filtro"
+                aria-current={filtros.cidade === c ? "page" : undefined}
               >
                 {c}
               </Link>
             ))}
-          </div>
+          </nav>
         </div>
       )}
 
@@ -148,7 +166,7 @@ export default async function ImoveisPublicosPage({ searchParams }) {
             </p>
             <div className="mt-5 flex flex-col justify-center gap-2.5 px-6 sm:flex-row">
               <a
-                href="https://wa.me/5561999999999?text=Ol%C3%A1!%20N%C3%A3o%20achei%20o%20que%20procuro%20no%20site.%20Podem%20me%20ajudar%3F"
+                href={linkWhats("Olá! Não achei o que procuro no site. Podem me ajudar?")}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-bold text-white hover:bg-cx-orange-dark"
@@ -178,7 +196,7 @@ export default async function ImoveisPublicosPage({ searchParams }) {
         )}
       </main>
 
-      <WhatsAppFlutuante />
+      <WhatsAppFlutuante numero={numeroWhats} />
     </div>
   );
 }

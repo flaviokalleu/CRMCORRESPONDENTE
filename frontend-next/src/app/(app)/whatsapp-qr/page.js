@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Lock, AlertCircle } from "@/components/icons";
+import { EmptyState } from "@/components/ui/page";
 
 // TODO (segurança/infra pendente): o WebSocket nativo do Go (`/api/ws`) é
 // cross-origin em relação ao Next (backend Go roda em outro host/porta) e o
@@ -32,9 +36,11 @@ export default function WhatsAppQRPage() {
   const [blocked, setBlocked] = useState(false);
   const [idle, setIdle] = useState(true);
   const [error, setError] = useState("");
+  // Plano sem WhatsApp: o backend responde 403 FEATURE_NOT_AVAILABLE.
+  const [semPlano, setSemPlano] = useState(false);
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const [desconectando, setDesconectando] = useState(false);
   const wsRef = useRef(null);
-
-  const empresaLabel = user?.tenant_nome || user?.tenantName || "sua empresa";
 
   const handleEvent = useCallback((data) => {
     if (data.type === "qr") {
@@ -67,6 +73,11 @@ export default function WhatsAppQRPage() {
   const checkStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/backend/whatsapp/qr-code");
+      if (res.status === 403) {
+        const body = await res.json().catch(() => null);
+        if (body?.code === "FEATURE_NOT_AVAILABLE") setSemPlano(true);
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       if (data.blocked) {
@@ -162,9 +173,10 @@ export default function WhatsAppQRPage() {
         body: JSON.stringify({ sessionId: "default" }),
       });
       const data = await res.json();
+      if (res.status === 403 && data?.code === "FEATURE_NOT_AVAILABLE") { setSemPlano(true); return; }
       if (data.hasQrCode && data.qrCode) setQrCode(data.qrCode);
     } catch {
-      setError("Não foi possível conectar. Verifique se o servidor está rodando.");
+      setError("Não foi possível gerar o QR Code agora. Espere um minuto e tente de novo.");
     } finally {
       setConnecting(false);
     }
@@ -179,11 +191,12 @@ export default function WhatsAppQRPage() {
       setQrCode("");
       setIdle(true);
     } catch {
-      setError("Não foi possível resetar. Tente novamente.");
+      setError("Não foi possível recomeçar a conexão. Tente de novo.");
     }
   };
 
   const handleDisconnect = async () => {
+    setDesconectando(true);
     try {
       await fetch("/api/backend/whatsapp/disconnect", {
         method: "POST",
@@ -194,80 +207,125 @@ export default function WhatsAppQRPage() {
       setQrCode("");
       setIdle(true);
     } catch {
-      setError("Não foi possível desconectar. Tente novamente.");
+      setError("Não foi possível desconectar. Tente de novo.");
+    } finally {
+      setDesconectando(false);
+      setConfirmarSaida(false);
     }
   };
 
+  const passos = (
+    <ol className="passos max-w-md text-left">
+      <li><span>No celular da imobiliária, abra o <strong>WhatsApp</strong>.</span></li>
+      <li><span>Toque em <strong>Mais opções</strong> (⋮) ou <strong>Configurações</strong> e depois em <strong>Aparelhos conectados</strong>.</span></li>
+      <li><span>Toque em <strong>Conectar um aparelho</strong> e aponte a câmera para o QR Code desta tela.</span></li>
+    </ol>
+  );
+
+  if (semPlano) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="crm-page-header">
+          <div>
+            <h1>WhatsApp</h1>
+            <p>Envie e receba mensagens dos clientes direto pelo sistema.</p>
+          </div>
+        </div>
+        <EmptyState
+          icon={Lock}
+          title="Disponível em outro plano"
+          hint="O seu plano atual não inclui o WhatsApp. Veja os planos e mude quando quiser — seus dados continuam todos aqui."
+        >
+          <Link href="/minha-assinatura" className="cx-btn cx-btn-primary">Ver planos</Link>
+        </EmptyState>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="crm-page-header">
         <div>
-          <h1 className="text-xl font-semibold text-cx-text">WhatsApp</h1>
-          <p className="text-sm text-cx-muted mt-1">
-            Conecte o WhatsApp da empresa {empresaLabel} para enviar e receber mensagens pelo sistema.
-          </p>
+          <h1>WhatsApp</h1>
+          <p>Conecte o WhatsApp da sua imobiliária para enviar e receber mensagens pelo sistema.</p>
         </div>
-        <span
-          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${
-            isConnected
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-red-50 text-red-700 border-red-200"
-          }`}
-        >
+        <span className={`status-selo ${isConnected ? "status-ok" : "status-perigo"}`}>
           {isConnected ? "Conectado" : "Desconectado"}
         </span>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
+        <p role="alert" className="form-aviso" data-tom="erro">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" /> {error}
+        </p>
       )}
 
-      <div className="rounded-xl border border-cx-border bg-cx-surface p-6">
+      <div className="crm-card p-6">
         {blocked ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-cx-text font-semibold">Conexão bloqueada</p>
-            <p className="text-cx-muted text-sm text-center max-w-sm">
-              O WhatsApp bloqueou esta sessão. Isso acontece quando a sessão expira ou há muitas tentativas.
+          <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+            <p className="text-cx-text font-semibold">A conexão caiu</p>
+            <p className="text-cx-muted text-sm max-w-sm">
+              O WhatsApp encerrou esta conexão. Isso acontece quando ela fica muito tempo parada ou depois de várias tentativas. É só conectar de novo.
             </p>
-            <button onClick={handleReset} className="rounded-lg bg-cx-orange px-5 py-2.5 text-sm font-semibold text-white hover:bg-cx-orange-dark">
-              Resetar e tentar novamente
+            <button type="button" onClick={handleReset} className="cx-btn cx-btn-primary">
+              Conectar de novo
             </button>
           </div>
         ) : connecting ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-2">
-            <p className="text-cx-text font-semibold">Conectando ao WhatsApp...</p>
-            <p className="text-cx-muted text-sm">Gerando QR Code, aguarde.</p>
+          <div className="flex flex-col items-center justify-center py-10 gap-2" role="status">
+            <p className="text-cx-text font-semibold">Gerando o QR Code…</p>
+            <p className="text-cx-muted text-sm">Leva alguns segundos.</p>
           </div>
         ) : isConnected ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-cx-text text-lg font-bold">WhatsApp conectado!</p>
+          <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+            <p className="text-cx-text text-lg font-bold">WhatsApp conectado</p>
             <p className="text-cx-muted text-sm">Pronto para enviar e receber mensagens pelo sistema.</p>
-            <button onClick={handleDisconnect} className="rounded-lg bg-red-50 border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">
+            <button type="button" onClick={() => setConfirmarSaida(true)} className="cx-btn cx-btn-danger">
               Desconectar WhatsApp
             </button>
           </div>
         ) : qrImage ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="bg-white rounded-xl p-3">
+          <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-center">
+            <div className="rounded-xl border border-cx-border p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrImage} alt="QR Code do WhatsApp" className="w-64 h-64" />
+              <img src={qrImage} alt="QR Code para conectar o WhatsApp" className="w-64 h-64" />
             </div>
-            <p className="text-cx-muted text-xs">Escaneie com o WhatsApp: Aparelhos conectados → Conectar aparelho.</p>
+            <div className="space-y-3">
+              <p className="text-cx-text font-semibold">Agora, no celular:</p>
+              {passos}
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10 gap-4">
-            <p className="text-cx-text font-semibold">WhatsApp desconectado</p>
-            <p className="text-cx-muted text-sm text-center max-w-sm">
-              Clique no botão abaixo para gerar o QR Code e conectar o WhatsApp da empresa {empresaLabel} ao sistema.
-            </p>
-            <button onClick={handleConnect} disabled={connecting} className="rounded-lg bg-cx-orange px-6 py-3 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50">
-              Conectar WhatsApp
+          <div className="flex flex-col items-center justify-center py-6 gap-5">
+            <div className="space-y-3">
+              <p className="text-cx-text font-semibold">Como conectar (leva 1 minuto)</p>
+              {passos}
+            </div>
+            <button type="button" onClick={handleConnect} disabled={connecting} className="cx-btn cx-btn-primary">
+              Mostrar QR Code
             </button>
           </div>
         )}
       </div>
+
+      <Dialog open={confirmarSaida} onOpenChange={(v) => !v && setConfirmarSaida(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Desconectar o WhatsApp?</DialogTitle>
+            <DialogDescription>
+              O sistema para de enviar e receber mensagens até você conectar de novo pelo QR Code. As conversas no celular não são apagadas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" onClick={() => setConfirmarSaida(false)} className="cx-btn cx-btn-outline">
+              Continuar conectado
+            </button>
+            <button type="button" onClick={handleDisconnect} disabled={desconectando} className="cx-btn cx-btn-danger-solid">
+              {desconectando ? "Desconectando…" : "Desconectar"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

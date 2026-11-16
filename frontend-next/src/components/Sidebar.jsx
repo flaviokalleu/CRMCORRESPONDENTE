@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   UserCog, Activity, ShieldCheck, Building2, Banknote, QrCode, X, Crown, Building,
   FileText, CreditCard, ChartNoAxesColumn, House, Wallet, TrendingUp, TrendingDown,
-  ChartLine, CalendarDays, Contact, SlidersHorizontal, Users, Lock,
+  ChartLine, CalendarDays, Contact, Users, Lock, FileSignature, ClipboardList, UserRound,
 } from "@/components/icons";
+import { usePendencias } from "@/lib/use-pendencias";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 // Sidebar do shell InnLex: trilho navy de 264px, rótulos de grupo em caixa
-// alta e o "scoop" no item ativo. Menu plano (sem seções recolhíveis), como
-// no kit de referência; "Sair" fica na topbar.
+// alta e o "scoop" no item ativo. Menu plano (sem seções recolhíveis), em
+// grupos curtos pelo uso: Início, Dia a dia, Dinheiro, Equipe e Ajustes.
+// "Sair" fica no menu do avatar, no topo.
 function NavItem({ href, icon: Icon, label, isActive, badge, bloqueado }) {
   // Recurso fora do plano: continua visível (a pessoa descobre que existe) e
   // leva para Minha assinatura, com cadeado — convite, não beco sem saída.
@@ -35,44 +37,13 @@ function NavItem({ href, icon: Icon, label, isActive, badge, bloqueado }) {
   );
 }
 
-const asList = (d) => (Array.isArray(d) ? d : Array.isArray(d?.data) ? d.data : []);
-
-// Contagens das badges: o que pede atenção agora. Tarefas = lembretes não
-// concluídos com data até hoje; Clientes = aguardando aprovação.
-function useSidebarBadges(pathname, { isStaff, operacional }) {
-  const [badges, setBadges] = useState({});
-  const last = useRef(0);
-
-  useEffect(() => {
-    if (Date.now() - last.current < 60_000) return undefined;
-    last.current = Date.now();
-    let cancelled = false;
-    const fimDeHoje = new Date(); fimDeHoje.setHours(23, 59, 59, 999);
-    const get = (path) => fetch(`/api/backend${path}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-
-    Promise.all([
-      isStaff ? get("/lembretes") : Promise.resolve(null),
-      operacional ? get("/dashboard") : Promise.resolve(null),
-    ]).then(([lembretes, dash]) => {
-      if (cancelled) return;
-      const tarefas = asList(lembretes).filter((t) => !t.concluido && t.status !== "concluido" && t.data && new Date(t.data) <= fimDeHoje).length;
-      const main = dash?.data ?? dash;
-      setBadges({
-        "/lembretes": tarefas,
-        "/clientes/lista": Number(main?.totalClientesAguardandoAprovacao) || 0,
-      });
-    });
-    return () => { cancelled = true; };
-  }, [pathname, isStaff, operacional]);
-
-  return badges;
-}
-
 export function Sidebar({ onClose, recursos }) {
   const { hasRole, isSuperAdmin } = useAuth();
   const pathname = usePathname();
   const isStaffRole = hasRole("administrador") || hasRole("correspondente");
-  const badges = useSidebarBadges(pathname, { isStaff: isStaffRole, operacional: isStaffRole || hasRole("corretor") });
+  const pendencias = usePendencias(pathname, { isStaff: isStaffRole, operacional: isStaffRole || hasRole("corretor") });
+  const badges = { "/lembretes": pendencias.tarefas, "/clientes/lista": pendencias.clientes };
+  const navRef = useRef(null);
 
   // Grupos na ordem do negócio. Grupo sem item visível para o papel some.
   const groups = useMemo(() => {
@@ -82,25 +53,30 @@ export function Sidebar({ onClose, recursos }) {
 
     return [
       {
-        label: "Resumo",
+        label: "Início",
         items: [
           { href: "/dashboard", icon: ChartLine, label: "Dashboard" },
           ...(isAdmin ? [{ href: "/relatorio", icon: ChartNoAxesColumn, label: "Relatórios" }] : []),
         ],
       },
       {
-        label: "Operação",
+        label: "Dia a dia",
         items: [
           ...(isStaff ? [{ href: "/lembretes", icon: CalendarDays, label: "Tarefas" }] : []),
           ...(operacional ? [
             { href: "/clientes/lista", icon: Contact, label: "Clientes" },
             { href: "/imoveis/lista", icon: Building2, label: "Imóveis" },
           ] : []),
+          ...(isStaff ? [{ href: "/proprietarios/lista", icon: Users, label: "Proprietários" }] : []),
           { href: "/propostas", icon: FileText, label: "Propostas" },
+          ...(isStaff ? [
+            { href: "/contratos/lista", icon: FileSignature, label: "Contratos" },
+            { href: "/laudos", icon: ClipboardList, label: "Laudos" },
+          ] : []),
         ],
       },
       {
-        label: "Financeiro",
+        label: "Dinheiro",
         items: [
           ...(isAdmin ? [
             { href: "/financeiro/dashboard", icon: Wallet, label: "Painel financeiro" },
@@ -111,24 +87,23 @@ export function Sidebar({ onClose, recursos }) {
         ],
       },
       {
-        label: "Cadastros",
+        label: "Equipe",
         items: isStaff ? [
           { href: "/corretores/lista", icon: UserCog, label: "Corretores" },
           { href: "/correspondentes/lista", icon: ShieldCheck, label: "Correspondentes" },
-          { href: "/proprietarios/lista", icon: Users, label: "Proprietários" },
         ] : [],
       },
       {
-        label: "Sistema",
+        label: "Ajustes",
         items: [
-          ...(isStaff ? [{ href: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp", recurso: "has_whatsapp" }] : []),
+          { href: "/configuracoes", icon: UserRound, label: "Meu perfil" },
+          ...(isAdmin ? [{ href: "/configuracoes-empresa", icon: Building, label: "Minha empresa" }] : []),
+          ...(isStaff ? [{ href: "/whatsapp-qr", icon: QrCode, label: "WhatsApp", recurso: "has_whatsapp" }] : []),
           ...(isAdmin ? [
-            { href: "/acessos", icon: Activity, label: "Acessos" },
-            { href: "/configuracoes-empresa", icon: Building, label: "Minha empresa" },
             { href: "/minha-assinatura", icon: CreditCard, label: "Minha assinatura" },
+            { href: "/acessos", icon: Activity, label: "Acessos" },
           ] : []),
           ...(isSuperAdmin ? [{ href: "/super-admin", icon: Crown, label: "Super Admin" }] : []),
-          { href: "/configuracoes", icon: SlidersHorizontal, label: "Configurações" },
         ],
       },
     ].filter((group) => group.items.length > 0);
@@ -142,6 +117,15 @@ export function Sidebar({ onClose, recursos }) {
     return pathname.startsWith(base + "/") && !groups.some((g) => g.items.some((i) => i.href !== href && pathname === i.href));
   };
 
+  // Depois de navegar, o item ativo pode estar abaixo da dobra do menu:
+  // rola só o necessário para ele aparecer (sem animação, sem pular a página).
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
   return (
     <div className="isidebar">
       <div className="isidebar-brand">
@@ -154,7 +138,7 @@ export function Sidebar({ onClose, recursos }) {
         </button>
       </div>
 
-      <nav className="isidebar-nav" aria-label="Menu principal">
+      <nav ref={navRef} className="isidebar-nav" aria-label="Menu principal">
         {groups.map((group) => (
           <div key={group.label} className="isidebar-group">
             <div className="isidebar-grouplabel">{group.label}</div>

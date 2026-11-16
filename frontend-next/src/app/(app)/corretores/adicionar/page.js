@@ -1,12 +1,12 @@
 import { AddCorretorForm } from "@/components/AddCorretorForm";
 import { PageHeader } from "@/components/ui/page";
 
-export const metadata = { title: "Adicionar Corretor" };
+export const metadata = { title: "Cadastrar corretor" };
 
 export default function AdicionarCorretorPage() {
   return (
-    <div className="p-6">
-      <PageHeader title="Adicionar Corretor" subtitle="Cadastro de um novo corretor." />
+    <div>
+      <PageHeader title="Cadastrar corretor" subtitle="Preencha os dados e crie o acesso. Ele já pode entrar no sistema depois de salvar." />
       <AddCorretorForm />
     </div>
   );

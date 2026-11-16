@@ -44,33 +44,33 @@ export function MetasGerenciais({ aprovacao, resolucao, meta, slaResumo, alertas
       <div className="ref-kpis ref-metas">
         <MetaCard
           icon={Target}
-          label="Aprovação das decisões"
+          label="Taxa de aprovação"
           value={fmtPct(aprovacao)}
-          hint={aprovacao == null ? "Sem decisões concluídas no período" : `Meta gerencial de ${meta}%`}
+          hint={aprovacao == null ? "Nenhum caso decidido no período" : `Meta: ${meta}%`}
           progress={aprovacao}
           tone={aprovacaoTone}
         />
         <MetaCard
           icon={CheckCircle2}
-          label="Resolução do período"
+          label="Casos concluídos"
           value={fmtPct(resolucao)}
-          hint={`${fmt(totalPeriodo)} ${totalPeriodo === 1 ? "entrada analisada" : "entradas analisadas"}`}
+          hint={`${fmt(totalPeriodo)} ${totalPeriodo === 1 ? "cliente no período" : "clientes no período"}`}
           progress={resolucao}
           tone={(resolucao ?? 0) >= 50 ? "good" : "info"}
         />
         <MetaCard
           icon={Gauge}
-          label={`SLA de ${slaResumo.sla} dias`}
+          label={`Dentro do prazo (${slaResumo.sla} dias)`}
           value={fmtPct(slaResumo.conformidade)}
-          hint={`${fmt(slaResumo.vencidos)} vencido${slaResumo.vencidos === 1 ? "" : "s"} · ${fmt(slaResumo.emRisco)} em risco`}
+          hint={`${fmt(slaResumo.vencidos)} atrasado${slaResumo.vencidos === 1 ? "" : "s"} · ${fmt(slaResumo.emRisco)} perto do prazo`}
           progress={slaResumo.conformidade}
           tone={slaTone}
         />
         <MetaCard
           icon={BellRing}
-          label="Situações ativas"
+          label="Pedem atenção"
           value={fmt(alertas)}
-          hint={alertas === 1 ? "1 cliente requer acompanhamento" : `${fmt(alertas)} clientes requerem acompanhamento`}
+          hint={alertas === 1 ? "1 cliente precisa de retorno" : `${fmt(alertas)} clientes precisam de retorno`}
           tone={alertas > 0 ? "warn" : "good"}
         />
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -392,6 +392,18 @@ function LinhasEsqueleto({ colunas }) {
   ));
 }
 
+// Preferência de visão (lista/funil) guardada no navegador. Em janela anônima
+// o acesso pode lançar: aí não há preferência.
+const semAssinatura = () => () => {};
+function lerVisaoSalva() {
+  try {
+    const v = window.localStorage.getItem("clientes:view");
+    return v === "kanban" || v === "lista" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ClientesLista({ initialSearch = "",
   initialData,
   initialStatus = "",
@@ -417,25 +429,20 @@ export function ClientesLista({ initialSearch = "",
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState(null);
   const [notesFor, setNotesFor] = useState(null); // { id, nome } — modal de notas
-  const [view, setView] = useState(initialView); // "lista" | "kanban"
+  // Visão escolhida nesta visita; sem escolha, vale a salva no navegador
+  // (preferência local, por isso localStorage) e, por fim, a da URL.
+  const [escolhida, setEscolhida] = useState(null); // "lista" | "kanban"
+  const salva = useSyncExternalStore(semAssinatura, lerVisaoSalva, () => null);
+  const view = escolhida ?? (initialView === "kanban" ? "kanban" : salva || initialView);
   const [editingId, setEditingId] = useState(null); // painel lateral de edição
   const [dragId, setDragId] = useState(null);
   const [overLane, setOverLane] = useState(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [selecionados, setSelecionados] = useState(() => new Set());
 
-  // Preferência de visão sobrevive ao reload (só conveniência local, por isso
-  // localStorage e não servidor). Em janela anônima o acesso pode lançar.
-  useEffect(() => {
-    if (initialView === "kanban") return;
-    try {
-      const saved = window.localStorage.getItem("clientes:view");
-      if (saved === "kanban" || saved === "lista") setView(saved);
-    } catch {}
-  }, [initialView]);
   const changeView = (v) => {
     if (!v) return;
-    setView(v);
+    setEscolhida(v);
     try { window.localStorage.setItem("clientes:view", v); } catch {}
   };
 
@@ -891,7 +898,8 @@ export function ClientesLista({ initialSearch = "",
                       </span>
                       <AvatarCliente nome={c.nome} className="size-10" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-cx-text">{c.nome || "—"}</p>
+                        {/* Nome em até 2 linhas: cortado em "CARLOS ED…" não dava para saber quem era. */}
+                        <p className="line-clamp-2 font-medium break-words text-cx-text">{c.nome || "—"}</p>
                         <p className="truncate text-xs text-cx-muted tabular-nums">
                           {c.telefone ? maskTelefone(c.telefone) : c.email || "sem contato"}
                         </p>

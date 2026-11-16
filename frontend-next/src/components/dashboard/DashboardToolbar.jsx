@@ -102,7 +102,7 @@ export function DashboardToolbar({ filtros, responsaveis = [], podeFiltrarRespon
           </label>
           <label>
             <span className="mb-1 block text-xs font-semibold text-wb-muted">
-              SLA da fila
+              Prazo para dar retorno
             </span>
             <span className="dash-num">
               <input

@@ -19,7 +19,7 @@ export default async function VisitasPage() {
 
   return (
     <div className="space-y-4 p-6">
-      <PageHeader title="Agenda de Visitas" subtitle="Gerencie visitas a imóveis." />
+      <PageHeader title="Visitas" subtitle="Confirme com o cliente pelo WhatsApp e, depois, marque como foi." />
       <VisitasManager initialVisitas={initialVisitas} clientes={clientes} imoveis={imoveis} />
     </div>
   );

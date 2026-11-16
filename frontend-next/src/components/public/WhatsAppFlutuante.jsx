@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MessageCircle, X } from "@/components/icons";
+import { WHATSAPP_PUBLICO } from "@/lib/contato-publico";
 
 // WhatsApp flutuante.
 //
@@ -35,14 +36,14 @@ const CANAIS = [
   },
 ];
 
-export function WhatsAppFlutuante({ numero = "5561999999999" }) {
+export function WhatsAppFlutuante({ numero = WHATSAPP_PUBLICO }) {
   const [aberto, setAberto] = useState(false);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 print:hidden">
       {aberto && (
         <div className="w-[min(19rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-cx-border bg-white shadow-2xl">
-          <div className="bg-[#075E54] px-4 py-3">
+          <div className="bg-[var(--channel-whatsapp-deep)] px-4 py-3">
             <p className="text-sm font-bold text-white">Fale com a gente</p>
             <p className="text-xs text-white/90">Respondemos pelo WhatsApp</p>
           </div>
@@ -72,7 +73,7 @@ export function WhatsAppFlutuante({ numero = "5561999999999" }) {
         // reprova AA; o #128C7E fica em 4,14:1, ainda abaixo. O verde escuro
         // #075E54 (também da paleta oficial do WhatsApp) chega a 7,67:1 e
         // continua inconfundível como "botão do WhatsApp".
-        className="inline-flex items-center gap-2 rounded-full bg-[#075E54] px-5 py-3.5 font-bold text-white shadow-lg transition-transform hover:scale-105"
+        className="inline-flex items-center gap-2 rounded-full bg-[var(--channel-whatsapp-deep)] px-5 py-3.5 font-bold text-white shadow-lg transition-transform hover:scale-105"
       >
         {aberto ? (
           <X className="h-5 w-5" aria-hidden="true" />

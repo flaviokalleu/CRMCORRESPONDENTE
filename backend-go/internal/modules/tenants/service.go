@@ -111,6 +111,8 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*models.Te
 		Ativo: true, Configuracoes: datatypes.JSON([]byte(`{}`)),
 	}
 	admin := &models.User{
+		// users.username é UNIQUE: vazio fazia o 2º cadastro em diante falhar.
+		Username: strings.ToLower(strings.TrimSpace(a.Email)),
 		FirstName: a.FirstName, LastName: a.LastName, Email: a.Email, Password: hash,
 		Telefone: a.Telefone, IsAdministrador: true,
 	}

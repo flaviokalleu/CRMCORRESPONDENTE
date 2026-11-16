@@ -74,7 +74,7 @@ export function BlocoRitmo({ entradasPeriodo, periodoLabel, taxaAprovacao, aguar
       </div>
       <div className="mt-5 space-y-3">
         <LinhaStat rotulo="Período analisado" valor={periodoLabel} />
-        <LinhaStat rotulo="Aprovação das decisões" valor={fmtPct(taxaAprovacao)} />
+        <LinhaStat rotulo="Taxa de aprovação" valor={fmtPct(taxaAprovacao)} />
         <LinhaStat rotulo="Aguardando decisão" valor={fmt(aguardando)} />
       </div>
     </Painel>
@@ -85,7 +85,7 @@ export function BlocoRitmo({ entradasPeriodo, periodoLabel, taxaAprovacao, aguar
 // as três taxas do próprio recorte, em barras.
 export function PainelTaxas({ taxaAprovacao, taxaResolucao, taxaRejeicao, className = "" }) {
   const linhas = [
-    { rotulo: "Aprovação das decisões", valor: taxaAprovacao, cor: "var(--color-wb-good)" },
+    { rotulo: "Taxa de aprovação", valor: taxaAprovacao, cor: "var(--color-wb-good)" },
     { rotulo: "Resolução das entradas", valor: taxaResolucao, cor: "var(--color-wb-brand)" },
     { rotulo: "Rejeição das decisões", valor: taxaRejeicao, cor: "var(--color-wb-bad)" },
   ];

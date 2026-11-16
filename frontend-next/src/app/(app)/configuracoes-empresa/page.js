@@ -1,7 +1,8 @@
 import { apiGet } from "@/lib/api-server";
+import { PageHeader } from "@/components/ui/page";
 import { ConfiguracoesEmpresaForm } from "@/components/ConfiguracoesEmpresaForm";
 
-export const metadata = { title: "Configurações da Empresa" };
+export const metadata = { title: "Minha empresa" };
 
 // Server Component: busca as configurações do tenant no servidor (SSR).
 // TODO: o guard de role (`hasRole('administrador')`) é client-side via
@@ -12,11 +13,12 @@ export default async function ConfiguracoesEmpresaPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-cx-text">Configurações da Empresa</h1>
-        <p className="text-sm text-cx-muted mt-1">Gerencie os dados e preferências da sua empresa.</p>
-      </div>
-      <ConfiguracoesEmpresaForm initialData={data} />
+      <PageHeader title="Minha empresa" subtitle="Logo, nome e contatos da sua imobiliária." />
+      {data ? (
+        <ConfiguracoesEmpresaForm initialData={data} />
+      ) : (
+        <p className="text-cx-muted text-sm">Não foi possível carregar os dados da empresa. Recarregue a página.</p>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
-import { UsersRound, Phone, BadgeCheck } from "@/components/icons";
+import { ContatoRapido } from "@/components/ui/contato-rapido";
+import { UsersRound, BadgeCheck } from "@/components/icons";
 
 export const metadata = { title: "Lista de Corretores" };
 
@@ -24,7 +25,7 @@ export default async function ListaCorretoresPage() {
           <Thead>
             <Th>Corretor</Th>
             <Th>Usuário</Th>
-            <Th>Contato</Th>
+            <Th>Falar com</Th>
             <Th>CRECI</Th>
           </Thead>
           <tbody>
@@ -40,12 +41,8 @@ export default async function ListaCorretoresPage() {
                   </div>
                 </Td>
                 <Td muted>@{c.username}</Td>
-                <Td muted>
-                  {c.telefone ? (
-                    <a href={`https://wa.me/55${(c.telefone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-cx-text">
-                      <Phone className="h-3.5 w-3.5" /> {c.telefone}
-                    </a>
-                  ) : "—"}
+                <Td>
+                  <ContatoRapido telefone={c.telefone} nome={`${c.first_name} ${c.last_name}`} />
                 </Td>
                 <Td muted>
                   {c.creci ? (

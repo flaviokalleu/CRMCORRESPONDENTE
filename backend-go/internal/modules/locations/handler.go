@@ -35,7 +35,7 @@ func (h *Handler) Municipios(c *gin.Context) {
 		return
 	}
 	var list []Municipio
-	if err := h.db.WithContext(c.Request.Context()).Where(`"estadoId" = ?`, estadoID).Find(&list).Error; err != nil {
+	if err := h.db.WithContext(c.Request.Context()).Where("estado_id = ?", estadoID).Find(&list).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao listar municípios"})
 		return
 	}

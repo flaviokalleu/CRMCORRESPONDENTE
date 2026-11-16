@@ -4,6 +4,9 @@ import { FormIntro } from "@/components/ui/form-intro";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Plus, X } from "@/components/icons";
+import { maskPhone } from "@/lib/masks";
 
 // Client Component pequeno usado dentro da página Server de proprietários,
 // só para permitir cadastro sem sair da página. Sempre via proxy
@@ -12,6 +15,8 @@ export function ProprietarioAddForm() {
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  // Fechado por padrão: a lista é o que se consulta; o cadastro abre sob pedido.
+  const [aberto, setAberto] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -34,7 +39,9 @@ export function ProprietarioAddForm() {
       if (!res.ok) throw new Error(data?.error || data?.message || "Erro ao cadastrar proprietário");
 
       setForm({ name: "", phone: "", address: "" });
-      setMessage({ type: "success", text: "Proprietário cadastrado com sucesso." });
+      setMessage({ type: "", text: "" });
+      setAberto(false);
+      toast.success("Proprietário cadastrado.");
       router.refresh();
     } catch (err) {
       setMessage({ type: "error", text: err.message || "Erro ao cadastrar proprietário" });
@@ -43,17 +50,32 @@ export function ProprietarioAddForm() {
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text placeholder-[#9aa6b4] outline-none transition-colors focus:border-cx-blue focus:ring-2 focus:ring-cx-blue/20";
+  const inputClass = "cx-input";
+
+  if (!aberto) {
+    return (
+      <div>
+        <button type="button" className="lst-botao lst-botao-principal" onClick={() => setAberto(true)}>
+          <Plus aria-hidden="true" /> Novo proprietário
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="crm-form rounded-2xl border border-cx-border bg-cx-surface p-5">
-      <FormIntro title="Novo proprietário" description="Cadastre os dados de contato para vincular imóveis e contratos." />
+    <form onSubmit={handleSubmit} className="crm-form lst-painel">
+      <div className="flex items-start justify-between gap-3">
+        <FormIntro title="Novo proprietário" description="Nome e telefone bastam para começar." />
+        <button type="button" className="lst-acao" onClick={() => setAberto(false)} aria-label="Fechar">
+          <X aria-hidden="true" />
+        </button>
+      </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="block"><span className="crm-field-label mb-2 block">Nome completo</span>
 <input
           className={inputClass}
-          placeholder="Nome completo"
+          placeholder="Ex.: Maria Aparecida Souza"
+          autoFocus
           value={form.name}
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
         />
@@ -61,32 +83,34 @@ export function ProprietarioAddForm() {
         <label className="block"><span className="crm-field-label mb-2 block">Telefone</span>
 <input
           className={inputClass}
-          placeholder="Telefone"
+          placeholder="(61) 99999-9999"
+          inputMode="tel"
           value={form.phone}
-          onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+          onChange={(e) => setForm((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))}
         />
 </label>
-        <label className="block"><span className="crm-field-label mb-2 block">Endereço</span>
+        <label className="block"><span className="crm-field-label mb-2 block">Endereço <span className="crm-field-opt">(opcional)</span></span>
 <input
           className={inputClass}
-          placeholder="Endereço"
+          placeholder="Rua, número, bairro, cidade"
           value={form.address}
           onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
         />
 </label>
       </div>
       {message.text && (
-        <p className={`mt-3 text-xs ${message.type === "success" ? "text-emerald-700" : "text-red-700"}`}>
+        <p className="lst-erro mt-3" role="alert">
           {message.text}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={saving}
-        className="mt-4 rounded-lg bg-cx-orange px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cx-orange-dark disabled:opacity-50"
-      >
-        {saving ? "Salvando..." : "Salvar proprietário"}
-      </button>
+      <div className="lst-painel-rodape">
+        <button type="submit" disabled={saving} className="lst-botao lst-botao-principal">
+          {saving ? "Salvando…" : "Salvar proprietário"}
+        </button>
+        <button type="button" className="lst-botao" onClick={() => setAberto(false)}>
+          Cancelar
+        </button>
+      </div>
     </form>
   );
 }

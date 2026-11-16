@@ -1,7 +1,8 @@
 import { apiGet } from "@/lib/api-server";
+import { PageHeader } from "@/components/ui/page";
 import { ConfiguracoesUsuarioForm } from "@/components/ConfiguracoesUsuarioForm";
 
-export const metadata = { title: "Configurações" };
+export const metadata = { title: "Meu perfil" };
 
 // Server Component: busca os dados do usuário logado no servidor (SSR).
 export default async function ConfiguracoesPage() {
@@ -10,14 +11,11 @@ export default async function ConfiguracoesPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-cx-text">Configurações</h1>
-        <p className="text-sm text-cx-muted mt-1">Gerencie suas informações pessoais.</p>
-      </div>
+      <PageHeader title="Meu perfil" subtitle="Seus dados de contato, sua foto e sua senha." />
       {initialUser ? (
         <ConfiguracoesUsuarioForm initialUser={initialUser} />
       ) : (
-        <p className="text-cx-muted text-sm">Não foi possível carregar seus dados.</p>
+        <p className="text-cx-muted text-sm">Não foi possível carregar seus dados. Recarregue a página.</p>
       )}
     </div>
   );

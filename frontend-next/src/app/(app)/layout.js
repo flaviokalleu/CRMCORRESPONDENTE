@@ -3,6 +3,10 @@ import { hasSession, getVerEmpresa } from "@/lib/session";
 import { apiGet } from "@/lib/api-server";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppShell } from "@/components/AppShell";
+import { Toaster } from "@/components/ui/sonner";
+
+// Telas internas levam a marca do produto na aba (a vitrine pública usa a da imobiliária).
+export const metadata = { title: { template: "%s | Webba CRM", default: "Webba CRM" } };
 
 // Layout do CRM autenticado. Roda no servidor: confere sessão (defesa em
 // profundidade além do proxy.js) e já busca o usuário — o Client Component
@@ -36,6 +40,8 @@ export default async function AppLayout({ children }) {
   return (
     <AuthProvider initialUser={me.user}>
       <AppShell assinatura={assinatura} verComo={verComo}>{children}</AppShell>
+      {/* Avisos rápidos ("Cliente cadastrado") de qualquer tela do CRM. */}
+      <Toaster position="top-center" closeButton />
     </AuthProvider>
   );
 }

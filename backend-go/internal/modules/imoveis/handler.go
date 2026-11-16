@@ -37,6 +37,7 @@ func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
 		g.GET("/", h.List)
 		g.GET("/imoveis", h.List)
 		g.GET("/busca", h.Busca)
+		g.POST("", h.Create) // o proxy do Next remove a barra final
 		g.POST("/", h.Create)
 		g.PUT("/:id", h.Update)
 		g.DELETE("/:id", h.Delete)

@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
-  User, Mail, Phone, IdCard, Briefcase, Calendar, Wallet, Heart, ShieldCheck,
-  Landmark, Users, FileText, Upload, MapPin, Save, Loader2, CheckCircle,
-  AlertCircle, UserCheck, FolderOpen, Check, ChevronRight, X, Fingerprint,
-  Coins, Contact, Radio, Home,
+  User, Heart, ShieldCheck, Landmark, Save, UserCheck, FolderOpen, Check,
+  ChevronRight, Fingerprint, Coins, Contact, ChevronDown,
 } from "@/components/icons";
+import { toast } from "sonner";
+import { maskCpf as maskCPF, maskPhone, soDigitos } from "@/lib/masks";
+import { FormField, FormAlert, focarPrimeiroErro } from "@/components/ui/form-field";
+import { MoneyInput } from "@/components/ui/money-input";
+import { FormActions } from "@/components/ui/form-actions";
+import { Dropzone as DropzoneBase } from "@/components/ui/dropzone";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 // ── Formulário completo de cliente (criação + edição) ──────────────────────────
 // Envia multipart/form-data (o backend Go lê via c.GetPostForm — JSON chega
@@ -49,19 +54,8 @@ const RENDA_TIPOS = [
 ];
 
 // ── Helpers de máscara / formatação ────────────────────────────────────────────
-const onlyDigits = (s) => (s || "").toString().replace(/\D/g, "");
-
-const maskCPF = (v) =>
-  onlyDigits(v).slice(0, 11)
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1-$2");
-
-const maskPhone = (v) => {
-  const d = onlyDigits(v).slice(0, 11);
-  if (d.length <= 10) return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
-  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
-};
+const onlyDigits = soDigitos;
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const centavosToReais = (digits) => (onlyDigits(digits) ? parseInt(onlyDigits(digits), 10) / 100 : 0);
 const formatReais = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -122,51 +116,29 @@ const EMPTY_FILES = {
 };
 
 // ── UI atoms ─────────────────────────────────────────────────────────────────
-const fieldCls =
-  "w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text placeholder-[#9aa6b4] outline-none transition-colors focus:border-cx-blue focus:bg-cx-surface focus:ring-2 focus:ring-cx-blue/20 [&>option]:bg-white [&>option]:text-cx-text";
-
-function Label({ children, icon: Icon }) {
+// Rótulo + controle + erro via FormField (htmlFor/id, aria-invalid). O id
+// padrão é o `name` do campo, para o foco no primeiro erro achar o controle.
+function Text({ label, id, error, hint, required, optional, className = "", ...props }) {
   return (
-    <span className="crm-field-label mb-2 flex items-center gap-2">
-      {Icon && <Icon className="h-3 w-3" />}
-      {children}
-    </span>
+    <FormField id={id ?? props.name} label={label} error={error} hint={hint} required={required} optional={optional} className={className}>
+      <input {...props} />
+    </FormField>
   );
 }
 
-function Text({ label, icon, className = "", ...props }) {
+function Select({ label, id, error, hint, children, className = "", ...props }) {
   return (
-    <label className={`block ${className}`}>
-      <Label icon={icon}>{label}</Label>
-      <input {...props} className={fieldCls} />
-    </label>
+    <FormField id={id ?? props.name} label={label} error={error} hint={hint} className={className}>
+      <select {...props}>{children}</select>
+    </FormField>
   );
 }
 
-function Select({ label, icon, children, className = "", ...props }) {
+function Money({ label, id, value, onChange, placeholder, hint, error }) {
   return (
-    <label className={`block ${className}`}>
-      <Label icon={icon}>{label}</Label>
-      <select {...props} className={fieldCls}>{children}</select>
-    </label>
-  );
-}
-
-function Money({ label, icon, value, onChange, placeholder }) {
-  return (
-    <label className="block">
-      <Label icon={icon}>{label}</Label>
-      <div className="crm-money flex items-stretch overflow-hidden rounded-lg border border-cx-border bg-cx-surface transition-colors focus-within:border-orange-200 focus-within:ring-2 focus-within:ring-orange-500/25">
-        <span className="flex items-center border-r border-cx-border bg-cx-surface px-3 text-xs font-semibold text-cx-muted">R$</span>
-        <input
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          inputMode="numeric"
-          className="w-full bg-transparent px-3 py-2.5 text-sm tabular-nums text-cx-text placeholder-[#9aa6b4] outline-none"
-        />
-      </div>
-    </label>
+    <FormField id={id} label={label} hint={hint} error={error}>
+      <MoneyInput value={value} onChange={onChange} placeholder={placeholder} />
+    </FormField>
   );
 }
 
@@ -191,51 +163,34 @@ function SwitchRow({ checked, onChange, title, desc }) {
     <div className="flex items-center justify-between gap-4 rounded-xl border border-cx-border bg-cx-surface px-4 py-3">
       <div>
         <p className="text-sm font-medium text-cx-text">{title}</p>
-        {desc && <p className="text-[11px] text-cx-muted">{desc}</p>}
+        {desc && <p className="text-xs text-cx-muted">{desc}</p>}
       </div>
       <Switch checked={checked} onChange={onChange} />
     </div>
   );
 }
 
-function Dropzone({ label, icon: Icon, files, onChange, onClear }) {
+function Dropzone({ id, label, files, onChange }) {
   return (
-    <div className="space-y-1.5">
-      <Label icon={Icon}>{label}</Label>
-      <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-cx-border bg-cx-surface px-4 py-5 text-center transition-colors hover:border-orange-200 hover:bg-cx-surface">
-        <Upload className="h-5 w-5 text-cx-muted transition-colors group-hover:text-orange-700" />
-        <span className="text-[11px] text-cx-muted group-hover:text-cx-muted">Selecionar arquivos</span>
-        <input type="file" multiple onChange={onChange} className="hidden" />
-      </label>
-      {files.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {files.map((f, i) => (
-            <span key={i} className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-md border border-cx-orange/30 bg-orange-50 px-2 py-1 text-[10px] text-cx-orange-text">
-              <FileText className="h-3 w-3 shrink-0" />
-              <span className="truncate">{f.name}</span>
-            </span>
-          ))}
-          <button type="button" onClick={onClear} className="inline-flex items-center gap-1 rounded-md border border-cx-border px-2 py-1 text-[10px] text-cx-muted hover:text-cx-muted">
-            <X className="h-3 w-3" /> limpar
-          </button>
-        </div>
-      )}
+    <div className="crm-field">
+      <p className="crm-field-label">{label}</p>
+      <DropzoneBase id={id} multiple files={files} onChange={onChange} accept="image/*,application/pdf" texto="Toque para enviar fotos ou PDF" />
     </div>
   );
 }
 
 function Section({ id, refCb, icon: Icon, title, subtitle, done, children }) {
   return (
-    <section ref={refCb} id={id} className="crm-form-section scroll-mt-6 rounded-2xl border border-cx-border bg-cx-surface p-5 sm:p-6">
-      <header className="mb-5 flex items-center gap-3 border-b border-cx-border/[0.15] pb-4">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${done ? "border-cx-orange/40 bg-orange-50 text-cx-orange-text" : "border-cx-border bg-cx-surface text-cx-muted"}`}>
-          <Icon className="h-4 w-4" />
+    <section ref={refCb} id={id} className="crm-form-section crm-card scroll-mt-6">
+      <header className="flex items-center gap-3 border-b">
+        <span className="flex shrink-0 items-center justify-center border">
+          <Icon aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h3 className="text-[15px] font-semibold tracking-tight text-cx-text">{title}</h3>
-          {subtitle && <p className="truncate text-[11px] text-cx-muted">{subtitle}</p>}
+          <h3>{title}</h3>
+          {subtitle && <p>{subtitle}</p>}
         </div>
-        {done && <Check className="ml-auto h-4 w-4 text-orange-700" />}
+        {done && <Check className="ml-auto h-4 w-4 text-primary" aria-label="Seção preenchida" />}
       </header>
       {children}
     </section>
@@ -256,7 +211,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
   const [files, setFiles] = useState(EMPTY_FILES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [erros, setErros] = useState({});
   const [usuarios, setUsuarios] = useState([]);
 
   const canAssign = !!(user?.is_administrador || user?.is_correspondente);
@@ -283,11 +238,14 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
     return () => { active = false; };
   }, [canAssign]);
 
-  const set = (name, value) => setForm((p) => ({ ...p, [name]: value }));
+  // Ao corrigir um campo, o erro dele some na hora (recuperação de erro).
+  const set = (name, value) => {
+    setForm((p) => ({ ...p, [name]: value }));
+    setErros((p) => (p[name] ? { ...p, [name]: undefined } : p));
+  };
   const onText = (e) => set(e.target.name, e.target.value);
   const onUpper = (e) => set(e.target.name, e.target.value.toUpperCase());
-  const handleFiles = (key) => (e) => setFiles((p) => ({ ...p, [key]: Array.from(e.target.files) }));
-  const clearFiles = (key) => () => setFiles((p) => ({ ...p, [key]: [] }));
+  const handleFiles = (key) => (list) => setFiles((p) => ({ ...p, [key]: list }));
 
   const isCasado = form.estado_civil === "casado";
   const rendaFormal = form.renda_tipo === "formal" || form.renda_tipo === "mista";
@@ -356,11 +314,16 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
-    if (!form.nome.trim() || !form.email.trim() || !form.telefone.trim() || onlyDigits(form.cpf).length !== 11) {
-      setError("Preencha nome, e-mail, telefone e um CPF com 11 dígitos.");
-      goTo("identificacao");
+    const novos = {};
+    if (!form.nome.trim()) novos.nome = "Escreva o nome do cliente.";
+    if (!form.email.trim()) novos.email = "Escreva o e-mail do cliente.";
+    else if (!EMAIL_OK.test(form.email.trim())) novos.email = "Confira o e-mail. Exemplo: maria@email.com";
+    if (onlyDigits(form.telefone).length < 10) novos.telefone = "Escreva o telefone com DDD.";
+    if (onlyDigits(form.cpf).length !== 11) novos.cpf = "O CPF precisa ter 11 números.";
+    if (Object.keys(novos).length) {
+      setErros(novos);
+      focarPrimeiroErro(novos, ["nome", "email", "telefone", "cpf"]);
       return;
     }
 
@@ -368,7 +331,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
     const put = (k, v) => { if (v !== undefined && v !== null && v.toString().trim() !== "") fd.append(k, v); };
 
     put("nome", form.nome.toUpperCase());
-    put("email", form.email.toUpperCase());
+    put("email", form.email.trim());
     put("telefone", form.telefone);
     put("cpf", onlyDigits(form.cpf));
     put("estado_civil", form.estado_civil);
@@ -388,7 +351,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
 
     if (isCasado && form.cadastrar_conjuge) {
       put("conjuge_nome", form.conjuge_nome.toUpperCase());
-      put("conjuge_email", form.conjuge_email.toUpperCase());
+      put("conjuge_email", form.conjuge_email.trim());
       put("conjuge_telefone", form.conjuge_telefone);
       put("conjuge_cpf", onlyDigits(form.conjuge_cpf));
       put("conjuge_profissao", form.conjuge_profissao.toUpperCase());
@@ -403,7 +366,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
       put("fiador_nome", form.fiador_nome.toUpperCase());
       put("fiador_cpf", onlyDigits(form.fiador_cpf));
       put("fiador_telefone", form.fiador_telefone);
-      put("fiador_email", form.fiador_email.toUpperCase());
+      put("fiador_email", form.fiador_email.trim());
     }
 
     if (showCaixa) fd.append("possui_formularios_caixa", form.possui_formularios_caixa ? "true" : "false");
@@ -421,12 +384,34 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
         const details = Array.isArray(data?.details) ? data.details.map((d) => d.message).join(" | ") : null;
         throw new Error(details || data.message || data.error || `Erro (${res.status})`);
       }
-      setSuccess(mode === "edit" ? "Cliente atualizado." : "Cliente cadastrado.");
-      if (mode === "create") { setForm(buildInitialState(null)); setFiles(EMPTY_FILES); }
+      const saved = await res.json().catch(() => ({}));
+      const novoId = saved?.cliente?.id ?? saved?.id;
+      if (mode === "create") {
+        toast.success(`${form.nome.trim() || "Cliente"} foi cadastrado.`, {
+          action: { label: "Cadastrar outro", onClick: () => router.push("/clientes/adicionar") },
+          duration: 8000,
+        });
+        router.push(novoId ? `/editar-cliente/${novoId}` : "/clientes/lista");
+      } else {
+        toast.success("Alterações salvas.");
+      }
       router.refresh();
-      refs.current.identificacao?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
-      setError(err.message || "Erro ao salvar cliente.");
+      const msg = err.message || "Não foi possível salvar o cliente. Tente de novo.";
+      // Duplicidade vira erro no próprio campo (com foco), não um aviso genérico.
+      const campo = /cpf/i.test(msg) ? "cpf" : /e-?mail/i.test(msg) ? "email" : null;
+      if (campo) {
+        const texto = campo === "cpf" ? "Já existe um cliente com este CPF." : "Já existe um cliente com este e-mail.";
+        const novos = { [campo]: texto };
+        setErros((p) => ({ ...p, ...novos }));
+        focarPrimeiroErro(novos, [campo]);
+      } else {
+        setError(msg);
+        // A página rola dentro do <main> do layout, não na janela: o aviso
+        // flutuante garante que a pessoa veja o erro de onde estiver.
+        toast.error(msg);
+        requestAnimationFrame(() => document.querySelector(".crm-alert[data-tom='erro']")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      }
     } finally {
       setLoading(false);
     }
@@ -531,36 +516,31 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
 
       {/* ══ Coluna direita: FORMULÁRIO ══ */}
       <div className="space-y-5">
-        {(error || success) && (
-          <div className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${success ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
-            {success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
-            {success || error}
-          </div>
-        )}
+        {error && <FormAlert titulo="Não deu para salvar">{error}</FormAlert>}
 
         {/* Identificação */}
         <Section id="identificacao" refCb={registerRef} icon={Fingerprint} title="Identificação" subtitle="Quem é o cliente" done={!!(form.nome && onlyDigits(form.cpf).length === 11)}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Text label="Nome completo *" icon={User} name="nome" value={form.nome} onChange={onUpper} required placeholder="MARIA DA SILVA" className="sm:col-span-2" />
-            <Text label="E-mail *" icon={Mail} type="email" name="email" value={form.email} onChange={onUpper} required placeholder="MARIA@EMAIL.COM" />
-            <Text label="Telefone *" icon={Phone} name="telefone" value={form.telefone} onChange={(e) => set("telefone", maskPhone(e.target.value))} required placeholder="(00) 00000-0000" />
-            <Text label="CPF *" icon={IdCard} name="cpf" value={form.cpf} onChange={(e) => set("cpf", maskCPF(e.target.value))} required placeholder="000.000.000-00" />
-            <Select label="Estado civil" icon={Heart} name="estado_civil" value={form.estado_civil} onChange={onText}>
+            <Text label="Nome completo" required error={erros.nome} name="nome" autoComplete="name" value={form.nome} onChange={onUpper} placeholder="MARIA DA SILVA" className="sm:col-span-2" />
+            <Text label="E-mail" required error={erros.email} type="email" name="email" autoComplete="email" inputMode="email" value={form.email} onChange={onText} placeholder="maria@email.com" />
+            <Text label="Telefone (WhatsApp)" required error={erros.telefone} type="tel" name="telefone" autoComplete="tel" inputMode="tel" value={form.telefone} onChange={(e) => set("telefone", maskPhone(e.target.value))} placeholder="(61) 99999-9999" />
+            <Text label="CPF" required error={erros.cpf} name="cpf" inputMode="numeric" value={form.cpf} onChange={(e) => set("cpf", maskCPF(e.target.value))} placeholder="000.000.000-00" />
+            <Select label="Estado civil" name="estado_civil" value={form.estado_civil} onChange={onText}>
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
               <option value="divorciado">Divorciado(a)</option>
               <option value="viuvo">Viúvo(a)</option>
               <option value="uniao_estavel">União estável</option>
             </Select>
-            <Text label="Naturalidade / cidade" icon={MapPin} name="naturalidade" value={form.naturalidade} onChange={onUpper} placeholder="SÃO PAULO - SP" />
-            <Text label="Data de nascimento" icon={Calendar} type="date" name="data_nascimento" value={form.data_nascimento} onChange={onText} />
+            <Text label="Naturalidade / cidade" name="naturalidade" value={form.naturalidade} onChange={onUpper} placeholder="SÃO PAULO - SP" />
+            <Text label="Data de nascimento" type="date" name="data_nascimento" value={form.data_nascimento} onChange={onText} />
             {/* Origem e interesse alimentam as colunas de mesmo nome na lista de
                 clientes. A origem tem lista de sugestões mas aceita texto livre
                 (o banco não restringe) — cada imobiliária capta por canais
                 diferentes e a lista fixa envelheceria rápido. */}
             <Text
               label="Origem do contato"
-              icon={Radio}
+             
               name="origem"
               list="origens-sugeridas"
               value={form.origem}
@@ -570,24 +550,34 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
             <datalist id="origens-sugeridas">
               {ORIGENS_SUGERIDAS.map((item) => <option key={item} value={item} />)}
             </datalist>
-            <Text label="Interesse" icon={Home} name="interesse" value={form.interesse} onChange={onUpper} placeholder="APARTAMENTO 2 QUARTOS" />
-            {mode === "create" && (
-              <Text label="Data do cadastro" icon={Calendar} type="date" name="data_criacao" value={form.data_criacao} onChange={onText} />
-            )}
+            <Text label="Interesse" name="interesse" value={form.interesse} onChange={onUpper} placeholder="APARTAMENTO 2 QUARTOS" />
           </div>
+          {/* Data do cadastro já vem com hoje; só abre quem precisa lançar um
+              cadastro antigo. */}
+          {mode === "create" && (
+            <Collapsible className="mt-5">
+              <CollapsibleTrigger className="crm-more-trigger">
+                Mais detalhes (opcional)
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="crm-more-panel">
+                <Text label="Data do cadastro" hint="Já vem com a data de hoje. Mude só se o cliente chegou antes." type="date" name="data_criacao" value={form.data_criacao} onChange={onText} className="max-w-xs" />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </Section>
 
         {/* Renda & trabalho */}
         <Section id="renda" refCb={registerRef} icon={Coins} title="Renda & trabalho" subtitle="Composição de renda do titular" done={!!(form.valorRendaDigits && form.renda_tipo)}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Text label="Profissão" icon={Briefcase} name="profissao" value={form.profissao} onChange={onUpper} placeholder="GERENTE DE VENDAS" />
-            <Money label="Renda mensal *" icon={Wallet} value={formatRendaFromDigits(form.valorRendaDigits)} onChange={(e) => set("valorRendaDigits", onlyDigits(e.target.value))} placeholder="2.000,00" />
-            <Select label="Tipo de renda" icon={Coins} name="renda_tipo" value={form.renda_tipo} onChange={onText}>
+            <Text label="Profissão" name="profissao" value={form.profissao} onChange={onUpper} placeholder="GERENTE DE VENDAS" />
+            <Money label="Renda mensal" id="valor_renda" hint="Pode deixar em branco se ainda não souber." value={formatRendaFromDigits(form.valorRendaDigits)} onChange={(v) => set("valorRendaDigits", onlyDigits(v))} placeholder="2.000,00" />
+            <Select label="Tipo de renda" name="renda_tipo" value={form.renda_tipo} onChange={onText}>
               <option value="">Selecione</option>
               {RENDA_TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </Select>
             {rendaFormal && (
-              <Text label="Data de admissão" icon={Calendar} type="date" name="data_admissao" value={form.data_admissao} onChange={onText} />
+              <Text label="Data de admissão" type="date" name="data_admissao" value={form.data_admissao} onChange={onText} />
             )}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -596,7 +586,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
           </div>
           {form.possui_carteira_mais_tres_anos && (
             <div className="mt-3 grid gap-3 duration-200 animate-in fade-in slide-in-from-top-1 sm:grid-cols-3">
-              <Text label="Número do PIS" icon={ShieldCheck} name="numero_pis" value={form.numero_pis} onChange={onText} placeholder="123.45678.90-1" />
+              <Text label="Número do PIS" name="numero_pis" value={form.numero_pis} onChange={onText} placeholder="123.45678.90-1" />
             </div>
           )}
         </Section>
@@ -607,19 +597,19 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
             <SwitchRow title="Cadastrar cônjuge" desc="Inclui o cônjuge na composição de renda" checked={form.cadastrar_conjuge} onChange={(v) => set("cadastrar_conjuge", v)} />
             {form.cadastrar_conjuge && (
               <div className="mt-4 grid grid-cols-1 gap-3 duration-200 animate-in fade-in slide-in-from-top-1 sm:grid-cols-2 lg:grid-cols-3">
-                <Text label="Nome do cônjuge" icon={User} name="conjuge_nome" value={form.conjuge_nome} onChange={onUpper} placeholder="JOÃO DA SILVA" />
-                <Text label="E-mail do cônjuge" icon={Mail} type="email" name="conjuge_email" value={form.conjuge_email} onChange={onUpper} />
-                <Text label="Telefone do cônjuge" icon={Phone} value={form.conjuge_telefone} onChange={(e) => set("conjuge_telefone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
-                <Text label="CPF do cônjuge" icon={IdCard} value={form.conjuge_cpf} onChange={(e) => set("conjuge_cpf", maskCPF(e.target.value))} placeholder="000.000.000-00" />
-                <Text label="Profissão do cônjuge" icon={Briefcase} name="conjuge_profissao" value={form.conjuge_profissao} onChange={onUpper} />
-                <Text label="Nascimento do cônjuge" icon={Calendar} type="date" name="conjuge_data_nascimento" value={form.conjuge_data_nascimento} onChange={onText} />
-                <Money label="Renda do cônjuge" icon={Wallet} value={formatRendaFromDigits(form.conjugeRendaDigits)} onChange={(e) => set("conjugeRendaDigits", onlyDigits(e.target.value))} placeholder="2.000,00" />
-                <Select label="Tipo de renda do cônjuge" icon={Coins} name="conjuge_renda_tipo" value={form.conjuge_renda_tipo} onChange={onText}>
+                <Text label="Nome do cônjuge" name="conjuge_nome" value={form.conjuge_nome} onChange={onUpper} placeholder="JOÃO DA SILVA" />
+                <Text label="E-mail do cônjuge" type="email" inputMode="email" name="conjuge_email" value={form.conjuge_email} onChange={onText} placeholder="joao@email.com" />
+                <Text label="Telefone do cônjuge" id="conjuge_telefone" type="tel" inputMode="tel" value={form.conjuge_telefone} onChange={(e) => set("conjuge_telefone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
+                <Text label="CPF do cônjuge" id="conjuge_cpf" inputMode="numeric" value={form.conjuge_cpf} onChange={(e) => set("conjuge_cpf", maskCPF(e.target.value))} placeholder="000.000.000-00" />
+                <Text label="Profissão do cônjuge" name="conjuge_profissao" value={form.conjuge_profissao} onChange={onUpper} />
+                <Text label="Nascimento do cônjuge" type="date" name="conjuge_data_nascimento" value={form.conjuge_data_nascimento} onChange={onText} />
+                <Money label="Renda do cônjuge" id="conjuge_valor_renda" value={formatRendaFromDigits(form.conjugeRendaDigits)} onChange={(v) => set("conjugeRendaDigits", onlyDigits(v))} placeholder="2.000,00" />
+                <Select label="Tipo de renda do cônjuge" name="conjuge_renda_tipo" value={form.conjuge_renda_tipo} onChange={onText}>
                   <option value="">Selecione</option>
                   {RENDA_TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </Select>
                 {conjugeRendaFormal && (
-                  <Text label="Admissão do cônjuge" icon={Calendar} type="date" name="conjuge_data_admissao" value={form.conjuge_data_admissao} onChange={onText} />
+                  <Text label="Admissão do cônjuge" type="date" name="conjuge_data_admissao" value={form.conjuge_data_admissao} onChange={onText} />
                 )}
               </div>
             )}
@@ -631,10 +621,10 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
           <SwitchRow title="Cliente possui fiador" desc="Terceiro que garante o contrato" checked={form.possui_fiador} onChange={(v) => set("possui_fiador", v)} />
           {form.possui_fiador && (
             <div className="mt-4 grid grid-cols-1 gap-3 duration-200 animate-in fade-in slide-in-from-top-1 sm:grid-cols-2 lg:grid-cols-3">
-              <Text label="Nome do fiador" icon={User} name="fiador_nome" value={form.fiador_nome} onChange={onUpper} />
-              <Text label="CPF do fiador" icon={IdCard} value={form.fiador_cpf} onChange={(e) => set("fiador_cpf", maskCPF(e.target.value))} placeholder="000.000.000-00" />
-              <Text label="Telefone do fiador" icon={Phone} value={form.fiador_telefone} onChange={(e) => set("fiador_telefone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
-              <Text label="E-mail do fiador" icon={Mail} type="email" name="fiador_email" value={form.fiador_email} onChange={onUpper} />
+              <Text label="Nome do fiador" name="fiador_nome" value={form.fiador_nome} onChange={onUpper} />
+              <Text label="CPF do fiador" id="fiador_cpf" inputMode="numeric" value={form.fiador_cpf} onChange={(e) => set("fiador_cpf", maskCPF(e.target.value))} placeholder="000.000.000-00" />
+              <Text label="Telefone do fiador" id="fiador_telefone" type="tel" inputMode="tel" value={form.fiador_telefone} onChange={(e) => set("fiador_telefone", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
+              <Text label="E-mail do fiador" type="email" inputMode="email" name="fiador_email" value={form.fiador_email} onChange={onText} />
             </div>
           )}
         </Section>
@@ -644,8 +634,8 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
           <Section id="caixa" refCb={registerRef} icon={Landmark} title="Caixa" subtitle="Formulários e tela de aprovação" done={form.possui_formularios_caixa}>
             <SwitchRow title="Possui formulários Caixa" desc="Formulários exigidos no processo Caixa" checked={form.possui_formularios_caixa} onChange={(v) => set("possui_formularios_caixa", v)} />
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Dropzone label="Formulários Caixa" icon={Landmark} files={files.formulariosCaixa} onChange={handleFiles("formulariosCaixa")} onClear={clearFiles("formulariosCaixa")} />
-              <Dropzone label="Tela de aprovação" icon={Landmark} files={files.tela_aprovacao} onChange={handleFiles("tela_aprovacao")} onClear={clearFiles("tela_aprovacao")} />
+              <Dropzone id="doc-formulariosCaixa" label="Formulários Caixa" files={files.formulariosCaixa} onChange={handleFiles("formulariosCaixa")} />
+              <Dropzone id="doc-tela_aprovacao" label="Tela de aprovação" files={files.tela_aprovacao} onChange={handleFiles("tela_aprovacao")} />
             </div>
           </Section>
         )}
@@ -653,7 +643,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
         {/* Responsável */}
         {canAssign && usuarios.length > 0 && (
           <Section id="responsavel" refCb={registerRef} icon={UserCheck} title="Responsável" subtitle="Quem atende este cliente" done={!!form.userId}>
-            <Select label="Usuário responsável" icon={User} name="userId" value={form.userId} onChange={onText} className="max-w-md">
+            <Select label="Usuário responsável" name="userId" value={form.userId} onChange={onText} className="max-w-md">
               <option value="">Manter padrão (você)</option>
               {usuarios.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -667,7 +657,7 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
         {/* Situação — status só admin/correspondente */}
         {showSituacao && (
           <Section id="situacao" refCb={registerRef} icon={Contact} title="Situação" subtitle="Etapa no funil" done={form.status !== "aguardando_aprovacao"}>
-            <Select label="Status" icon={Contact} name="status" value={form.status} onChange={onText} className="max-w-md">
+            <Select label="Status" name="status" value={form.status} onChange={onText} className="max-w-md">
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
           </Section>
@@ -676,34 +666,26 @@ export function ClienteForm({ mode = "create", clienteId, initial }) {
         {/* Documentos */}
         <Section id="documentos" refCb={registerRef} icon={FolderOpen} title="Documentos" subtitle="PDF ou imagens para análise" done={anyFiles}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Dropzone label="Documentos pessoais" icon={IdCard} files={files.documentosPessoais} onChange={handleFiles("documentosPessoais")} onClear={clearFiles("documentosPessoais")} />
-            <Dropzone label="Extrato / contracheque" icon={Wallet} files={files.extratoBancario} onChange={handleFiles("extratoBancario")} onClear={clearFiles("extratoBancario")} />
+            <Dropzone id="doc-documentosPessoais" label="Documentos pessoais" files={files.documentosPessoais} onChange={handleFiles("documentosPessoais")} />
+            <Dropzone id="doc-extratoBancario" label="Extrato / contracheque" files={files.extratoBancario} onChange={handleFiles("extratoBancario")} />
             {form.possui_dependente && (
-              <Dropzone label="Documentos dos dependentes" icon={Users} files={files.documentosDependente} onChange={handleFiles("documentosDependente")} onClear={clearFiles("documentosDependente")} />
+              <Dropzone id="doc-documentosDependente" label="Documentos dos dependentes" files={files.documentosDependente} onChange={handleFiles("documentosDependente")} />
             )}
             {isCasado && (
-              <Dropzone label="Documentos do cônjuge" icon={Heart} files={files.documentosConjuge} onChange={handleFiles("documentosConjuge")} onClear={clearFiles("documentosConjuge")} />
+              <Dropzone id="doc-documentosConjuge" label="Documentos do cônjuge" files={files.documentosConjuge} onChange={handleFiles("documentosConjuge")} />
             )}
             {form.possui_fiador && (
-              <Dropzone label="Documentos do fiador" icon={ShieldCheck} files={files.fiadorDocumentos} onChange={handleFiles("fiadorDocumentos")} onClear={clearFiles("fiadorDocumentos")} />
+              <Dropzone id="doc-fiadorDocumentos" label="Documentos do fiador" files={files.fiadorDocumentos} onChange={handleFiles("fiadorDocumentos")} />
             )}
           </div>
         </Section>
 
-        {/* CTA */}
-        <div className="sticky bottom-4 z-10">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-900/40 ring-1 ring-orange-400/30 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? (
-              <><Loader2 className="h-5 w-5 animate-spin" /> Salvando…</>
-            ) : (
-              <><Save className="h-5 w-5" /> {mode === "edit" ? "Salvar alterações" : "Cadastrar cliente"}</>
-            )}
-          </button>
-        </div>
+        <FormActions
+          loading={loading}
+          icon={Save}
+          submitLabel={mode === "edit" ? "Salvar alterações" : "Cadastrar cliente"}
+          cancelHref={mode === "edit" ? undefined : "/clientes/lista"}
+        />
       </div>
     </form>
   );

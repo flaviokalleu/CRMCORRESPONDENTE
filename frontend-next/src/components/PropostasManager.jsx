@@ -5,8 +5,9 @@ import Link from "next/link";
 import {
   FileText, FileSignature, FileClock, Home as HomeIcon, Receipt, Plus, Search,
   Filter, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, Check, Handshake,
-  Send, X, Trash2, Loader2, Inbox, AlertTriangle, Lightbulb,
+  Send, X, Trash2, Loader2, Inbox, AlertTriangle, Lightbulb, MessageCircle,
 } from "@/components/icons";
+import { linkWhatsApp } from "@/components/ui/contato-rapido";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -47,6 +48,9 @@ const PROPOSTA_STATUS = {
   expirada: { label: "Expirada", tone: "neutral" },
   cancelada: { label: "Cancelada", tone: "negative" },
 };
+
+// Tom → classe de semáforo do crm-design.css (seção "Assinatura").
+const TOM_CLASSE = { positive: "ass-tom-ok", attention: "ass-tom-alerta", negative: "ass-tom-perigo", neutral: "ass-tom-neutro" };
 
 // Mesmo método de `lib/cliente-status.js`: a cor deriva do TOM semântico do
 // status (positive/negative/attention/neutral), não de uma paleta nova. Os
@@ -227,6 +231,48 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
   const visiveis = filtered.slice((currentPage - 1) * LIMIT, currentPage * LIMIT);
 
   const contagem = (status) => propostas.filter((p) => p.status === status).length;
+
+  // Menu de ações de uma proposta — o mesmo na tabela (computador) e no
+  // cartão (celular).
+  const acoesDaProposta = (p) => {
+    const emAberto = p.status === "pendente" || p.status === "em_negociacao";
+    const processando = busyId === p.id;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon" disabled={processando} className="text-cx-muted" />}
+          aria-label={`Ações da proposta de ${p.cliente?.nome || "cliente"}`}
+          aria-busy={processando}
+        >
+          {processando ? <Loader2 className="animate-spin" /> : <MoreVertical />}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48!">
+          {p.status === "pendente" && (
+            <DropdownMenuItem onClick={() => updateStatus(p.id, "em_negociacao", {}, "negociar")}>
+              <Handshake /> Marcar em negociação
+            </DropdownMenuItem>
+          )}
+          {emAberto && (
+            <>
+              <DropdownMenuItem onClick={() => updateStatus(p.id, "aceita", { valor_aceito: p.valor_ofertado }, "aprovar")}>
+                <Check /> Aprovar proposta
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => updateStatus(p.id, "recusada", {}, "reprovar")}>
+                <X /> Reprovar proposta
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuItem render={<Link href={`/propostas/contratos?proposta=${p.id}`} />}>
+            <FileText /> Gerar contrato
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={() => handleDelete(p.id)}>
+            <Trash2 /> Excluir proposta
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
   const filtrosAtivos = payment ? 1 : 0;
 
   const idsVisiveis = visiveis.map((p) => p.id);
@@ -333,16 +379,17 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
           <p className="text-sm text-cx-muted">Crie, acompanhe e gerencie suas propostas e contratos.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Ação principal primeiro: no celular ela fica no topo, ao alcance. */}
+          <Button onClick={() => setOpen(true)} className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark sm:order-2">
+            <Plus /> Nova proposta
+          </Button>
           <Button
             variant="outline"
             nativeButton={false}
             render={<Link href="/propostas/contratos" />}
-            className="gap-2 border-cx-border text-cx-text"
+            className="gap-2 border-cx-border text-cx-text sm:order-1"
           >
             <FileText /> Modelos de contrato
-          </Button>
-          <Button onClick={() => setOpen(true)} className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark">
-            <Plus /> Nova proposta
           </Button>
         </div>
       </div>
@@ -355,43 +402,39 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
         </p>
       )}
 
-      {/* 4 contadores do topo — clicáveis, filtram a tabela pela etapa. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {METRICAS.map(({ status, label, Icon }) => {
-          const info = propostaStatusInfo(status);
-          const ativo = stage === status;
-          return (
-            <button
-              key={status}
-              type="button"
-              onClick={() => { setStage(ativo ? "" : status); setPage(1); }}
-              aria-pressed={ativo}
-              className={cn(
-                "flex items-center gap-3 rounded-xl border p-3 text-left transition-colors",
-                ativo ? "border-cx-blue bg-cx-blue-soft" : "border-cx-border bg-cx-surface hover:bg-cx-bg"
-              )}
-            >
-              <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                style={{ backgroundColor: info.soft, color: info.ink }}
+      {/* Filtro rápido por etapa, com contador (antes: 4 cartões grandes que
+          ocupavam a primeira tela inteira do celular, mais um select repetindo
+          a mesma escolha). Etapas finais só aparecem quando existem. */}
+      <div className="lst-filtros" role="group" aria-label="Filtrar por etapa">
+        <button type="button" className="lst-filtro" aria-pressed={!stage} onClick={() => { setStage(""); setPage(1); }}>
+          Todas <span className="lst-filtro-n">{propostas.length}</span>
+        </button>
+        {Object.keys(PROPOSTA_STATUS)
+          .filter((status) => METRICAS.some((m) => m.status === status) || contagem(status) > 0)
+          .map((status) => {
+            const ativo = stage === status;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => { setStage(ativo ? "" : status); setPage(1); }}
+                aria-pressed={ativo}
+                className={cn("lst-filtro", contagem(status) > 0 && TOM_CLASSE[PROPOSTA_STATUS[status].tone])}
               >
-                <Icon className="size-5" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-xl font-bold tabular-nums text-cx-text">{contagem(status)}</span>
-                <span className="block truncate text-xs text-cx-muted">{label}</span>
-              </span>
-            </button>
-          );
-        })}
+                {PROPOSTA_STATUS[status].label} <span className="lst-filtro-n">{contagem(status)}</span>
+              </button>
+            );
+          })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 2xl:grid-cols-[1fr_300px]">
         <div className="min-w-0 space-y-4">
           <section className="ikit-card">
             {/* Busca + etapa + responsável + mais filtros */}
             <div className="ikit-toolbar">
-              <div className="relative" style={{ flex: "1 1 320px" }}>
+              {/* Sem flex-basis fixo: no celular a barra vira coluna e os 320px viravam
+                  altura, abrindo um buraco enorme abaixo da busca. */}
+              <div className="relative w-full sm:w-auto sm:min-w-64 sm:flex-1">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cx-muted" />
                 <Input
                   value={search}
@@ -401,17 +444,6 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                   className="h-11 border-cx-border pl-10! text-sm"
                 />
               </div>
-              <Select value={stage} onValueChange={(v) => { setStage(v ?? ""); setPage(1); }}>
-                <SelectTrigger aria-label="Filtrar etapa" className="h-11 w-full border-cx-border text-sm sm:w-[190px]">
-                  <SelectValue placeholder="Todas as etapas" />
-                </SelectTrigger>
-                <SelectContent className="min-w-56!">
-                  <SelectItem value="">Todas as etapas</SelectItem>
-                  {Object.entries(PROPOSTA_STATUS).map(([value, meta]) => (
-                    <SelectItem key={value} value={value}>{meta.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={corretorId} onValueChange={(v) => { setCorretorId(v ?? ""); setPage(1); }}>
                 <SelectTrigger aria-label="Filtrar responsável" className="h-11 w-full border-cx-border text-sm sm:w-[190px]">
                   <SelectValue placeholder="Todos os corretores" />
@@ -467,9 +499,43 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
               <Link href="/propostas/contratos" className="ikit-tab">Modelos</Link>
             </nav>
 
+            {/* Celular: cartões (a tabela de 900px virava rolagem lateral). */}
+            {!loadError && visiveis.length > 0 && (
+              <div className="p-3 md:hidden">
+              <ul className="lst-lista">
+                {visiveis.map((p) => (
+                  <li key={p.id} className={cn("lst-item", TOM_CLASSE[propostaStatusInfo(p.status).tone])}>
+                    <div className="lst-item-corpo">
+                      <p className="lst-item-titulo">{p.cliente?.nome || "Cliente não informado"}</p>
+                      <p className="lst-item-texto">{p.imovel?.nome_imovel || p.imovel?.endereco || "Imóvel não informado"}</p>
+                      <div className="lst-item-meta">
+                        <span className="font-semibold text-cx-text tabular-nums">{formatCurrency(p.valor_ofertado)}</span>
+                        <StatusPill status={p.status} />
+                      </div>
+                    </div>
+                    <div className="lst-item-acoes">
+                      {p.cliente?.telefone && (
+                        <a
+                          href={linkWhatsApp(p.cliente.telefone)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="lst-acao lst-acao-whats"
+                          aria-label={`Chamar ${p.cliente?.nome || "cliente"} no WhatsApp`}
+                        >
+                          <MessageCircle aria-hidden="true" />
+                        </a>
+                      )}
+                      {acoesDaProposta(p)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              </div>
+            )}
+
             {/* Tabela */}
-            <div className="overflow-x-auto">
-              <Table className="min-w-[900px] table-fixed">
+            <div className={cn("overflow-x-auto", !loadError && visiveis.length > 0 && "hidden md:block")}>
+              <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow className="border-cx-border/[0.15] hover:bg-transparent">
                     <TableHead className="w-10 px-3! py-3! text-center">
@@ -482,7 +548,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                       />
                     </TableHead>
                     {["Cliente", "Imóvel", "Valor", "Etapa", "Data", "Responsável", "Ações"].map((titulo) => (
-                      <TableHead key={titulo} className="px-3! py-3! text-center text-[10px] font-semibold tracking-[0.1em] text-cx-muted uppercase">
+                      <TableHead key={titulo} className={cn("px-3! py-3! text-xs font-semibold tracking-wide text-cx-muted uppercase", titulo === "Cliente" || titulo === "Imóvel" ? "text-left" : "text-center")}>
                         {titulo}
                       </TableHead>
                     ))}
@@ -514,8 +580,6 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                   ) : (
                     visiveis.map((p) => {
                       const data = p.created_at ? new Date(p.created_at) : null;
-                      const emAberto = p.status === "pendente" || p.status === "em_negociacao";
-                      const processando = busyId === p.id;
                       return (
                         <TableRow key={p.id} className="border-cx-border/[0.12]" data-state={selected.has(p.id) ? "selected" : undefined}>
                           <TableCell className="px-3! py-3! text-center">
@@ -536,13 +600,13 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-3! py-3! text-center">
+                          <TableCell className="px-3! py-3!">
                             <p className="truncate font-medium text-cx-text">{p.imovel?.nome_imovel || p.imovel?.endereco || "Imóvel não informado"}</p>
                             <p className="truncate text-xs text-cx-muted">
                               {[p.imovel?.tipo, p.imovel?.quartos ? `${p.imovel.quartos} quartos` : null].filter(Boolean).join(" · ") || "—"}
                             </p>
                           </TableCell>
-                          <TableCell className="px-3! py-3! text-center font-semibold text-cx-text tabular-nums">
+                          <TableCell className="px-3! py-3! text-center font-semibold whitespace-nowrap text-cx-text tabular-nums">
                             {formatCurrency(p.valor_ofertado)}
                           </TableCell>
                           <TableCell className="px-3! py-3! text-center">
@@ -560,39 +624,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                             <AvatarResponsavel user={p.corretor} />
                           </TableCell>
                           <TableCell className="px-3! py-3! text-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={<Button variant="ghost" size="icon-sm" disabled={processando} className="text-cx-muted" />}
-                                aria-label={`Ações da proposta de ${p.cliente?.nome || "cliente"}`}
-                                aria-busy={processando}
-                              >
-                                {processando ? <Loader2 className="animate-spin" /> : <MoreVertical />}
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="min-w-48!">
-                                {p.status === "pendente" && (
-                                  <DropdownMenuItem onClick={() => updateStatus(p.id, "em_negociacao", {}, "negociar")}>
-                                    <Handshake /> Marcar em negociação
-                                  </DropdownMenuItem>
-                                )}
-                                {emAberto && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => updateStatus(p.id, "aceita", { valor_aceito: p.valor_ofertado }, "aprovar")}>
-                                      <Check /> Aprovar proposta
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem variant="destructive" onClick={() => updateStatus(p.id, "recusada", {}, "reprovar")}>
-                                      <X /> Reprovar proposta
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                  </>
-                                )}
-                                <DropdownMenuItem render={<Link href={`/propostas/contratos?proposta=${p.id}`} />}>
-                                  <FileText /> Gerar contrato
-                                </DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive" onClick={() => handleDelete(p.id)}>
-                                  <Trash2 /> Excluir proposta
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {acoesDaProposta(p)}
                           </TableCell>
                         </TableRow>
                       );
@@ -643,13 +675,6 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
 
         {/* Coluna lateral */}
         <aside className="space-y-4">
-          <Card className="ring-cx-border bg-cx-surface p-4">
-            <h2 className="text-sm font-semibold text-cx-text">Criar nova proposta</h2>
-            <p className="mt-1 text-xs text-cx-muted">Preencha os dados, gere o documento e envie para o cliente.</p>
-            <Button onClick={() => setOpen(true)} className="mt-3 w-full gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark">
-              <Plus /> Nova proposta
-            </Button>
-          </Card>
 
           <Card className="ring-cx-border bg-cx-surface p-4">
             <div className="flex items-center justify-between">

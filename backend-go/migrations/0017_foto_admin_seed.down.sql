@@ -1,0 +1,1 @@
+-- sem volta: o arquivo admin.jpg nunca existiu.
