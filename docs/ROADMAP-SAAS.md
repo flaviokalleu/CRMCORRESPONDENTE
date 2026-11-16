@@ -49,24 +49,34 @@ Decisões tomadas em 2026-11-16:
 - [x] Erro 402 em **todas** as rotas da imobiliária, menos login, assinatura e
       configurações da empresa.
 - [x] Frontend: 402 leva para "Minha assinatura"; banner com dias de teste.
-- [ ] Ligar limites (clientes, usuários, imóveis, aluguéis) e módulos do plano às
+- [x] Ligar limites (clientes, usuários, imóveis, aluguéis) e módulos do plano às
       rotas, e esconder do menu o que o plano não tem, com convite para mudar de plano.
 
 ## Etapa 4 — Painel master
 
-- [ ] Lista de imobiliárias com situação, plano, valor e "pago até".
-- [ ] Ficha: trocar plano, preço combinado, tolerância, prorrogar, bloquear/desbloquear,
+- [x] Lista de imobiliárias com situação, plano, valor e "pago até".
+- [x] Ficha: trocar plano, preço combinado, tolerância, prorrogar, bloquear/desbloquear,
       dar baixa manual em fatura, cancelar fatura, "entrar como".
-- [ ] Métricas corrigidas (MRR, em teste, bloqueadas, cancelamentos).
-- [ ] CRUD de planos.
+- [x] Métricas corrigidas (MRR, em teste, bloqueadas, cancelamentos).
+- [x] CRUD de planos.
+
+## Onde está cada coisa
+
+- Backend: `backend-go/internal/modules/assinatura/` (regra de acesso `acesso.go`,
+  faturas/pagamento/webhook `service.go`, avisos `avisos.go`, rotas `handler.go`,
+  ações do master `master.go`, painel `painel.go`); limites e recursos do plano por
+  rota em `internal/middleware/regras_do_plano.go` (rota nova que cria recurso
+  limitado ou usa recurso pago entra na tabela de lá).
+- Frontend: `src/components/assinatura/` (Minha assinatura, faixa de prazo, tela de
+  bloqueio, painel master, ficha da empresa, editor de planos, faixa "Entrar como").
+- "Entrar como": cookie httpOnly `cri_ver_empresa` → cabeçalho `X-Tenant-Id`
+  (o backend só aceita de superadmin).
 
 ## Pendências conhecidas
 
-- Rotas do WhatsApp (`modwhatsapp`, registradas com auth própria) ainda não passam pelo bloqueio 402.
-- Páginas de detalhe que chamam `notFound()` quando a API falha mostram 404 em vez da
-  tela de bloqueio (imóvel, editar cliente, contratos).
-- Ações do master já existem na API (`/api/super-admin/assinaturas/*`: baixa manual,
-  cancelar fatura, prorrogar, bloquear/desbloquear, condições); falta a tela (etapa 4).
+- Pagamento real pelo Asaas ainda não testado: falta a chave da conta da plataforma.
+- Teste antigo `TestOtimizarPDFSemGanhoDevolveEntradaIntacta` (pacote media) falha;
+  não tem relação com a assinatura (pacote não alterado).
 
 ## Configuração (produção)
 

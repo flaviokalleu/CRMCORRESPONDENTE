@@ -118,7 +118,7 @@ function AcoesRapidas({ t, ocupado, acao, entrarComo, tenantId }) {
           Prorrogar por
           <span className="mt-1 flex items-center gap-2">
             <input type="number" min="1" max="366" value={dias} onChange={(e) => setDias(e.target.value)} className="cx-input h-10 w-20" />
-            <span className="text-sm font-normal text-cx-muted">dias</span>
+            <span className="whitespace-nowrap text-sm font-normal text-cx-muted">dias</span>
           </span>
         </label>
         <Button variant="outline" disabled={ocupado} onClick={() => acao("POST", `/assinaturas/${tenantId}/prorrogar`, { dias: Number(dias) }, `Prorrogado por ${dias} dias.`)}>
@@ -189,9 +189,10 @@ function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId }) {
             step="0.01"
             value={preco}
             onChange={(e) => setPreco(e.target.value)}
-            placeholder="Vazio = preço do plano · 0 = cortesia"
+            placeholder="Preço do plano"
             className="cx-input mt-1 h-10 w-full"
           />
+          <span className="mt-1 block text-xs font-normal text-cx-muted">Vazio = preço do plano · 0 = cortesia</span>
         </label>
         <label className="text-sm font-semibold text-cx-text">
           Tolerância após o vencimento (dias)
