@@ -16,22 +16,28 @@ async function api(metodo, caminho, corpo) {
   return { ok: res.ok, dados };
 }
 
+async function buscarFicha(id) {
+  const { ok, dados } = await api("GET", `/assinaturas/${id}`);
+  return ok ? dados : { erro: dados.error || "Não foi possível carregar." };
+}
+
 // Ficha de uma imobiliária: situação no topo, ações mais usadas primeiro
 // (prorrogar, entrar como), depois plano/condições e faturas.
-export function FichaEmpresa({ tenantId, planos, onFechar, onMudou }) {
+export function FichaEmpresa({ tenantId, plataforma, planos, onFechar, onMudou }) {
   const router = useRouter();
   const [ficha, setFicha] = useState(null);
   const [aviso, setAviso] = useState("");
   const [ocupado, setOcupado] = useState(false);
 
-  const carregar = useCallback(async () => {
-    const { ok, dados } = await api("GET", `/assinaturas/${tenantId}`);
-    setFicha(ok ? dados : { erro: dados.error || "Não foi possível carregar." });
-  }, [tenantId]);
+  const carregar = useCallback(async () => setFicha(await buscarFicha(tenantId)), [tenantId]);
 
   useEffect(() => {
-    carregar();
-  }, [carregar]);
+    let vivo = true;
+    buscarFicha(tenantId).then((f) => vivo && setFicha(f));
+    return () => {
+      vivo = false;
+    };
+  }, [tenantId]);
 
   async function acao(metodo, caminho, corpo, sucesso) {
     setOcupado(true);
@@ -64,7 +70,6 @@ export function FichaEmpresa({ tenantId, planos, onFechar, onMudou }) {
   const t = ficha?.tenant;
   const sub = ficha?.assinatura;
   const situacao = ficha?.acesso ? situacaoEmTexto(ficha.acesso) : null;
-  const plataforma = ficha && tenantId === 1;
 
   return (
     <Dialog open onOpenChange={(v) => !v && onFechar()}>

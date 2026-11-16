@@ -26,6 +26,17 @@ var nomeDoRecurso = map[string]string{
 	"clientes": "clientes", "usuarios": "usuários", "imoveis": "imóveis", "alugueis": "aluguéis",
 }
 
+var nomeDoRecursoSingular = map[string]string{
+	"clientes": "cliente", "usuarios": "usuário", "imoveis": "imóvel", "alugueis": "aluguel",
+}
+
+func nomeComQuantidade(resource string, n int) string {
+	if n == 1 {
+		return nomeDoRecursoSingular[resource]
+	}
+	return nomeDoRecurso[resource]
+}
+
 var resourceLimitField = map[string]string{
 	"clientes": "clientes",
 	"usuarios": "usuarios",
@@ -155,7 +166,7 @@ func RequireLimit(db *gorm.DB, resource string) gin.HandlerFunc {
 		}
 		if count >= int64(maxAllowed) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":   fmt.Sprintf("Você chegou ao limite de %d %s do seu plano. Mude de plano em Minha assinatura para cadastrar mais.", maxAllowed, nomeDoRecurso[resource]),
+				"error":   fmt.Sprintf("Você chegou ao limite de %d %s do seu plano. Mude de plano em Minha assinatura para cadastrar mais.", maxAllowed, nomeComQuantidade(resource, maxAllowed)),
 				"code":    "LIMIT_REACHED",
 				"limite":  maxAllowed,
 				"atual":   count,

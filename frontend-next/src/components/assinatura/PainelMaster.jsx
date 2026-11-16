@@ -109,7 +109,7 @@ function Empresas({ empresas, planos }) {
               <li key={e.id}>
                 <button
                   type="button"
-                  onClick={() => setAberta(e.id)}
+                  onClick={() => setAberta(e)}
                   className="flex w-full flex-wrap items-center justify-between gap-3 py-3 text-left hover:bg-[var(--muted)]"
                 >
                   <span className="min-w-0">
@@ -130,7 +130,8 @@ function Empresas({ empresas, planos }) {
 
       {aberta && (
         <FichaEmpresa
-          tenantId={aberta}
+          tenantId={aberta.id}
+          plataforma={aberta.plataforma}
           planos={planos}
           onFechar={() => setAberta(null)}
           onMudou={() => router.refresh()}
