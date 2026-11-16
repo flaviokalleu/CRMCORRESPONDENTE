@@ -78,3 +78,47 @@ func (s *Service) Delete(ctx context.Context, id uint) error {
 	}
 	return s.repo.Delete(ctx, id)
 }
+
+// UpdateInput: campos opcionais da edição (nil = não mexe).
+type UpdateInput struct {
+	Status    *string
+	Titulo    *string
+	Descricao *string
+	Data      *time.Time
+}
+
+// Update edita a tarefa e/ou marca feita. Sem `status`, não mexe em concluido
+// (antes, qualquer PUT sem status reabria a tarefa).
+func (s *Service) Update(ctx context.Context, id uint, in UpdateInput) (*models.Lembrete, error) {
+	l, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, ErrNaoEncontrado
+	}
+	if in.Status != nil {
+		l.Concluido = *in.Status == "concluido"
+	}
+	if in.Titulo != nil {
+		l.Titulo = *in.Titulo
+	}
+	if in.Descricao != nil {
+		if *in.Descricao == "" {
+			l.Descricao = nil
+		} else {
+			d := *in.Descricao
+			l.Descricao = &d
+		}
+	}
+	if in.Data != nil {
+		l.Data = in.Data.In(saoPauloLocation())
+		l.Notificado = false
+	}
+	if in.Titulo != nil || in.Data != nil {
+		if outro, err := s.repo.FindByTituloData(ctx, l.Titulo, l.Data.Format("2006-01-02")); err == nil && outro.ID != l.ID {
+			return nil, ErrDuplicado
+		}
+	}
+	if err := s.repo.Save(ctx, l); err != nil {
+		return nil, err
+	}
+	return l, nil
+}

@@ -9,7 +9,8 @@ import { maskMoney, soDigitos } from "@/lib/masks";
 export function MoneyInput({ value, onChange, semCentavos = false, grande = false, placeholder, ...props }) {
   const mascarar = (v) => {
     if (!semCentavos) return maskMoney(v);
-    const d = soDigitos(v).slice(0, 13);
+    // Colar "350.000,50" virava 35.000.050 (os centavos entravam como reais).
+    const d = soDigitos(String(v ?? "").split(",")[0]).slice(0, 13);
     return d ? Number(d).toLocaleString("pt-BR") : "";
   };
   return (

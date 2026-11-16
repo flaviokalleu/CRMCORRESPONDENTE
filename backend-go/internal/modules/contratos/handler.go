@@ -70,7 +70,7 @@ func (h *Handler) SalvarContrato(c *gin.Context) {
 	}
 	var req ContratoTextoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "O texto do contrato está vazio."})
 		return
 	}
 	caminho, nomeArquivo, err := h.svc.SalvarContrato(c.Request.Context(), id, req.TextoContrato)
@@ -82,7 +82,7 @@ func (h *Handler) SalvarContrato(c *gin.Context) {
 		if errors.Is(err, ErrPDFEngineNotConfigured) {
 			// Texto salvo com sucesso; PDF pendente de integração (ver wiring doc).
 			c.JSON(http.StatusOK, gin.H{
-				"message": "Texto do contrato salvo. Geração de PDF indisponível (motor não configurado).",
+				"message": "Contrato salvo. Para ter o PDF, use “Imprimir / salvar PDF”.",
 			})
 			return
 		}
@@ -131,6 +131,10 @@ func (h *Handler) AplicarReajuste(c *gin.Context) {
 	}
 	var req ReajusteAplicarRequest
 	_ = c.ShouldBindJSON(&req)
+	if req.Indice < -50 || req.Indice > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Índice de reajuste: use um percentual entre -50 e 100.", "campo": "indice"})
+		return
+	}
 	// NOTA (wiring): AsaasUpdater real deve ser injetado pelo servidor quando
 	// internal/integrations/asaas estiver pronto; passamos nil (sem propagação).
 	res, err := h.svc.AplicarReajuste(c.Request.Context(), id, req.Indice, "", nil)
@@ -157,7 +161,7 @@ func (h *Handler) Opcoes(c *gin.Context) {
 func (h *Handler) Vincular(c *gin.Context) {
 	var req VincularRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Escolha o inquilino, o imóvel e o proprietário."})
 		return
 	}
 	cliente, err := h.svc.Vincular(c.Request.Context(), req)
@@ -166,9 +170,9 @@ func (h *Handler) Vincular(c *gin.Context) {
 		case errors.Is(err, ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 		case errors.Is(err, ErrTenantMismatch):
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Imóvel ou proprietário não encontrado. Atualize a página e escolha de novo."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar o contrato. Tente de novo."})
 		}
 		return
 	}
@@ -182,7 +186,7 @@ func (h *Handler) AtualizarVinculo(c *gin.Context) {
 	}
 	var req VincularRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Escolha o inquilino, o imóvel e o proprietário."})
 		return
 	}
 	cliente, err := h.svc.AtualizarVinculo(c.Request.Context(), id, req)
@@ -191,9 +195,9 @@ func (h *Handler) AtualizarVinculo(c *gin.Context) {
 		case errors.Is(err, ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 		case errors.Is(err, ErrTenantMismatch):
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Imóvel ou proprietário não encontrado. Atualize a página e escolha de novo."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar o contrato. Tente de novo."})
 		}
 		return
 	}
@@ -251,15 +255,26 @@ func (h *Handler) AnexarDocumentos(c *gin.Context) {
 		return
 	}
 
+	// Confere tudo antes de gravar: antes, arquivo recusado sumia em silêncio
+	// e a tela dizia "documentação salva com sucesso".
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Escolha pelo menos um arquivo."})
+		return
+	}
+	for _, fh := range files {
+		if !allowedDocExt[strings.ToLower(filepath.Ext(fh.Filename))] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "O arquivo \"" + fh.Filename + "\" não é aceito. Envie PDF, JPG, PNG, DOC ou DOCX.", "campo": "documentos"})
+			return
+		}
+		if fh.Size > maxDocBytes {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "O arquivo \"" + fh.Filename + "\" passa de 20 MB.", "campo": "documentos"})
+			return
+		}
+	}
+
 	var docs []ContratoDocumento
 	for i, fh := range files {
 		ext := strings.ToLower(filepath.Ext(fh.Filename))
-		if !allowedDocExt[ext] {
-			continue
-		}
-		if fh.Size > maxDocBytes {
-			continue
-		}
 		src, err := fh.Open()
 		if err != nil {
 			continue

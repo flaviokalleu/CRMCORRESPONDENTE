@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, Clock, Plus, Trash2, X, CalendarCheck, AlertCircle } from "@/components/icons";
+import { Check, Clock, Plus, Trash2, X, CalendarCheck, AlertCircle, Pencil } from "@/components/icons";
 
 // Tarefas (lembretes) do dia a dia.
 //
@@ -57,7 +57,7 @@ function diasDeAtraso(l, hoje) {
   return Math.round((h - d) / 86400000);
 }
 
-const FORM_VAZIO = { titulo: "", descricao: "", dia: "", hora: "" };
+const FORM_VAZIO = { id: null, titulo: "", descricao: "", dia: "", hora: "", diaOriginal: "" };
 
 export function LembretesManager({ initialLembretes }) {
   const [lembretes, setLembretes] = useState(initialLembretes || []);
@@ -66,6 +66,7 @@ export function LembretesManager({ initialLembretes }) {
   const [form, setForm] = useState(FORM_VAZIO);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const enviando = useRef(false); // trava contra dois cliques seguidos
 
   const hoje = new Date();
   const hojeKey = chaveDia(hoje);
@@ -110,37 +111,50 @@ export function LembretesManager({ initialLembretes }) {
     return [...mapa.entries()];
   })();
 
-  const abrirForm = () => {
-    setForm({ ...FORM_VAZIO, dia: hojeKey });
+  // Sem argumento = nova tarefa; com uma tarefa = edição dela.
+  const abrirForm = (l) => {
+    if (l?.id) {
+      const d = new Date(l.data);
+      const dia = chaveDia(d);
+      setForm({ id: l.id, titulo: l.titulo, descricao: l.descricao || "", dia, hora: `${pad(d.getHours())}:${pad(d.getMinutes())}`, diaOriginal: dia });
+    } else {
+      setForm({ ...FORM_VAZIO, dia: hojeKey });
+    }
     setErro("");
     setAberto(true);
   };
 
   const criar = async (e) => {
     e.preventDefault();
+    if (enviando.current) return;
     if (!form.titulo.trim()) return setErro("Escreva o que precisa ser feito.");
     if (!form.dia) return setErro("Escolha o dia.");
+    // Dia que já passou só vale se a tarefa já estava nele (edição).
+    if (form.dia < hojeKey && form.dia !== form.diaOriginal) return setErro("Esse dia já passou. Escolha hoje ou um dia depois.");
+    enviando.current = true;
     setSalvando(true);
     setErro("");
     try {
-      const res = await fetch("/api/backend/lembretes", {
-        method: "POST",
+      const res = await fetch(form.id ? `/api/backend/lembretes/${form.id}` : "/api/backend/lembretes", {
+        method: form.id ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           titulo: form.titulo.trim(),
-          descricao: form.descricao.trim() || null,
+          descricao: form.descricao.trim() || (form.id ? "" : null),
           data: dataComFuso(form.dia, form.hora),
         }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error || "Não foi possível salvar a tarefa.");
-      setLembretes((prev) => [...prev, body]);
+      if (form.id) setLembretes((prev) => prev.map((x) => (x.id === body.id ? body : x)));
+      else setLembretes((prev) => [...prev, body]);
       setForm({ ...FORM_VAZIO, dia: form.dia });
       setAberto(false);
-      toast.success("Tarefa anotada.");
+      toast.success(form.id ? "Tarefa atualizada." : "Tarefa anotada.");
     } catch (err) {
       setErro(err.message);
     } finally {
+      enviando.current = false;
       setSalvando(false);
     }
   };
@@ -209,7 +223,7 @@ export function LembretesManager({ initialLembretes }) {
           ))}
         </div>
         {!aberto && (
-          <button type="button" className="lst-botao lst-botao-principal" onClick={abrirForm}>
+          <button type="button" className="lst-botao lst-botao-principal" onClick={() => abrirForm()}>
             <Plus aria-hidden="true" /> Nova tarefa
           </button>
         )}
@@ -218,7 +232,7 @@ export function LembretesManager({ initialLembretes }) {
       {aberto && (
         <form onSubmit={criar} className="lst-painel" noValidate>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="lst-painel-titulo">Nova tarefa</h2>
+            <h2 className="lst-painel-titulo">{form.id ? "Editar tarefa" : "Nova tarefa"}</h2>
             <button type="button" className="lst-acao" onClick={() => setAberto(false)} aria-label="Fechar">
               <X aria-hidden="true" />
             </button>
@@ -230,7 +244,7 @@ export function LembretesManager({ initialLembretes }) {
                 className="cx-input"
                 placeholder="Ex.: Ligar para a Fernanda sobre a documentação"
                 value={form.titulo}
-                maxLength={120}
+                maxLength={255}
                 autoFocus
                 onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))}
               />
@@ -254,7 +268,8 @@ export function LembretesManager({ initialLembretes }) {
                   className="cx-input lst-campo-curto"
                   aria-label="Outro dia"
                   value={form.dia}
-                  min={hojeKey}
+                  min={form.id && form.diaOriginal < hojeKey ? form.diaOriginal : hojeKey}
+                  max="2100-12-31"
                   onChange={(e) => setForm((p) => ({ ...p, dia: e.target.value }))}
                 />
                 <input
@@ -288,7 +303,7 @@ export function LembretesManager({ initialLembretes }) {
           )}
           <div className="lst-painel-rodape">
             <button type="submit" className="lst-botao lst-botao-principal" disabled={salvando}>
-              <Check aria-hidden="true" /> {salvando ? "Salvando…" : "Salvar tarefa"}
+              <Check aria-hidden="true" /> {salvando ? "Salvando…" : form.id ? "Salvar alterações" : "Salvar tarefa"}
             </button>
             <button type="button" className="lst-botao" onClick={() => setAberto(false)}>
               Cancelar
@@ -298,7 +313,7 @@ export function LembretesManager({ initialLembretes }) {
       )}
 
       {grupos.length === 0 ? (
-        <Vazio filtro={filtro} onNova={abrirForm} temPendentes={contagem.fazer > 0} onVerTodas={() => setFiltro("fazer")} />
+        <Vazio filtro={filtro} onNova={() => abrirForm()} temPendentes={contagem.fazer > 0} onVerTodas={() => setFiltro("fazer")} />
       ) : (
         <div>
           {grupos.map(([key, itens]) => (
@@ -347,6 +362,15 @@ export function LembretesManager({ initialLembretes }) {
                         )}
                       </div>
                       <div className="lst-item-acoes">
+                        <button
+                          type="button"
+                          className="lst-acao"
+                          onClick={() => abrirForm(l)}
+                          aria-label={`Editar: ${l.titulo}`}
+                          title="Editar"
+                        >
+                          <Pencil aria-hidden="true" />
+                        </button>
                         <button
                           type="button"
                           className="lst-acao lst-acao-perigo"

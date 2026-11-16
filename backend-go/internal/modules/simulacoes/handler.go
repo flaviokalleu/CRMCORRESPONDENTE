@@ -34,7 +34,7 @@ func bindCalculoInput(req CalcularRequest) CalculoInput {
 func (h *Handler) Calcular(c *gin.Context) {
 	var req CalcularRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Campos obrigatórios ausentes ou inválidos"})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Preencha o valor do imóvel, o prazo e os juros."})
 		return
 	}
 	resultado, err := Calcular(bindCalculoInput(req))
@@ -54,7 +54,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	var req CalcularRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Campos obrigatórios ausentes ou inválidos"})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Preencha o valor do imóvel, o prazo e os juros."})
 		return
 	}
 	resultado, err := Calcular(bindCalculoInput(req))

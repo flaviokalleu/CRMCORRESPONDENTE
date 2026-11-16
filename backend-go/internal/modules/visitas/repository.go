@@ -22,6 +22,15 @@ func (r *Repository) Create(ctx context.Context, v *models.Visita) error {
 	return r.db.WithContext(ctx).Create(v).Error
 }
 
+// DaEmpresa confere que cliente e imóvel existem no tenant atual (o filtro de
+// tenant do GORM vale para estes SELECTs).
+func (r *Repository) DaEmpresa(ctx context.Context, clienteID, imovelID uint) bool {
+	var nc, ni int64
+	r.db.WithContext(ctx).Model(&models.Cliente{}).Where("id = ?", clienteID).Count(&nc)
+	r.db.WithContext(ctx).Model(&models.Imovel{}).Where("id = ?", imovelID).Count(&ni)
+	return nc > 0 && ni > 0
+}
+
 func (r *Repository) FindByID(ctx context.Context, id uint) (*models.Visita, error) {
 	var v models.Visita
 	err := r.db.WithContext(ctx).First(&v, id).Error

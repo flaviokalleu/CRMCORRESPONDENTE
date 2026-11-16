@@ -81,7 +81,11 @@ func (h *Handler) publico(c *gin.Context) {
 func (h *Handler) criarBoleto(c *gin.Context) {
 	var req CreateBoletoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: confira cliente, valor, título e vencimento."})
+		return
+	}
+	if err := validarCobranca(req.Titulo, req.Valor, &req.DataVencimento); err != nil {
+		respostaErroCobranca(c, err)
 		return
 	}
 	_, userID, tenantID, _ := adminUser(c)
@@ -99,7 +103,11 @@ func (h *Handler) criarBoleto(c *gin.Context) {
 func (h *Handler) criarPix(c *gin.Context) {
 	var req CreatePixRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: confira cliente, valor, título e vencimento."})
+		return
+	}
+	if err := validarCobranca(req.Titulo, req.Valor, nil); err != nil {
+		respostaErroCobranca(c, err)
 		return
 	}
 	_, userID, tenantID, _ := adminUser(c)
@@ -117,7 +125,11 @@ func (h *Handler) criarPix(c *gin.Context) {
 func (h *Handler) criarUniversal(c *gin.Context) {
 	var req CreateUniversalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: confira cliente, valor, título e vencimento."})
+		return
+	}
+	if err := validarCobranca(req.Titulo, req.Valor, &req.DataVencimento); err != nil {
+		respostaErroCobranca(c, err)
 		return
 	}
 	_, userID, tenantID, _ := adminUser(c)
@@ -132,13 +144,7 @@ func (h *Handler) criarUniversal(c *gin.Context) {
 	})
 }
 
-func respondCreateError(c *gin.Context, err error) {
-	if errors.Is(err, ErrClienteNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-}
+func respondCreateError(c *gin.Context, err error) { respostaErroCobranca(c, err) }
 
 func (h *Handler) pixQrCode(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -258,7 +264,11 @@ func (h *Handler) verificarStatus(c *gin.Context) {
 	}
 	p, err := h.svc.VerificarStatus(c.Request.Context(), tenantID, body.PagamentoID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Pagamento não encontrado"})
+		if errors.Is(err, ErrPagamentoNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pagamento não encontrado"})
+			return
+		}
+		respostaErroCobranca(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, p)

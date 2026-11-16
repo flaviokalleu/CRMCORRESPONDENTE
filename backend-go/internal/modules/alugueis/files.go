@@ -8,17 +8,43 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
+
+	"crmimob/internal/uploads"
+	"crmimob/internal/validacao"
 )
 
 // UploadsRoot é a raiz de armazenamento local de arquivos, espelhando o
 // `backend/uploads` do Node. TODO(wiring): integrar com
 // internal/integrations/storage para contabilizar quota por tenant
 // (04-spec não exige isso neste cluster, mas os outros clusters já usam).
-var UploadsRoot = "uploads"
+// Antes era "uploads" relativo ao backend-go/, fora da raiz compartilhada:
+// as fotos nunca eram servidas. Agora usa a mesma raiz dos imóveis e grava em
+// imoveis/alugueis/, que já é servida em /api/uploads/imoveis (fotos de
+// imóvel são públicas por natureza).
+func uploadsRootDir() string { return uploads.Root() }
 
-const maxImageBytes = 5 << 20 // 5MB, igual ao multer de alugueis.js
+const subdirFotos = "imoveis/alugueis"
+
+const maxImageBytes = 10 << 20 // 10 MB, igual às fotos de imóveis
+const maxFotosAdicionais = 10
+
+var extImagem = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+
+// conferirImagem recusa o que não é foto ou passa do limite, com mensagem
+// para a pessoa (antes: .txt era aceito como foto e arquivo grande dava 500).
+func conferirImagem(fh *multipart.FileHeader, campo, rotulo string) error {
+	ext := strings.ToLower(filepath.Ext(fh.Filename))
+	if !extImagem[ext] {
+		return &validacao.ErroCampo{Campo: campo, Mensagem: rotulo + ": o arquivo \"" + fh.Filename + "\" não é uma foto. Envie JPG, PNG ou WEBP."}
+	}
+	if fh.Size > maxImageBytes {
+		return &validacao.ErroCampo{Campo: campo, Mensagem: rotulo + ": o arquivo \"" + fh.Filename + "\" passa de 10 MB. Diminua a foto e tente de novo."}
+	}
+	return nil
+}
 
 // saveMultipartFile grava um *multipart.FileHeader em uploadsRoot/subdir com
 // nome único (timestamp+nome original) e devolve o caminho RELATIVO a
@@ -27,7 +53,7 @@ func saveMultipartFile(fh *multipart.FileHeader, subdir string, maxBytes int64) 
 	if maxBytes > 0 && fh.Size > maxBytes {
 		return "", fmt.Errorf("arquivo %s excede o limite de %d bytes", fh.Filename, maxBytes)
 	}
-	dir := filepath.Join(UploadsRoot, subdir)
+	dir := filepath.Join(uploadsRootDir(), subdir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
@@ -37,7 +63,12 @@ func saveMultipartFile(fh *multipart.FileHeader, subdir string, maxBytes int64) 
 	}
 	defer src.Close()
 
-	safeName := strings.ReplaceAll(filepath.Base(fh.Filename), " ", "_")
+	safeName := strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '-' || r == '_' {
+			return r
+		}
+		return '_'
+	}, filepath.Base(fh.Filename))
 	name := fmt.Sprintf("%d_%s", time.Now().UnixNano(), safeName)
 	dstPath := filepath.Join(dir, name)
 	dst, err := os.Create(dstPath)
@@ -66,13 +97,13 @@ func removeUploadedFile(relPath string) {
 	if relPath == "" {
 		return
 	}
-	_ = os.Remove(filepath.Join(UploadsRoot, relPath))
+	_ = os.Remove(filepath.Join(uploadsRootDir(), relPath))
 }
 
 // cleanupTempFiles remove arquivos de uploads/temp com mais de `olderThan`.
 // POST /api/alugueis/cleanup-temp.
 func cleanupTempFiles(olderThan time.Duration) (int, error) {
-	dir := filepath.Join(UploadsRoot, "temp")
+	dir := filepath.Join(uploadsRootDir(), "temp")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {

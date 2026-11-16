@@ -42,7 +42,8 @@ export function PagamentoRowActions({ pagamento, situacao, cliente }) {
         body: JSON.stringify({ pagamento_id: pagamento.id }),
       });
       if (!res.ok) {
-        toast.error("Não foi possível conferir agora. Tente mais tarde.");
+        const data = await res.json().catch(() => ({}));
+        toast.error(res.status === 422 && data.error ? data.error : "Não foi possível conferir agora. Tente mais tarde.");
         return;
       }
       const atualizado = await res.json().catch(() => ({}));
@@ -92,9 +93,12 @@ export function PagamentoRowActions({ pagamento, situacao, cliente }) {
           <RefreshCw className="size-4" aria-hidden="true" />
         </button>
       )}
-      <button type="button" onClick={excluir} disabled={!!ocupado} className="fin-acao" data-tom="perigo" aria-label={`Excluir cobrança ${pagamento.titulo}`}>
-        <Trash2 className="size-4" aria-hidden="true" />
-      </button>
+      {/* Cobrança paga não se exclui (o backend recusa): nem mostra o botão. */}
+      {situacao?.id !== "pago" && (
+        <button type="button" onClick={excluir} disabled={!!ocupado} className="fin-acao" data-tom="perigo" aria-label={`Excluir cobrança ${pagamento.titulo}`}>
+          <Trash2 className="size-4" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }

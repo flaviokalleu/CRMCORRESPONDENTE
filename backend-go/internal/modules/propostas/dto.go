@@ -15,6 +15,12 @@ type CreateRequest struct {
 
 // UpdateRequest é o body de PUT /api/propostas/:id (negociação, parcial).
 type UpdateRequest struct {
+	// Edição da proposta (antes só dava para mexer na negociação).
+	ValorOfertado  *float64 `json:"valor_ofertado,omitempty"`
+	FormaPagamento *string  `json:"forma_pagamento,omitempty"`
+	// DataValidade: "" ou null limpam; ver Update.
+	DataValidade *string `json:"data_validade,omitempty"`
+
 	Status              *string  `json:"status,omitempty"`
 	ValorContraProposta *float64 `json:"valor_contra_proposta,omitempty"`
 	ValorAceito         *float64 `json:"valor_aceito,omitempty"`
@@ -25,7 +31,8 @@ type UpdateRequest struct {
 
 // ListFilters replica os filtros de GET /api/propostas.
 type ListFilters struct {
-	Status string
+	Status     string
+	CorretorID *uint // preenchido pelo handler quando quem pede é corretor
 	Page   int
 	Limit  int
 }

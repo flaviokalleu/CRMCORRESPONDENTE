@@ -3,9 +3,9 @@ package alugueis
 // AluguelRequest é o corpo (form-data, campos texto) de POST/PUT
 // /api/alugueis. Fotos vêm em arquivos separados (foto_capa, fotos_adicionais).
 type AluguelRequest struct {
-	NomeImovel    string `form:"nome_imovel" json:"nome_imovel" binding:"required"`
-	Descricao     string `form:"descricao" json:"descricao" binding:"required"`
-	ValorAluguel  string `form:"valor_aluguel" json:"valor_aluguel" binding:"required"` // string: parseCurrencyValue (R$, milhar, vírgula)
+	NomeImovel    string `form:"nome_imovel" json:"nome_imovel"`
+	Descricao     string `form:"descricao" json:"descricao"`
+	ValorAluguel  string `form:"valor_aluguel" json:"valor_aluguel"` // string: parseCurrencyValue (R$, milhar, vírgula)
 	Quartos       int    `form:"quartos" json:"quartos"`
 	Banheiro      int    `form:"banheiro" json:"banheiro"`
 	DiaVencimento int    `form:"dia_vencimento" json:"dia_vencimento"`
@@ -14,12 +14,12 @@ type AluguelRequest struct {
 // ClienteAluguelRequest é o corpo (form-data) de POST/PUT /api/clientealuguel.
 // Reflete os campos do inquilino + fiador + vínculo com proprietário/corretor.
 type ClienteAluguelRequest struct {
-	Nome          string  `form:"nome" json:"nome" binding:"required"`
+	Nome          string  `form:"nome" json:"nome"`
 	CPF           string  `form:"cpf" json:"cpf"`
 	Email         string  `form:"email" json:"email"`
 	Telefone      string  `form:"telefone" json:"telefone"`
-	ValorAluguel  float64 `form:"valor_aluguel" json:"valor_aluguel" binding:"required"`
-	DiaVencimento int     `form:"dia_vencimento" json:"dia_vencimento" binding:"required"`
+	ValorAluguel  float64 `form:"valor_aluguel" json:"valor_aluguel"`
+	DiaVencimento int     `form:"dia_vencimento" json:"dia_vencimento"`
 
 	AluguelID          *uint  `form:"aluguel_id" json:"aluguel_id"`
 	DataInicioContrato string `form:"data_inicio_contrato" json:"data_inicio_contrato"` // YYYY-MM-DD
@@ -51,8 +51,8 @@ type ClienteAluguelRequest struct {
 // PagamentoManualRequest é o corpo de POST /clientealuguel/:id/pagamento —
 // append manual ao histórico embutido `historico_pagamentos`.
 type PagamentoManualRequest struct {
-	Data          string  `json:"data" binding:"required"`
-	Valor         float64 `json:"valor" binding:"required"`
+	Data          string  `json:"data"`
+	Valor         float64 `json:"valor"`
 	Status        string  `json:"status"`
 	FormaPagamento string `json:"forma_pagamento"`
 }
@@ -69,7 +69,7 @@ type HistoricoPagamento struct {
 
 // CobrancaAvulsaRequest é o corpo de POST /clientealuguel/:id/cobranca-avulsa.
 type CobrancaAvulsaRequest struct {
-	Valor          float64 `json:"valor" binding:"required"`
-	DataVencimento string  `json:"data_vencimento" binding:"required"`
+	Valor          float64 `json:"valor"`
+	DataVencimento string  `json:"data_vencimento"`
 	Descricao      string  `json:"descricao"`
 }

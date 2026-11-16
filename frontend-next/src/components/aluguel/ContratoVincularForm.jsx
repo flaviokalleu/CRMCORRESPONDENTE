@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 // Client Component: formulário de vínculo inquilino + imóvel + proprietário
@@ -15,9 +15,11 @@ export function ContratoVincularForm({ opcoes, onSalvo }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const enviando = useRef(false); // trava contra clique duplo
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (enviando.current) return;
     setMsg("");
     setErr("");
 
@@ -26,15 +28,18 @@ export function ContratoVincularForm({ opcoes, onSalvo }) {
       return;
     }
 
+    enviando.current = true;
     setSaving(true);
     try {
       const res = await fetch("/api/backend/contratos/vincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Os ids vão como número: o <select> dá texto ("5") e o Go recusava
+        // o JSON inteiro — nenhum contrato conseguia ser salvo pela tela.
         body: JSON.stringify({
-          cliente_aluguel_id: selectedInquilino,
-          aluguel_id: selectedImovel,
-          proprietario_id: selectedProprietario,
+          cliente_aluguel_id: Number(selectedInquilino),
+          aluguel_id: Number(selectedImovel),
+          proprietario_id: Number(selectedProprietario),
         }),
       });
       const data = await res.json().catch(() => null);
@@ -61,6 +66,7 @@ export function ContratoVincularForm({ opcoes, onSalvo }) {
     } catch (e2) {
       setErr(e2.message || "Erro ao salvar contrato");
     } finally {
+      enviando.current = false;
       setSaving(false);
     }
   }
@@ -125,7 +131,12 @@ export function ContratoVincularForm({ opcoes, onSalvo }) {
           type="file"
           multiple
           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-          onChange={(e) => setArquivos(Array.from(e.target.files || []))}
+          onChange={(e) => {
+            const todos = Array.from(e.target.files || []);
+            const ok = todos.filter((f) => /\.(pdf|jpe?g|png|docx?)$/i.test(f.name) && f.size <= 20 * 1024 * 1024);
+            setErr(ok.length < todos.length ? "Alguns arquivos foram recusados: envie PDF, JPG, PNG, DOC ou DOCX de até 20 MB." : "");
+            setArquivos(ok);
+          }}
           className="w-full text-sm text-cx-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cx-blue-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-cx-blue"
         />
       </div>

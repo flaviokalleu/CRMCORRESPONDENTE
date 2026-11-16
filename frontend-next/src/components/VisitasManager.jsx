@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Calendar, Check, Home, Plus, Trash2, X, MessageCircle } from "@/components/icons";
+import { Calendar, Check, Home, Plus, Trash2, X, MessageCircle, Pencil, Star } from "@/components/icons";
 import { linkWhatsApp } from "@/components/ui/contato-rapido";
 
 // Agenda de visitas. A lista vem primeiro (é o que se consulta todo dia); o
@@ -30,7 +30,16 @@ function grupoDe(v, hojeKey) {
   return v.status;
 }
 
-const FORM_VAZIO = { cliente_id: "", imovel_id: "", data_visita: "", observacoes: "" };
+const FORM_VAZIO = { id: null, cliente_id: "", imovel_id: "", data_visita: "", observacoes: "" };
+
+// datetime-local ("2026-11-20T15:30", hora do aparelho) → ISO com fuso.
+// Mandar o texto cru fazia o Go recusar a data, e os ids iam como texto
+// ("12") num campo numérico: agendar visita sempre falhava.
+const paraISO = (local) => new Date(local).toISOString();
+const paraLocal = (iso) => {
+  const d = new Date(iso);
+  return `${chaveDia(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 export function VisitasManager({ initialVisitas, clientes, imoveis }) {
   const [visitas, setVisitas] = useState(initialVisitas || []);
@@ -38,6 +47,9 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const enviando = useRef(false);
+  // Painel "Como foi?" de uma visita: comentário do cliente + nota 1–5.
+  const [resultado, setResultado] = useState(null);
   const hojeKey = chaveDia(new Date());
 
   const contagem = useMemo(() => {
@@ -65,34 +77,95 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
     return f.sort((a, b) => dir * (new Date(a.data_visita) - new Date(b.data_visita)));
   }, [visitas, filtro, hojeKey]);
 
+  const abrirForm = (v) => {
+    setErro("");
+    setForm(v?.id
+      ? { id: v.id, cliente_id: String(v.cliente_id), imovel_id: String(v.imovel_id), data_visita: paraLocal(v.data_visita), observacoes: v.observacoes || "" }
+      : FORM_VAZIO);
+    setAberto(true);
+  };
+
   const criar = async (e) => {
     e.preventDefault();
+    if (enviando.current) return;
     if (!form.cliente_id || !form.imovel_id || !form.data_visita) {
       setErro("Escolha o cliente, o imóvel e o dia/horário.");
       return;
     }
+    const quando = new Date(form.data_visita);
+    if (Number.isNaN(quando.getTime()) || quando.getFullYear() < 2000 || quando.getFullYear() > 2100) {
+      setErro("Data inválida. Escolha o dia no calendário.");
+      return;
+    }
+    if (!form.id && quando < new Date()) {
+      setErro("Esse horário já passou. Para agendar, escolha um horário a partir de agora.");
+      return;
+    }
+    enviando.current = true;
     setSalvando(true);
     setErro("");
     try {
-      const res = await fetch("/api/backend/visitas", {
-        method: "POST",
+      const corpo = form.id
+        ? { data_visita: paraISO(form.data_visita), observacoes: form.observacoes.trim() }
+        : {
+            cliente_id: Number(form.cliente_id),
+            imovel_id: Number(form.imovel_id),
+            data_visita: paraISO(form.data_visita),
+            observacoes: form.observacoes.trim() || null,
+          };
+      const res = await fetch(form.id ? `/api/backend/visitas/${form.id}` : "/api/backend/visitas", {
+        method: form.id ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(corpo),
       });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error || "Não foi possível agendar a visita.");
-      const nova = body?.data || body;
+      if (!res.ok) throw new Error(body?.message || body?.error || "Não foi possível salvar a visita.");
+      const salva = body?.data || body;
       // A resposta nem sempre traz cliente/imóvel aninhados — completa para exibir.
-      const cliente = nova.cliente || clientes?.find((c) => String(c.id) === String(form.cliente_id));
-      const imovel = nova.imovel || imoveis?.find((i) => String(i.id) === String(form.imovel_id));
-      setVisitas((prev) => [...prev, { ...nova, cliente, imovel }]);
+      const cliente = salva.cliente || clientes?.find((c) => String(c.id) === String(form.cliente_id));
+      const imovel = salva.imovel || imoveis?.find((i) => String(i.id) === String(form.imovel_id));
+      if (form.id) {
+        setVisitas((prev) => prev.map((x) => (x.id === salva.id ? { ...x, ...salva, cliente: x.cliente || cliente, imovel: x.imovel || imovel } : x)));
+        toast.success("Visita atualizada.");
+      } else {
+        setVisitas((prev) => [...prev, { ...salva, cliente, imovel }]);
+        setFiltro("proximas");
+        toast.success("Visita agendada.", { description: "Que tal confirmar com o cliente pelo WhatsApp?" });
+      }
       setForm(FORM_VAZIO);
       setAberto(false);
-      setFiltro("proximas");
-      toast.success("Visita agendada.", { description: "Que tal confirmar com o cliente pelo WhatsApp?" });
     } catch (err) {
       setErro(err.message);
     } finally {
+      enviando.current = false;
+      setSalvando(false);
+    }
+  };
+
+  // Salva o "Como foi?": marca realizada com o comentário e a nota.
+  const salvarResultado = async (e) => {
+    e.preventDefault();
+    if (enviando.current) return;
+    const v = visitas.find((x) => x.id === resultado.id);
+    enviando.current = true;
+    setSalvando(true);
+    try {
+      const corpo = { status: "realizada", feedback_cliente: resultado.feedback.trim() };
+      if (resultado.nota) corpo.nota_avaliacao = resultado.nota;
+      const res = await fetch(`/api/backend/visitas/${v.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corpo),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.message || "Não foi possível salvar.");
+      setVisitas((prev) => prev.map((x) => (x.id === v.id ? { ...x, ...(body?.data || {}), cliente: x.cliente, imovel: x.imovel } : x)));
+      setResultado(null);
+      toast.success("Visita marcada como realizada.");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      enviando.current = false;
       setSalvando(false);
     }
   };
@@ -153,7 +226,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
           ))}
         </div>
         {!aberto && (
-          <button type="button" className="lst-botao lst-botao-principal" onClick={() => setAberto(true)}>
+          <button type="button" className="lst-botao lst-botao-principal" onClick={() => abrirForm()}>
             <Plus aria-hidden="true" /> Agendar visita
           </button>
         )}
@@ -162,7 +235,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
       {aberto && (
         <form onSubmit={criar} className="lst-painel" noValidate>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="lst-painel-titulo">Agendar visita</h2>
+            <h2 className="lst-painel-titulo">{form.id ? "Editar visita" : "Agendar visita"}</h2>
             <button type="button" className="lst-acao" onClick={() => setAberto(false)} aria-label="Fechar">
               <X aria-hidden="true" />
             </button>
@@ -173,6 +246,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
               <select
                 className="cx-input"
                 value={form.cliente_id}
+                disabled={!!form.id}
                 autoFocus
                 onChange={(e) => setForm((p) => ({ ...p, cliente_id: e.target.value }))}
               >
@@ -189,6 +263,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
               <select
                 className="cx-input"
                 value={form.imovel_id}
+                disabled={!!form.id}
                 onChange={(e) => setForm((p) => ({ ...p, imovel_id: e.target.value }))}
               >
                 <option value="">Escolha o imóvel…</option>
@@ -205,6 +280,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
                 type="datetime-local"
                 className="cx-input"
                 value={form.data_visita}
+                max="2100-12-31T23:59"
                 onChange={(e) => setForm((p) => ({ ...p, data_visita: e.target.value }))}
               />
             </label>
@@ -216,6 +292,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
                 className="cx-input"
                 placeholder="Ex.: levar planta e IPTU; chave na portaria"
                 value={form.observacoes}
+                maxLength={1000}
                 onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
               />
             </label>
@@ -227,7 +304,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
           )}
           <div className="lst-painel-rodape">
             <button type="submit" className="lst-botao lst-botao-principal" disabled={salvando}>
-              <Check aria-hidden="true" /> {salvando ? "Agendando…" : "Agendar visita"}
+              <Check aria-hidden="true" /> {salvando ? "Salvando…" : form.id ? "Salvar alterações" : "Agendar visita"}
             </button>
             <button type="button" className="lst-botao" onClick={() => setAberto(false)}>
               Cancelar
@@ -252,7 +329,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
             </p>
           </div>
           {filtro === "proximas" && (
-            <button type="button" className="lst-botao lst-botao-principal" onClick={() => setAberto(true)}>
+            <button type="button" className="lst-botao lst-botao-principal" onClick={() => abrirForm()}>
               <Plus aria-hidden="true" /> Agendar visita
             </button>
           )}
@@ -296,6 +373,43 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
                   {v.observacoes && (
                     <p className="lst-item-texto">{v.observacoes}</p>
                   )}
+                  {(v.feedback_cliente || v.nota_avaliacao) && (
+                    <p className="lst-item-texto">
+                      {v.nota_avaliacao ? `Nota ${v.nota_avaliacao}/5` : ""}{v.nota_avaliacao && v.feedback_cliente ? " · " : ""}{v.feedback_cliente}
+                    </p>
+                  )}
+                  {resultado?.id === v.id && (
+                    <form onSubmit={salvarResultado} className="lst-painel mt-3" noValidate>
+                      <h3 className="lst-painel-titulo">Como foi a visita?</h3>
+                      <label className="mt-2 block">
+                        <span className="crm-field-label mb-1 block">
+                          O que o cliente achou <span className="crm-field-opt">(opcional)</span>
+                        </span>
+                        <textarea className="cx-input" rows={2} maxLength={1000} value={resultado.feedback}
+                          placeholder="Ex.: gostou da planta, achou a garagem pequena"
+                          onChange={(e) => setResultado((r) => ({ ...r, feedback: e.target.value }))} />
+                      </label>
+                      <div className="mt-2" role="group" aria-label="Nota do cliente para o imóvel, de 1 a 5">
+                        <span className="crm-field-label mb-1 block">
+                          Nota do cliente <span className="crm-field-opt">(opcional)</span>
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button key={n} type="button" className="lst-filtro" aria-pressed={resultado.nota === n}
+                              aria-label={`Nota ${n}`} onClick={() => setResultado((r) => ({ ...r, nota: r.nota === n ? null : n }))}>
+                              <Star aria-hidden="true" /> {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="lst-painel-rodape">
+                        <button type="submit" className="lst-botao lst-botao-principal" disabled={salvando}>
+                          <Check aria-hidden="true" /> {salvando ? "Salvando…" : "Marcar como realizada"}
+                        </button>
+                        <button type="button" className="lst-botao" onClick={() => setResultado(null)}>Cancelar</button>
+                      </div>
+                    </form>
+                  )}
                 </div>
                 <div className="lst-item-acoes">
                   {wa && (
@@ -312,7 +426,7 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
                   )}
                   {aberta(v) && (
                     <>
-                      <button type="button" className="lst-botao" onClick={() => mudarStatus(v, "realizada")}>
+                      <button type="button" className="lst-botao" onClick={() => setResultado({ id: v.id, feedback: v.feedback_cliente || "", nota: v.nota_avaliacao || null })}>
                         <Check aria-hidden="true" /> Foi realizada
                       </button>
                       <button
@@ -326,6 +440,15 @@ export function VisitasManager({ initialVisitas, clientes, imoveis }) {
                       </button>
                     </>
                   )}
+                  <button
+                    type="button"
+                    className="lst-acao"
+                    onClick={() => abrirForm(v)}
+                    title="Editar"
+                    aria-label={`Editar visita de ${nomeCliente}`}
+                  >
+                    <Pencil aria-hidden="true" />
+                  </button>
                   <button
                     type="button"
                     className="lst-acao lst-acao-perigo"

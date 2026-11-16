@@ -10,6 +10,7 @@ import (
 	"gorm.io/datatypes"
 
 	"crmimob/internal/models"
+	"crmimob/internal/validacao"
 )
 
 var (
@@ -20,24 +21,6 @@ var (
 type Service struct{ repo *Repository }
 
 func NewService(repo *Repository) *Service { return &Service{repo: repo} }
-
-func parseFloatPtr(s *string) *float64 {
-	if s == nil || strings.TrimSpace(*s) == "" {
-		return nil
-	}
-	v, err := strconv.ParseFloat(strings.TrimSpace(*s), 64)
-	if err != nil {
-		return nil
-	}
-	return &v
-}
-
-func parseFloat(s *string) float64 {
-	if v := parseFloatPtr(s); v != nil {
-		return *v
-	}
-	return 0
-}
 
 func parseIntVal(s *string) int {
 	if s == nil {
@@ -58,15 +41,76 @@ func parseBoolVal(s *string) bool {
 	return v == "true" || v == "1"
 }
 
-func applyImovelInput(im *models.Imovel, in ImovelInput) {
-	if in.NomeImovel != nil {
-		im.NomeImovel = *in.NomeImovel
+// validarImovel confere os campos recebidos (só os enviados — PUT parcial) e
+// devolve o primeiro erro com o campo da tela. Antes, letras e negativos
+// viravam 0 em silêncio e textos longos estouravam a coluna varchar(255).
+func validarImovel(in ImovelInput) *validacao.ErroCampo {
+	txt := func(p *string, campo, rotulo string) *validacao.ErroCampo {
+		if p == nil {
+			return nil
+		}
+		return validacao.Texto(campo, *p, rotulo, false)
+	}
+	if e := validacao.Primeiro(
+		txt(in.NomeImovel, "nome_imovel", "Nome do imóvel"),
+		txt(in.Tipo, "tipo", "Tipo"),
+		txt(in.Endereco, "endereco", "Endereço"),
+		txt(in.Localizacao, "localizacao", "Cidade"),
+		txt(in.Tags, "tags", "Palavras-chave"),
+		txt(in.SituacaoImovel, "situacao_imovel", "Situação"),
+	); e != nil {
+		return e
 	}
 	if in.DescricaoImovel != nil {
-		im.DescricaoImovel = in.DescricaoImovel
+		if e := validacao.TextoLongo("descricao_imovel", *in.DescricaoImovel, "Descrição", 10000); e != nil {
+			return e
+		}
+	}
+	if in.Observacoes != nil {
+		if e := validacao.TextoLongo("observacoes", *in.Observacoes, "Anotações", 10000); e != nil {
+			return e
+		}
+	}
+	if in.Quartos != nil {
+		if _, e := validacao.Inteiro("quartos", *in.Quartos, "Quartos", 0, 99); e != nil {
+			return e
+		}
+	}
+	if in.Banheiro != nil {
+		if _, e := validacao.Inteiro("banheiro", *in.Banheiro, "Banheiros", 0, 99); e != nil {
+			return e
+		}
+	}
+	if in.ValorVenda != nil {
+		if _, e := validacao.Valor("valor_venda", *in.ValorVenda, "Valor de venda", false); e != nil {
+			return e
+		}
+	}
+	if in.ValorAvaliacao != nil {
+		if _, e := validacao.Valor("valor_avaliacao", *in.ValorAvaliacao, "Valor de avaliação", false); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func applyImovelInput(im *models.Imovel, in ImovelInput) {
+	// Texto vazio em campo opcional = apagar (a edição manda "" ao limpar).
+	opcional := func(p *string) *string {
+		if p == nil || strings.TrimSpace(*p) == "" {
+			return nil
+		}
+		v := strings.TrimSpace(*p)
+		return &v
+	}
+	if in.NomeImovel != nil {
+		im.NomeImovel = strings.TrimSpace(*in.NomeImovel)
+	}
+	if in.DescricaoImovel != nil {
+		im.DescricaoImovel = opcional(in.DescricaoImovel)
 	}
 	if in.Endereco != nil {
-		im.Endereco = *in.Endereco
+		im.Endereco = strings.TrimSpace(*in.Endereco)
 	}
 	if in.Tipo != nil {
 		im.Tipo = *in.Tipo
@@ -78,16 +122,20 @@ func applyImovelInput(im *models.Imovel, in ImovelInput) {
 		im.Banheiro = parseIntVal(in.Banheiro)
 	}
 	if in.Tags != nil {
-		im.Tags = in.Tags
+		im.Tags = opcional(in.Tags)
 	}
 	if in.ValorAvaliacao != nil {
-		im.ValorAvaliacao = parseFloatPtr(in.ValorAvaliacao)
+		im.ValorAvaliacao, _ = validacao.Valor("", *in.ValorAvaliacao, "x", false)
 	}
 	if in.ValorVenda != nil {
-		im.ValorVenda = parseFloat(in.ValorVenda)
+		if v, _ := validacao.Valor("", *in.ValorVenda, "x", false); v != nil {
+			im.ValorVenda = *v
+		} else {
+			im.ValorVenda = 0
+		}
 	}
 	if in.Localizacao != nil {
-		im.Localizacao = in.Localizacao
+		im.Localizacao = opcional(in.Localizacao)
 	}
 	if in.Exclusivo != nil {
 		im.Exclusivo = parseBoolVal(in.Exclusivo)
@@ -95,11 +143,11 @@ func applyImovelInput(im *models.Imovel, in ImovelInput) {
 	if in.TemInquilino != nil {
 		im.TemInquilino = parseBoolVal(in.TemInquilino)
 	}
-	if in.SituacaoImovel != nil {
+	if in.SituacaoImovel != nil && strings.TrimSpace(*in.SituacaoImovel) != "" {
 		im.SituacaoImovel = *in.SituacaoImovel
 	}
 	if in.Observacoes != nil {
-		im.Observacoes = in.Observacoes
+		im.Observacoes = opcional(in.Observacoes)
 	}
 }
 
@@ -123,10 +171,17 @@ func (s *Service) Get(ctx context.Context, id uint) (*models.Imovel, error) {
 }
 
 func (s *Service) Create(ctx context.Context, in ImovelInput, tenantID *uint) (*models.Imovel, error) {
-	im := &models.Imovel{TenantID: tenantID}
+	if e := validarImovel(in); e != nil {
+		return nil, e
+	}
+	im := &models.Imovel{TenantID: tenantID, SituacaoImovel: "disponivel"}
 	applyImovelInput(im, in)
-	if im.NomeImovel == "" || im.Endereco == "" || im.Tipo == "" {
-		return nil, ErrDadosInvalidos
+	if e := validacao.Primeiro(
+		validacao.Texto("nome_imovel", im.NomeImovel, "Nome do imóvel", true),
+		validacao.Texto("tipo", im.Tipo, "Tipo", true),
+		validacao.Texto("endereco", im.Endereco, "Endereço", true),
+	); e != nil {
+		return nil, e
 	}
 	if err := s.repo.Create(ctx, im); err != nil {
 		return nil, err
@@ -139,7 +194,17 @@ func (s *Service) Update(ctx context.Context, id uint, in ImovelInput) (*models.
 	if err != nil {
 		return nil, ErrNaoEncontrado
 	}
+	if e := validarImovel(in); e != nil {
+		return nil, e
+	}
 	applyImovelInput(im, in)
+	if e := validacao.Primeiro(
+		validacao.Texto("nome_imovel", im.NomeImovel, "Nome do imóvel", true),
+		validacao.Texto("tipo", im.Tipo, "Tipo", true),
+		validacao.Texto("endereco", im.Endereco, "Endereço", true),
+	); e != nil {
+		return nil, e
+	}
 	if err := s.repo.Save(ctx, im); err != nil {
 		return nil, err
 	}

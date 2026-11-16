@@ -7,6 +7,7 @@ import {
   UserCog, Activity, ShieldCheck, Building2, Banknote, QrCode, X, Crown, Building,
   FileText, CreditCard, ChartNoAxesColumn, House, Wallet, TrendingUp, TrendingDown,
   ChartLine, CalendarDays, Contact, Users, Lock, FileSignature, ClipboardList, UserRound,
+  Calendar, Calculator,
 } from "@/components/icons";
 import { usePendencias } from "@/lib/use-pendencias";
 import { useAuth } from "@/context/AuthContext";
@@ -16,12 +17,12 @@ import { cn } from "@/lib/utils";
 // alta e o "scoop" no item ativo. Menu plano (sem seções recolhíveis), em
 // grupos curtos pelo uso: Início, Dia a dia, Dinheiro, Equipe e Ajustes.
 // "Sair" fica no menu do avatar, no topo.
-function NavItem({ href, icon: Icon, label, isActive, badge, bloqueado }) {
+function NavItem({ href, icon: Icon, label, isActive, badge, bloqueado, recurso }) {
   // Recurso fora do plano: continua visível (a pessoa descobre que existe) e
   // leva para Minha assinatura, com cadeado — convite, não beco sem saída.
   if (bloqueado) {
     return (
-      <Link href="/minha-assinatura" className="isidebar-link isidebar-locked" title="Disponível em outro plano">
+      <Link href={`/minha-assinatura?recurso=${recurso}`} className="isidebar-link isidebar-locked" title="Disponível em outro plano">
         <Icon className="isidebar-icon" />
         <span className="isidebar-label">{label}</span>
         <Lock className="isidebar-lock" aria-label="Disponível em outro plano" />
@@ -63,9 +64,12 @@ export function Sidebar({ onClose, recursos }) {
         label: "Dia a dia",
         items: [
           ...(isStaff ? [{ href: "/lembretes", icon: CalendarDays, label: "Tarefas" }] : []),
+          // Visitas e Simulador existiam mas não tinham link em lugar nenhum.
           ...(operacional ? [
+            { href: "/visitas", icon: Calendar, label: "Visitas" },
             { href: "/clientes/lista", icon: Contact, label: "Clientes" },
             { href: "/imoveis/lista", icon: Building2, label: "Imóveis" },
+            { href: "/simulador", icon: Calculator, label: "Simulador" },
           ] : []),
           ...(isStaff ? [{ href: "/proprietarios/lista", icon: Users, label: "Proprietários" }] : []),
           { href: "/propostas", icon: FileText, label: "Propostas" },
@@ -149,6 +153,7 @@ export function Sidebar({ onClose, recursos }) {
                 badge={badges[item.href]}
                 isActive={isActive(item.href)}
                 bloqueado={Boolean(item.recurso && recursos && recursos[item.recurso] === false)}
+                recurso={item.recurso}
               />
             ))}
           </div>

@@ -22,6 +22,23 @@ func (r *Repository) Create(ctx context.Context, p *models.Proposta) error {
 	return r.db.WithContext(ctx).Create(p).Error
 }
 
+// FindByIDCompleto traz cliente, imóvel e corretor junto (a tela mostra os nomes).
+func (r *Repository) FindByIDCompleto(ctx context.Context, id uint) (*models.Proposta, error) {
+	var p models.Proposta
+	if err := r.db.WithContext(ctx).Preload("Cliente").Preload("Imovel").Preload("Corretor").First(&p, id).Error; err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// DaEmpresa confere que cliente e imóvel são do tenant atual.
+func (r *Repository) DaEmpresa(ctx context.Context, clienteID, imovelID uint) bool {
+	var nc, ni int64
+	r.db.WithContext(ctx).Model(&models.Cliente{}).Where("id = ?", clienteID).Count(&nc)
+	r.db.WithContext(ctx).Model(&models.Imovel{}).Where("id = ?", imovelID).Count(&ni)
+	return nc > 0 && ni > 0
+}
+
 func (r *Repository) FindByID(ctx context.Context, id uint) (*models.Proposta, error) {
 	var p models.Proposta
 	err := r.db.WithContext(ctx).First(&p, id).Error
@@ -36,6 +53,9 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Proposta
 	if f.Status != "" {
 		base = base.Where("status = ?", f.Status)
 	}
+	if f.CorretorID != nil {
+		base = base.Where("corretor_id = ?", *f.CorretorID)
+	}
 	var total int64
 	if err := base.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -44,6 +64,9 @@ func (r *Repository) List(ctx context.Context, f ListFilters) ([]models.Proposta
 	q := r.db.WithContext(ctx).Preload("Cliente").Preload("Imovel").Preload("Corretor")
 	if f.Status != "" {
 		q = q.Where("status = ?", f.Status)
+	}
+	if f.CorretorID != nil {
+		q = q.Where("corretor_id = ?", *f.CorretorID)
 	}
 	var out []models.Proposta
 	offset := (f.Page - 1) * f.Limit

@@ -1,16 +1,25 @@
 "use client";
 
 import { FormIntro } from "@/components/ui/form-intro";
+import { FormField, focarPrimeiroErro } from "@/components/ui/form-field";
 import { userPhotoUrl } from "@/lib/user-avatar";
-import { maskPhone } from "@/lib/masks";
+import { maskPhone, soDigitos } from "@/lib/masks";
 import { UserAvatar } from "@/components/UserAvatar";
+import { useAuth } from "@/context/AuthContext";
 import { CheckCircle2, AlertCircle } from "@/components/icons";
 
 import { useEffect, useRef, useState } from "react";
 
-// Client Component: form de edição do perfil do usuário logado, via proxy
-// `/api/backend/user/:id`.
+// Client Component: perfil do usuário logado, via proxy `/api/backend/user`.
+// Dados e foto: PUT /user/:id. Senha: PUT /user/me/senha, que exige a senha
+// atual — o PUT /user/:id nunca aceitou senha (allow-list do Go), então a
+// troca antiga dizia "salvo" e a senha continuava a mesma.
+const ORDEM = ["settings-photo", "first_name", "last_name", "email", "telefone", "pix_account", "address", "senha_atual", "password", "confirmPassword"];
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX = 255;
+
 export function ConfiguracoesUsuarioForm({ initialUser }) {
+  const { refresh } = useAuth();
   const [form, setForm] = useState({
     id: initialUser?.id,
     first_name: initialUser?.first_name || "",
@@ -25,32 +34,32 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
   const [arquivo, setArquivo] = useState(null);
   const [previa, setPrevia] = useState(userPhotoUrl(initialUser?.photo));
   const inputFoto = useRef(null);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [senha, setSenha] = useState({ senha_atual: "", password: "", confirmPassword: "" });
+  const [erros, setErros] = useState({});
   const [message, setMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
 
   // A prévia local é uma object URL criada na hora da escolha. Guardamos a
   // última em um ref para revogar antes de criar a próxima — sem isso, cada
-  // troca de arquivo vaza um blob na memória da aba. O efeito só cuida da
-  // limpeza ao desmontar; criar a URL aqui evitaria um setState dentro de
-  // efeito, que é o que a regra react-hooks/set-state-in-effect proíbe.
+  // troca de arquivo vaza um blob na memória da aba.
   const blobAtual = useRef(null);
   useEffect(() => () => {
     if (blobAtual.current) URL.revokeObjectURL(blobAtual.current);
   }, []);
 
+  const limparErro = (k) => setErros((p) => (p[k] ? { ...p, [k]: undefined } : p));
+
   const escolherFoto = (e) => {
     const f = e.target.files?.[0];
+    limparErro("settings-photo");
     if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setMessage({ type: "error", text: "Selecione um arquivo de imagem." });
-      return;
-    }
-    if (f.size > 5 * 1024 * 1024) {
-      setMessage({ type: "error", text: "A foto deve ter no máximo 5 MB." });
-      return;
-    }
+    const recusar = (texto) => {
+      setErros((p) => ({ ...p, "settings-photo": texto }));
+      e.target.value = "";
+      setArquivo(null);
+    };
+    if (!f.type.startsWith("image/")) return recusar("Esse arquivo não é uma foto. Escolha uma imagem JPG ou PNG.");
+    if (f.size > 5 * 1024 * 1024) return recusar("A foto deve ter no máximo 5 MB.");
     setMessage({ type: "", text: "" });
     if (blobAtual.current) URL.revokeObjectURL(blobAtual.current);
     blobAtual.current = URL.createObjectURL(f);
@@ -61,119 +70,144 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: name === "telefone" ? maskPhone(value) : value }));
+    limparErro(name);
     if (message.type === "success") setMessage({ type: "", text: "" });
+  };
+  const mudarSenha = (e) => {
+    const { name, value } = e.target;
+    setSenha((p) => ({ ...p, [name]: value }));
+    limparErro(name);
+  };
+
+  const trocandoSenha = !!(senha.senha_atual || senha.password || senha.confirmPassword);
+
+  const validar = () => {
+    const e = {};
+    if (!form.first_name.trim()) e.first_name = "Escreva o seu nome.";
+    if (!form.email.trim()) e.email = "Escreva o seu e-mail. É com ele que você entra no sistema.";
+    else if (!EMAIL_OK.test(form.email.trim())) e.email = "Confira o e-mail. Exemplo: joao@email.com";
+    const tel = soDigitos(form.telefone);
+    if (tel && (tel.length < 10 || tel.length > 13)) e.telefone = "Escreva o celular com DDD. Exemplo: (61) 99999-9999";
+    if (trocandoSenha) {
+      if (!senha.senha_atual) e.senha_atual = "Para trocar a senha, digite a senha que você usa hoje.";
+      if (senha.password.length < 6) e.password = "A nova senha precisa ter pelo menos 6 caracteres.";
+      else if (senha.password !== senha.confirmPassword) e.confirmPassword = "As duas senhas não são iguais.";
+    }
+    return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setMessage({ type: "", text: "" });
-
-    if (password && password.length < 6) {
-      setMessage({ type: "error", text: "A nova senha precisa ter pelo menos 6 caracteres." });
-      return;
-    }
-    if (password && password !== confirmPassword) {
-      setMessage({ type: "error", text: "As duas senhas não são iguais. Digite a mesma senha nos dois campos." });
+    const novos = validar();
+    if (Object.keys(novos).length) {
+      setErros(novos);
+      focarPrimeiroErro(novos, ORDEM);
       return;
     }
 
     setSaving(true);
+    // Erro do Go com `campo` vai para baixo do campo certo.
+    const tratar = async (res) => {
+      if (res.ok) return res.json().catch(() => null);
+      const data = await res.json().catch(() => ({}));
+      const campo = data.campo === "photo" ? "settings-photo" : data.campo;
+      if (campo && ORDEM.includes(campo)) {
+        setErros({ [campo]: data.error });
+        focarPrimeiroErro({ [campo]: true }, ORDEM);
+        throw new Error("");
+      }
+      throw new Error(data.error || "Não foi possível salvar. Confira os dados e tente de novo.");
+    };
     try {
-      // Com foto o envio precisa ser multipart (o Go lê o arquivo em
-      // c.FormFile("photo")); sem foto, segue o JSON de sempre.
+      // Com foto o envio precisa ser multipart (o Go lê c.FormFile("photo")).
+      const dados = { ...form, email: form.email.trim().toLowerCase(), first_name: form.first_name.trim() };
       let res;
       if (arquivo) {
         const fd = new FormData();
-        Object.entries(form).forEach(([k, v]) => { if (k !== "id") fd.append(k, v ?? ""); });
-        if (password) fd.append("password", password);
+        Object.entries(dados).forEach(([k, v]) => { if (k !== "id") fd.append(k, v ?? ""); });
         fd.append("photo", arquivo);
         res = await fetch(`/api/backend/user/${form.id}`, { method: "PUT", body: fd });
       } else {
-        const payload = { ...form };
-        if (password) payload.password = password;
+        const { id: _id, ...payload } = dados;
         res = await fetch(`/api/backend/user/${form.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       }
-      if (!res.ok) throw new Error("Não foi possível salvar. Confira os dados e tente de novo.");
-      const salvo = await res.json().catch(() => null);
-      if (salvo?.user?.photo) {
-        // Nome do arquivo é fixo por usuário (usuario_{id}.ext), então o
-        // navegador serviria a foto antiga do cache. O sufixo força a releitura.
-        setPrevia(`${userPhotoUrl(salvo.user.photo)}?v=${Date.now()}`);
-      }
+      const salvo = await tratar(res);
+      if (salvo?.user?.photo) setPrevia(userPhotoUrl(salvo.user.photo));
       setArquivo(null);
       if (inputFoto.current) inputFoto.current.value = "";
-      setMessage({ type: "success", text: "Pronto! Seus dados foram salvos." });
-      setPassword("");
-      setConfirmPassword("");
+
+      if (trocandoSenha) {
+        await tratar(await fetch("/api/backend/user/me/senha", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ senha_atual: senha.senha_atual, nova_senha: senha.password }),
+        }));
+        setSenha({ senha_atual: "", password: "", confirmPassword: "" });
+      }
+      setMessage({ type: "success", text: trocandoSenha ? "Pronto! Seus dados e sua nova senha foram salvos." : "Pronto! Seus dados foram salvos." });
+      refresh(); // atualiza nome e foto no topo da tela
     } catch (err) {
-      setMessage({ type: "error", text: err.message || "Não foi possível salvar. Tente de novo." });
+      if (err.message) setMessage({ type: "error", text: err.message });
     } finally {
       setSaving(false);
     }
   };
 
+  const campo = (name, label, props = {}) => (
+    <FormField id={name} label={label} error={erros[name]} hint={props.hint} required={props.required} optional={props.optional} className={props.className}>
+      <input name={name} value={form[name] || ""} onChange={handleChange} maxLength={MAX}
+        type={props.type || "text"} placeholder={props.placeholder} autoComplete={props.autoComplete} inputMode={props.inputMode} />
+    </FormField>
+  );
+
   return (
-    <form onSubmit={handleSubmit} className="crm-form crm-form-composed space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="crm-form crm-form-composed space-y-4">
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div className="md:col-span-2"><FormIntro title="Informações pessoais" description="Mantenha os dados de identificação e contato atualizados." /></div>
 
         <div className="md:col-span-2 flex items-center gap-4">
           <UserAvatar src={previa} name={`${form.first_name} ${form.last_name}`} size="lg" alt="Sua foto de perfil" />
-          <div>
-            <label htmlFor="settings-photo" className="block text-sm text-cx-muted mb-2">Foto de perfil</label>
+          <FormField id="settings-photo" label="Foto de perfil" error={erros["settings-photo"]}
+            hint="JPG ou PNG, até 5 MB. A foto aparece no topo da tela, na lista de clientes e no Kanban." className="min-w-0 flex-1">
             <input
               ref={inputFoto}
-              id="settings-photo"
               name="photo"
               type="file"
               accept="image/*"
               onChange={escolherFoto}
               className="block w-full text-sm text-cx-muted file:mr-3 file:rounded-lg file:border-0 file:bg-cx-blue-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-cx-blue hover:file:bg-cx-border"
             />
-            <p className="form-dica">JPG ou PNG, até 5 MB. A foto aparece no topo da tela, na lista de clientes e no Kanban.</p>
-          </div>
+          </FormField>
         </div>
-        <Field label="Nome" name="first_name" value={form.first_name} onChange={handleChange} />
-        <Field label="Sobrenome" name="last_name" value={form.last_name} onChange={handleChange} />
-        <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" />
-        <Field label="Celular" name="telefone" value={form.telefone} onChange={handleChange} type="tel" placeholder="(00) 00000-0000" />
-        <Field label="Chave PIX" name="pix_account" value={form.pix_account} onChange={handleChange} dica="Usada para receber suas comissões. Pode ser CPF, celular, e-mail ou chave aleatória." />
-        <Field label="Endereço" name="address" value={form.address} onChange={handleChange} className="md:col-span-2" dica="Rua, número, bairro e cidade. Aparece nos contratos e recibos." />
+        {campo("first_name", "Nome", { required: true, autoComplete: "given-name" })}
+        {campo("last_name", "Sobrenome", { optional: true, autoComplete: "family-name" })}
+        {campo("email", "E-mail", { required: true, type: "email", inputMode: "email", autoComplete: "email", hint: "É com ele que você entra no sistema." })}
+        {campo("telefone", "Celular", { optional: true, type: "tel", inputMode: "tel", autoComplete: "tel", placeholder: "(00) 00000-0000" })}
+        {campo("pix_account", "Chave PIX", { optional: true, hint: "Usada para receber suas comissões. Pode ser CPF, celular, e-mail ou chave aleatória." })}
+        {campo("address", "Endereço", { optional: true, className: "md:col-span-2", autoComplete: "street-address", hint: "Rua, número, bairro e cidade. Aparece nos contratos e recibos." })}
       </div>
 
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
-        <div className="md:col-span-2"><FormIntro title="Segurança da conta" description="Preencha os dois campos somente se quiser alterar a senha." /></div>
-        <div>
-          <label htmlFor="settings-password" className="block text-sm text-cx-muted mb-2">Nova senha</label>
-          <input
-            id="settings-password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Deixe em branco para manter"
-            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
-          />
-        </div>
-        <div>
-          <label htmlFor="settings-password-confirm" className="block text-sm text-cx-muted mb-2">Repita a nova senha</label>
-          <input
-            id="settings-password-confirm"
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
-          />
-        </div>
+        <div className="md:col-span-2"><FormIntro title="Trocar a senha" description="Preencha só se quiser mudar a senha. Para sua segurança, pedimos a senha atual." /></div>
+        <FormField id="senha_atual" label="Senha atual" error={erros.senha_atual} className="md:col-span-2">
+          <input name="senha_atual" type="password" autoComplete="current-password" value={senha.senha_atual} onChange={mudarSenha} />
+        </FormField>
+        <FormField id="password" label="Nova senha" error={erros.password} hint="Pelo menos 6 caracteres.">
+          <input name="password" type="password" autoComplete="new-password" maxLength={72} value={senha.password} onChange={mudarSenha} />
+        </FormField>
+        <FormField id="confirmPassword" label="Repita a nova senha" error={erros.confirmPassword}>
+          <input name="confirmPassword" type="password" autoComplete="new-password" maxLength={72} value={senha.confirmPassword} onChange={mudarSenha} />
+        </FormField>
       </div>
 
       <div className="form-acoes">
-        <button type="submit" disabled={saving}>
+        <button type="submit" disabled={saving} aria-busy={saving || undefined}>
           {saving ? "Salvando..." : "Salvar alterações"}
         </button>
         {message.text && (
@@ -184,24 +218,5 @@ export function ConfiguracoesUsuarioForm({ initialUser }) {
         )}
       </div>
     </form>
-  );
-}
-
-function Field({ label, name, value, onChange, type = "text", placeholder, dica, className = "" }) {
-  return (
-    <div className={className}>
-      <label htmlFor={`settings-${name}`} className="block text-sm text-cx-muted mb-2">{label}</label>
-      <input
-        type={type}
-        id={`settings-${name}`}
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        placeholder={placeholder}
-        aria-describedby={dica ? `settings-${name}-dica` : undefined}
-        className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
-      />
-      {dica && <p id={`settings-${name}-dica`} className="form-dica">{dica}</p>}
-    </div>
   );
 }

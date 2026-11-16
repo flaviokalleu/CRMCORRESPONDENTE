@@ -16,6 +16,7 @@ import (
 
 	"crmimob/internal/integrations/asaas"
 	"crmimob/internal/models"
+	"crmimob/internal/validacao"
 )
 
 var (
@@ -271,10 +272,18 @@ func (s *Service) Iniciar(ctx context.Context) {
 
 var naoDigito = regexp.MustCompile(`\D`)
 
-// documentoValido aceita 11 (CPF) ou 14 (CNPJ) dígitos.
+// documentoValido aceita CPF (11) ou CNPJ (14) com dígitos verificadores
+// certos. Antes só contava os números: "111.111.111-11" passava e quem
+// recusava era o Asaas, com erro genérico na tela.
 func documentoValido(doc string) (string, bool) {
 	d := naoDigito.ReplaceAllString(doc, "")
-	return d, len(d) == 11 || len(d) == 14
+	switch len(d) {
+	case 11:
+		return d, validacao.CPF("documento", d) == nil
+	case 14:
+		return d, validacao.CNPJValido(d)
+	}
+	return d, false
 }
 
 // LinkDePagamento devolve o link do Asaas para a fatura, criando a cobrança na

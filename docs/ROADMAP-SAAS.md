@@ -94,3 +94,32 @@ Decisões tomadas em 2026-11-16:
 - Programa de parceiros/indicação.
 - Aviso de cobrança também por WhatsApp.
 - Cancelamento pelo cliente e desistência em 7 dias (CDC).
+
+## Revisão de UX tela por tela (2026-11-16)
+
+Feito: auditoria das ~45 telas (computador e celular) e correção por prioridade.
+Telas públicas com planos reais do banco (fonte única `lib/planos-publicos.js`),
+sem prova social inventada; cadastro em 5 campos na moldura do login;
+menu reagrupado (Início, Dia a dia, Dinheiro, Equipe, Ajustes) com Contratos e
+Laudos; "Primeiros passos" no dashboard; dashboard sem jargão e com estado vazio;
+formulários com erro por campo, máscaras (`lib/masks.js`), campo de dinheiro e
+barra de ações; listas com filtros rápidos e WhatsApp a um toque; financeiro
+respondendo "entrou, saiu, sobrou"; WhatsApp da vitrine vindo de "Minha empresa"
+(`GET /api/public/empresa`).
+
+Defeitos de backend corrigidos no caminho: cadastro SaaS falhava a partir da 2ª
+empresa (username vazio, migração 0014); cliente de aluguel dava 500 (tipos,
+0013); criar cobrança e sessão do WhatsApp davam erro de SQL (colunas, 0015);
+busca de cidades dava 500 (`estado_id`); cadastro de imóvel pela tela dava 500
+(rota sem barra); entrar no celular derrubava o computador (até 5 sessões, 0016,
+e `jti` no JWT); foto inexistente do seed (0017).
+
+Pendências de UX/produto:
+- Não há tela para cadastrar inquilino (só a API `POST /clientealuguel`) nem laudo.
+- Busca global de verdade (a lupa hoje busca clientes).
+- Editar lançamentos de receita/despesa (hoje só excluir).
+- Filtros de período do financeiro no backend contam pelo fuso errado no dia 1º.
+- Portal do inquilino entra só com CPF: pedir um segundo fator (código por e-mail/SMS).
+- Tarefas sem vínculo com cliente (falta campo no backend).
+- Coluna "dossiê" do formulário de cliente ainda com cores soltas; camadas do CSS
+  (`.cx-input` fora de `@layer` vence utilitários do Tailwind).

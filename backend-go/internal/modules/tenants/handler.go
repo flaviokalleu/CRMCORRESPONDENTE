@@ -11,6 +11,7 @@ import (
 	"crmimob/internal/auth"
 	"crmimob/internal/middleware"
 	"crmimob/internal/modules/users"
+	"crmimob/internal/validacao"
 )
 
 // Handler expõe /api/tenant (onboarding público) e /api/tenant-settings
@@ -52,13 +53,22 @@ func (h *Handler) Register(c *gin.Context) {
 
 	tenant, admin, sub, access, refresh, err := h.svc.Register(c.Request.Context(), req)
 	if err != nil {
+		var campo *validacao.ErroCampo
+		if errors.As(err, &campo) {
+			status := http.StatusBadRequest
+			if campo == validacao.ErrEmailEmUso || campo == validacao.ErrUsuarioEmUso {
+				status = http.StatusConflict
+			}
+			c.JSON(status, gin.H{"error": campo.Mensagem, "campo": campo.Campo})
+			return
+		}
 		switch {
 		case errors.Is(err, ErrInvalidSlug), errors.Is(err, ErrWeakPassword):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.Is(err, ErrSlugTaken), errors.Is(err, ErrEmailTaken):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		case errors.Is(err, ErrPlanNotFound):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Este plano não está mais disponível. Recarregue a página e escolha outro."})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar organização"})
 		}
@@ -166,6 +176,11 @@ func (h *Handler) UpdateSettings(c *gin.Context) {
 	}
 	t, err := h.svc.UpdateSettings(c.Request.Context(), tenantID, req)
 	if err != nil {
+		var ec *validacao.ErroCampo
+		if errors.As(err, &ec) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ec.Mensagem, "campo": ec.Campo})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao atualizar configurações"})
 		return
 	}
@@ -195,6 +210,10 @@ func (h *Handler) UploadLogo(c *gin.Context) {
 	}
 	path, err := saveLogo(tenantID, fh)
 	if err != nil {
+		if errors.Is(err, ErrLogoInvalido) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Esse arquivo não é uma imagem. Envie o logo em PNG, JPG ou WEBP."})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao salvar logo"})
 		return
 	}

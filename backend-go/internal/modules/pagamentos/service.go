@@ -16,8 +16,8 @@ var (
 	ErrClienteNotFound   = errors.New("cliente não encontrado")
 	ErrPagamentoNotFound = errors.New("pagamento não encontrado")
 	ErrForbidden         = errors.New("acesso negado")
-	ErrNotEditable       = errors.New("pagamento só pode ser editado enquanto pendente")
-	ErrNotDeletable      = errors.New("pagamento aprovado não pode ser excluído")
+	ErrNotEditable       = errors.New("Só dá para editar uma cobrança que ainda não foi paga.")
+	ErrNotDeletable      = errors.New("Esta cobrança já foi paga e não pode ser excluída.")
 )
 
 // Service concentra as regras de negócio de cobranças avulsas (era Mercado
@@ -54,6 +54,9 @@ func (s *Service) clientForTenant(ctx context.Context, tenantID *uint) (*asaas.C
 	t, err := s.repo.findTenant(ctx, *tenantID)
 	if err != nil {
 		return nil, err
+	}
+	if asaas.ResolveAPIKey(t.AsaasAPIKey) == "" {
+		return nil, ErrSemAsaas
 	}
 	return asaas.NewClientForTenant(t.AsaasAPIKey), nil
 }

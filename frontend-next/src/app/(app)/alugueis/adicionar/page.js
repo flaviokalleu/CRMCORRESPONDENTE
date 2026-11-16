@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Save } from "@/components/icons";
@@ -15,7 +15,8 @@ import { parseMoney, soDigitos } from "@/lib/masks";
 // via proxy `/api/backend/alugueis` (nunca chamada direta ao Go). O backend
 // aceita valor_aluguel em pt-BR ("1.500,00" — parseCurrencyValue).
 const VAZIO = { nome_imovel: "", descricao: "", valor_aluguel: "", quartos: "", banheiro: "", dia_vencimento: "" };
-const ORDEM = ["nome_imovel", "descricao", "valor_aluguel", "dia_vencimento"];
+const ORDEM = ["nome_imovel", "descricao", "valor_aluguel", "dia_vencimento", "quartos", "banheiro", "foto_capa", "fotos_adicionais"];
+const FOTOS = "image/jpeg,image/png,image/webp";
 
 export default function AddAluguelPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function AddAluguelPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [erros, setErros] = useState({});
+  const enviando = useRef(false); // trava contra clique duplo (criava dois imóveis)
 
   const set = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -35,6 +37,7 @@ export default function AddAluguelPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (enviando.current) return;
     setError("");
 
     const novos = {};
@@ -59,11 +62,19 @@ export default function AddAluguelPage() {
     if (fotoCapa[0]) fd.append("foto_capa", fotoCapa[0]);
     fotosAdicionais.forEach((file) => fd.append("fotos_adicionais", file));
 
+    enviando.current = true;
     setLoading(true);
     try {
       const res = await fetch("/api/backend/alugueis", { method: "POST", body: fd });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || "Não foi possível cadastrar o imóvel. Tente de novo.");
+      if (!res.ok) {
+        if (data?.campo && ORDEM.includes(data.campo)) {
+          setErros({ [data.campo]: data.error });
+          focarPrimeiroErro({ [data.campo]: data.error }, ORDEM);
+          return;
+        }
+        throw new Error(data?.error || "Não foi possível cadastrar o imóvel. Tente de novo.");
+      }
       toast.success("Imóvel para aluguel cadastrado.", {
         action: { label: "Cadastrar outro", onClick: () => router.push("/alugueis/adicionar") },
         duration: 8000,
@@ -74,6 +85,7 @@ export default function AddAluguelPage() {
       setError(err.message);
       (document.getElementById("conteudo") || window).scrollTo({ top: 0, behavior: "smooth" }); // a página rola dentro do <main> do layout
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   }
@@ -86,11 +98,11 @@ export default function AddAluguelPage() {
         {error && <FormAlert titulo="Não deu para salvar">{error}</FormAlert>}
 
         <FormField id="nome_imovel" label="Nome ou endereço" required error={erros.nome_imovel}>
-          <input name="nome_imovel" value={formData.nome_imovel} onChange={onText} placeholder="Ex.: Apartamento Rua das Flores, 123" />
+          <input name="nome_imovel" maxLength={255} value={formData.nome_imovel} onChange={onText} placeholder="Ex.: Apartamento Rua das Flores, 123" />
         </FormField>
 
         <FormField id="descricao" label="Descrição" required error={erros.descricao}>
-          <textarea name="descricao" value={formData.descricao} onChange={onText} rows={4}
+          <textarea name="descricao" maxLength={5000} value={formData.descricao} onChange={onText} rows={4}
             placeholder="Onde fica, como é, o que tem de bom…" />
         </FormField>
 
@@ -102,10 +114,10 @@ export default function AddAluguelPage() {
             hint="Dia do mês em que o inquilino paga.">
             <input name="dia_vencimento" inputMode="numeric" value={formData.dia_vencimento} onChange={onNumero(2)} placeholder="Ex.: 10" />
           </FormField>
-          <FormField id="quartos" label="Quartos" optional>
+          <FormField id="quartos" label="Quartos" optional error={erros.quartos}>
             <input name="quartos" inputMode="numeric" value={formData.quartos} onChange={onNumero(2)} placeholder="Ex.: 3" />
           </FormField>
-          <FormField id="banheiro" label="Banheiros" optional>
+          <FormField id="banheiro" label="Banheiros" optional error={erros.banheiro}>
             <input name="banheiro" inputMode="numeric" value={formData.banheiro} onChange={onNumero(2)} placeholder="Ex.: 2" />
           </FormField>
         </div>
@@ -113,11 +125,13 @@ export default function AddAluguelPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="crm-field">
             <p className="crm-field-label">Foto de capa</p>
-            <Dropzone id="foto_capa" imagem accept="image/*" files={fotoCapa} onChange={setFotoCapa} texto="Toque para escolher a foto principal" />
+            {erros.foto_capa && <p className="crm-field-error" role="alert">{erros.foto_capa}</p>}
+            <Dropzone id="foto_capa" imagem accept={FOTOS} files={fotoCapa} onChange={setFotoCapa} texto="Toque para escolher a foto principal" />
           </div>
           <div className="crm-field">
-            <p className="crm-field-label">Mais fotos</p>
-            <Dropzone id="fotos_adicionais" imagem multiple accept="image/*" files={fotosAdicionais} onChange={setFotosAdicionais} texto="Toque para escolher várias fotos" />
+            <p className="crm-field-label">Mais fotos <span className="crm-field-opt">(até 10)</span></p>
+            {erros.fotos_adicionais && <p className="crm-field-error" role="alert">{erros.fotos_adicionais}</p>}
+            <Dropzone id="fotos_adicionais" imagem multiple accept={FOTOS} files={fotosAdicionais} onChange={setFotosAdicionais} texto="Toque para escolher várias fotos" />
           </div>
         </div>
 

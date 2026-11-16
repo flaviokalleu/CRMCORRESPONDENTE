@@ -37,7 +37,17 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 	var req CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "cliente_id, imovel_id e data_visita são obrigatórios"})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Escolha o cliente, o imóvel e o dia/horário da visita."})
+		return
+	}
+	if y := req.DataVisita.Year(); y < 2000 || y > 2100 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Data inválida. Escolha o dia no calendário.", "campo": "data_visita"})
+		return
+	}
+	// Cliente e imóvel precisam ser desta imobiliária (a busca é escopada
+	// por tenant); antes qualquer id existente no banco era aceito.
+	if !h.repo.DaEmpresa(c.Request.Context(), req.ClienteID, req.ImovelID) {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Cliente ou imóvel não encontrado. Recarregue a página e escolha de novo."})
 		return
 	}
 
@@ -56,7 +66,7 @@ func (h *Handler) Create(c *gin.Context) {
 		Observacoes: req.Observacoes,
 	}
 	if err := h.repo.Create(c.Request.Context(), v); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao criar visita", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao criar visita"})
 		return
 	}
 
@@ -93,9 +103,12 @@ func (h *Handler) List(c *gin.Context) {
 		}
 	}
 
+	if dono := soDoCorretor(c); dono != nil {
+		f.CorretorID = dono
+	}
 	out, total, err := h.repo.List(c.Request.Context(), f)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao listar visitas", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao listar visitas"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": out, "total": total, "page": f.Page, "pageSize": f.Limit})
@@ -110,7 +123,7 @@ func (h *Handler) ListByCliente(c *gin.Context) {
 	}
 	out, err := h.repo.ListByCliente(c.Request.Context(), uint(clienteID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao buscar visitas", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao buscar visitas"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
@@ -129,16 +142,24 @@ func (h *Handler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Visita não encontrada"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao buscar visita", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao buscar visita"})
 		return
 	}
 
+	if alheia(c, v.CorretorID) {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Visita não encontrada"})
+		return
+	}
 	var req UpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Corpo inválido"})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Dados inválidos. Recarregue a página e tente de novo."})
 		return
 	}
 	if req.DataVisita != nil {
+		if y := req.DataVisita.Year(); y < 2000 || y > 2100 {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Data inválida. Escolha o dia no calendário.", "campo": "data_visita"})
+			return
+		}
 		v.DataVisita = *req.DataVisita
 	}
 	if req.Status != nil {
@@ -156,14 +177,14 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	if req.NotaAvaliacao != nil {
 		if *req.NotaAvaliacao < 1 || *req.NotaAvaliacao > 5 {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "nota_avaliacao deve estar entre 1 e 5"})
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "A nota vai de 1 a 5 estrelas.", "campo": "nota_avaliacao"})
 			return
 		}
 		v.NotaAvaliacao = req.NotaAvaliacao
 	}
 
 	if err := h.repo.Update(c.Request.Context(), v); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao atualizar visita", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao atualizar visita"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": v})
@@ -176,9 +197,16 @@ func (h *Handler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "id inválido"})
 		return
 	}
+	if soDoCorretor(c) != nil {
+		atual, err := h.repo.FindByID(c.Request.Context(), uint(id))
+		if err != nil || alheia(c, atual.CorretorID) {
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Visita não encontrada"})
+			return
+		}
+	}
 	affected, err := h.repo.Delete(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao remover visita", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Erro ao remover visita"})
 		return
 	}
 	if affected == 0 {
@@ -186,4 +214,22 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Visita removida com sucesso"})
+}
+
+// soDoCorretor: corretor (sem ser admin/correspondente) só enxerga e mexe no
+// que é dele — antes via as visitas de toda a equipe, com nome e telefone dos
+// clientes dos colegas, embora a lista de clientes já viesse filtrada.
+func soDoCorretor(c *gin.Context) *uint {
+	u, ok := auth.UserFrom(c)
+	if ok && u.IsCorretor && !u.IsAdministrador && !u.IsCorrespondente && !u.IsSuperAdmin {
+		id := u.ID
+		return &id
+	}
+	return nil
+}
+
+// alheia: true quando o corretor tenta abrir visita de outro corretor.
+func alheia(c *gin.Context, corretorID *uint) bool {
+	dono := soDoCorretor(c)
+	return dono != nil && (corretorID == nil || *corretorID != *dono)
 }

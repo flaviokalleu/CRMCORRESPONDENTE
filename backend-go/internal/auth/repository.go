@@ -18,7 +18,9 @@ func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 
 func (r *Repository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var u models.User
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error; err != nil {
+	// Sem diferença de maiúsculas/espaços: no celular o teclado costuma pôr
+	// a 1ª letra maiúscula ("Joao@email.com") e o login falhava.
+	if err := r.db.WithContext(ctx).Where("lower(email) = lower(trim(?))", email).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil

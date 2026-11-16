@@ -33,12 +33,20 @@ func (h *PlanHandler) List(c *gin.Context) {
 func (h *PlanHandler) Create(c *gin.Context) {
 	var req PlanRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if msg := req.validar(); msg != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados do plano inválidos. Confira os campos."})
+		return
+	}
+	if msg := req.validar(); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 	p, err := h.svc.CreatePlan(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar plano"})
+		erroPlano(c, err, "Erro ao criar plano")
 		return
 	}
 	c.JSON(http.StatusCreated, p)
@@ -52,7 +60,15 @@ func (h *PlanHandler) Update(c *gin.Context) {
 	}
 	var req PlanRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if msg := req.validar(); msg != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados do plano inválidos. Confira os campos."})
+		return
+	}
+	if msg := req.validar(); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 	p, err := h.svc.UpdatePlan(c.Request.Context(), uint(id), req)
@@ -61,7 +77,7 @@ func (h *PlanHandler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plano não encontrado"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao atualizar plano"})
+		erroPlano(c, err, "Erro ao atualizar plano")
 		return
 	}
 	c.JSON(http.StatusOK, p)

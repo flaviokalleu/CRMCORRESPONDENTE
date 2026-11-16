@@ -98,7 +98,7 @@ export function FichaEmpresa({ tenantId, plataforma, planos, onFechar, onMudou }
         {sub && !plataforma && (
           <>
             <AcoesRapidas t={t} ocupado={ocupado} acao={acao} entrarComo={entrarComo} tenantId={tenantId} />
-            <PlanoECondicoes sub={sub} planos={planos} ocupado={ocupado} acao={acao} tenantId={tenantId} />
+            <PlanoECondicoes sub={sub} planos={planos} ocupado={ocupado} acao={acao} tenantId={tenantId} avisar={setAviso} />
             <Faturas faturas={ficha.faturas || []} ocupado={ocupado} acao={acao} />
           </>
         )}
@@ -121,7 +121,7 @@ function AcoesRapidas({ t, ocupado, acao, entrarComo, tenantId }) {
             <span className="whitespace-nowrap text-sm font-normal text-cx-muted">dias</span>
           </span>
         </label>
-        <Button variant="outline" disabled={ocupado} onClick={() => acao("POST", `/assinaturas/${tenantId}/prorrogar`, { dias: Number(dias) }, `Prorrogado por ${dias} dias.`)}>
+        <Button variant="outline" disabled={ocupado} onClick={() => acao("POST", `/assinaturas/${tenantId}/prorrogar`, { dias: Number(dias) }, `Prorrogado por ${Number(dias)} dias.`)}>
           Prorrogar
         </Button>
         <Button variant="outline" disabled={ocupado} onClick={entrarComo}>Entrar como esta empresa</Button>
@@ -146,7 +146,7 @@ function AcoesRapidas({ t, ocupado, acao, entrarComo, tenantId }) {
   );
 }
 
-function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId }) {
+function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId, avisar }) {
   const [planId, setPlanId] = useState(String(sub.plan_id));
   const [ciclo, setCiclo] = useState(sub.ciclo || "mensal");
   const [preco, setPreco] = useState(sub.preco_combinado != null ? String(sub.preco_combinado) : "");
@@ -175,7 +175,7 @@ function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId }) {
       <Button
         variant="outline"
         disabled={ocupado || (String(sub.plan_id) === planId && sub.ciclo === ciclo)}
-        onClick={() => acao("PUT", `/subscriptions/${tenantId}/change-plan`, { plan_id: Number(planId), ciclo }, "Plano trocado. Vale a partir da próxima fatura.")}
+        onClick={() => acao("PUT", `/assinaturas/${tenantId}/plano`, { plan_id: Number(planId), ciclo }, "Plano trocado. A fatura em aberto já foi ajustada.")}
       >
         Trocar plano agora
       </Button>
@@ -202,7 +202,11 @@ function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId }) {
       <Button
         variant="outline"
         disabled={ocupado}
-        onClick={() =>
+        onClick={() => {
+          // Campo vazio virava 0 (Number("") === 0) e gravava tolerância zero sem avisar.
+          const tol = Number(tolerancia);
+          if (tolerancia.trim() === "" || !Number.isInteger(tol) || tol < 0 || tol > 30) return avisar("Tolerância: escreva de 0 a 30 dias.");
+          if (preco !== "" && !(Number(preco) >= 0)) return avisar("Preço combinado: escreva um valor de 0 para cima, ou deixe vazio.");
           acao(
             "PUT",
             `/assinaturas/${tenantId}/condicoes`,
@@ -210,8 +214,8 @@ function PlanoECondicoes({ sub, planos, ocupado, acao, tenantId }) {
               ? { usar_tabela: true, tolerancia_dias: Number(tolerancia) }
               : { preco_combinado: Number(preco), tolerancia_dias: Number(tolerancia) },
             "Condições salvas. Valem a partir da próxima fatura."
-          )
-        }
+          );
+        }}
       >
         Salvar condições
       </Button>

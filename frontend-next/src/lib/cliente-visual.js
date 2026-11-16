@@ -37,8 +37,10 @@ export function corDoAvatar(nome) {
 }
 
 export function iniciaisDe(nome) {
-  const partes = (nome || "").trim().split(/\s+/).filter(Boolean);
-  return partes.length ? (partes[0][0] + (partes[1]?.[0] || "")).toUpperCase() : "?";
+  // 1ª letra/número de cada palavra, por code point (emoji cortado ao meio
+  // quebrava a hidratação — mesma correção de initialsOf em ui/page.jsx).
+  const partes = (nome || "").trim().split(/\s+/).map((w) => w.match(/[\p{L}\p{N}]/u)?.[0]).filter(Boolean);
+  return partes.length ? (partes[0] + (partes[1] || "")).toUpperCase() : "?";
 }
 
 // Ícone e cor por canal de captação. O campo é texto livre (ver migration

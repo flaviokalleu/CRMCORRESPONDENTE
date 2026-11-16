@@ -83,6 +83,13 @@ type Cliente struct {
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
 
+	// LegacyCreatedAt existe só para "segurar" a coluna antiga "createdAt"
+	// (camelCase, herdada do Sequelize). Sem ela o GORM casa "createdAt" com o
+	// campo CreatedAt pelo nome e a sobrescreve na leitura: a "Data do cadastro"
+	// escolhida no formulário era gravada em created_at mas a API devolvia a
+	// hora do INSERT. Somente leitura (`->`): o banco preenche pelo DEFAULT.
+	LegacyCreatedAt *time.Time `gorm:"column:createdAt;->" json:"-"`
+
 	// Associações (carregadas via Preload quando necessário — não persistidas)
 	User  *User  `gorm:"foreignKey:UserID;references:ID" json:"user,omitempty"`
 	Notas []Nota `gorm:"foreignKey:ClienteID;references:ID" json:"notas,omitempty"`

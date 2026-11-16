@@ -83,9 +83,19 @@ function FormPlano({ plano, novo, onFechar }) {
       setErro("Dê um nome ao plano.");
       return;
     }
+    if (!slugify(v.slug || v.nome)) {
+      setErro("O nome precisa ter ao menos uma letra ou número.");
+      return;
+    }
+    // Com noValidate o navegador não barra mais sozinho: confere aqui, em português.
+    const negativo = ["preco_mensal", "preco_anual", "trial_dias", "ordem", ...LIMITES.map(([k]) => k)].some((k) => !(Number(v[k]) >= 0));
+    if (negativo) {
+      setErro("Preços, dias de teste, ordem e limites não podem ser negativos (0 = sem limite).");
+      return;
+    }
     setSalvando(true);
     setErro("");
-    const corpo = { ...v, slug: v.slug || slugify(v.nome), descricao: v.descricao || null };
+    const corpo = { ...v, slug: v.slug || slugify(v.nome).slice(0, 80), descricao: v.descricao || null };
     const res = await fetch(`/api/backend/super-admin/plans${novo ? "" : `/${plano.id}`}`, {
       method: novo ? "POST" : "PUT",
       headers: { "Content-Type": "application/json" },
@@ -102,13 +112,13 @@ function FormPlano({ plano, novo, onFechar }) {
   }
 
   return (
-    <form onSubmit={salvar} className="mt-4 space-y-4 rounded-lg bg-[var(--muted)] p-4">
+    <form onSubmit={salvar} noValidate className="mt-4 space-y-4 rounded-lg bg-[var(--muted)] p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo rotulo="Nome">
-          <input value={v.nome} onChange={(e) => set("nome", e.target.value)} className="cx-input h-10 w-full" />
+          <input value={v.nome} onChange={(e) => set("nome", e.target.value)} maxLength={255} className="cx-input h-10 w-full" />
         </Campo>
         <Campo rotulo="Descrição curta">
-          <input value={v.descricao} onChange={(e) => set("descricao", e.target.value)} className="cx-input h-10 w-full" />
+          <input value={v.descricao} onChange={(e) => set("descricao", e.target.value)} maxLength={500} className="cx-input h-10 w-full" />
         </Campo>
         <Campo rotulo="Preço mensal (R$)">
           <input type="number" min="0" step="0.01" value={v.preco_mensal} onChange={num("preco_mensal")} className="cx-input h-10 w-full" />

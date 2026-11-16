@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"crmimob/internal/models"
 )
@@ -36,20 +35,38 @@ func normalizeCPF(s string) string { return onlyDigits.ReplaceAllString(s, "") }
 
 func normalizeEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
 
-// normalizeRenda mantém o valor se já tiver vírgula (assume-se já formatado
-// pt-BR); senão tenta formatar como "1234.56" → "1234,56" (2 casas).
+// normalizeRenda grava sempre no formato pt-BR "1.234,56" (a coluna é
+// VARCHAR e o front lê os dígitos). Entrada que não é número fica como veio —
+// validarInput já barrou esse caso antes de chegar aqui.
 func normalizeRenda(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
 	}
-	if strings.Contains(s, ",") {
+	f, err := models.ParseRenda(strings.TrimSpace(strings.ReplaceAll(s, "R$", "")))
+	if err != nil {
 		return s
 	}
-	if f, err := strconv.ParseFloat(s, 64); err == nil {
-		return strconv.FormatFloat(f, 'f', 2, 64)
+	return formatarReais(f)
+}
+
+// formatarReais formata 1234.5 como "1.234,50".
+func formatarReais(f float64) string {
+	txt := strconv.FormatFloat(f, 'f', 2, 64)
+	inteiro, dec := txt[:len(txt)-3], txt[len(txt)-2:]
+	neg := strings.HasPrefix(inteiro, "-")
+	inteiro = strings.TrimPrefix(inteiro, "-")
+	var b strings.Builder
+	for i, r := range inteiro {
+		if i > 0 && (len(inteiro)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(r)
 	}
-	return s
+	if neg {
+		return "-" + b.String() + "," + dec
+	}
+	return b.String() + "," + dec
 }
 
 // formatDateOnly replica `formatDateOnly` do Node: mantém só a parte "YYYY-MM-DD".
@@ -88,16 +105,23 @@ func applyInput(c *models.Cliente, in ClienteInput, partial bool) {
 		if transform != nil {
 			v = transform(v)
 		}
+		// Campo enviado vazio = apagar. Antes gravava "" e, no front, o
+		// formulário nem mandava o vazio — apagar um campo na edição não pegava.
+		if strings.TrimSpace(v) == "" {
+			*dst = nil
+			return
+		}
 		*dst = &v
 	}
 
 	trim := func(s string) string { return strings.TrimSpace(s) }
+	lowerTrim := func(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
 
 	set(&c.Nome, in.Nome, trim)
 	set(&c.Email, in.Email, normalizeEmail)
-	set(&c.Telefone, in.Telefone, nil)
+	set(&c.Telefone, in.Telefone, trim)
 	set(&c.CPF, in.CPF, normalizeCPF)
-	set(&c.EstadoCivil, in.EstadoCivil, nil)
+	set(&c.EstadoCivil, in.EstadoCivil, lowerTrim)
 	set(&c.Naturalidade, in.Naturalidade, trim)
 	set(&c.Profissao, in.Profissao, trim)
 	set(&c.Origem, in.Origem, trim)
@@ -106,7 +130,7 @@ func applyInput(c *models.Cliente, in ClienteInput, partial bool) {
 	set(&c.DataAdmissao, in.DataAdmissao, formatDateOnly)
 
 	set(&c.ValorRenda, in.ValorRenda, normalizeRenda)
-	set(&c.RendaTipo, in.RendaTipo, nil)
+	set(&c.RendaTipo, in.RendaTipo, lowerTrim)
 	set(&c.NumeroPis, in.NumeroPis, trim)
 
 	if b := parseLooseBool(in.PossuiCarteiraMaisTresAnos); b != nil {
@@ -116,20 +140,20 @@ func applyInput(c *models.Cliente, in ClienteInput, partial bool) {
 		c.PossuiDependente = b
 	}
 
-	set(&c.ConjugeNome, in.ConjugeNome, nil)
+	set(&c.ConjugeNome, in.ConjugeNome, trim)
 	set(&c.ConjugeEmail, in.ConjugeEmail, normalizeEmail)
 	set(&c.ConjugeTelefone, in.ConjugeTelefone, nil)
 	set(&c.ConjugeCPF, in.ConjugeCPF, normalizeCPF)
-	set(&c.ConjugeProfissao, in.ConjugeProfissao, nil)
+	set(&c.ConjugeProfissao, in.ConjugeProfissao, trim)
 	set(&c.ConjugeDataNascimento, in.ConjugeDataNascimento, formatDateOnly)
 	set(&c.ConjugeValorRenda, in.ConjugeValorRenda, normalizeRenda)
-	set(&c.ConjugeRendaTipo, in.ConjugeRendaTipo, nil)
+	set(&c.ConjugeRendaTipo, in.ConjugeRendaTipo, lowerTrim)
 	set(&c.ConjugeDataAdmissao, in.ConjugeDataAdmissao, formatDateOnly)
 
 	if b := parseLooseBool(in.PossuiFiador); b != nil {
 		c.PossuiFiador = *b
 	}
-	set(&c.FiadorNome, in.FiadorNome, nil)
+	set(&c.FiadorNome, in.FiadorNome, trim)
 	set(&c.FiadorCPF, in.FiadorCPF, normalizeCPF)
 	set(&c.FiadorTelefone, in.FiadorTelefone, nil)
 	set(&c.FiadorEmail, in.FiadorEmail, normalizeEmail)
@@ -161,14 +185,19 @@ func ValidateCreate(c *models.Cliente) error {
 // --- Criação ---
 
 func (s *Service) Create(ctx context.Context, in ClienteInput, tenantID uint, actor *models.User) (*models.Cliente, error) {
+	if err := validarInput(in, nil); err != nil {
+		return nil, err
+	}
 	cpf := ""
 	if in.CPF != nil {
 		cpf = normalizeCPF(*in.CPF)
 	}
-	if cpf != "" {
-		if _, err := s.repo.FindByCPF(ctx, cpf); err == nil {
-			return nil, ErrCPFDuplicado
-		}
+	// Duplicidade só dentro da empresa (UNIQUE por tenant, migração 0019).
+	if cpf != "" && s.repo.cpfEmUso(ctx, tenantID, cpf, 0) {
+		return nil, ErrCPFDuplicado
+	}
+	if in.Email != nil && s.repo.emailEmUso(ctx, tenantID, normalizeEmail(*in.Email), 0) {
+		return nil, ErrosCampos{{Campo: "email", Mensagem: "Já existe um cliente com este e-mail."}}
 	}
 
 	c := &models.Cliente{Status: "aguardando_aprovacao", TenantID: tenantID}
@@ -186,23 +215,25 @@ func (s *Service) Create(ctx context.Context, in ClienteInput, tenantID uint, ac
 	// corretor sempre vincula a si mesmo (§2.1 POST).
 	if actor.IsCorretor && !actor.IsAdministrador && !actor.IsCorrespondente {
 		c.UserID = &actor.ID
-	} else if in.UserID != nil {
-		if uid, err := strconv.ParseUint(*in.UserID, 10, 64); err == nil {
-			u := uint(uid)
-			c.UserID = &u
+	} else if in.UserID != nil && strings.TrimSpace(*in.UserID) != "" {
+		uid, err := strconv.ParseUint(strings.TrimSpace(*in.UserID), 10, 64)
+		if err != nil || !s.repo.usuarioDaEmpresa(ctx, uint(uid), tenantID) {
+			return nil, ErrosCampos{{Campo: "userId", Mensagem: "Escolha um responsável da lista."}}
 		}
+		u := uint(uid)
+		c.UserID = &u
 	} else {
 		c.UserID = &actor.ID
 	}
 
 	if in.DataCriacao != nil && strings.TrimSpace(*in.DataCriacao) != "" {
-		if t, err := time.Parse("2006-01-02", formatDateOnly(*in.DataCriacao)); err == nil {
+		if t, ok := dataDoCadastro(*in.DataCriacao); ok {
 			c.CreatedAt = t
 		}
 	}
 
 	if err := s.repo.Create(ctx, c); err != nil {
-		return nil, err
+		return nil, conflitoUnico(err)
 	}
 	return c, nil
 }
@@ -224,16 +255,30 @@ func (s *Service) Update(ctx context.Context, id uint, in ClienteInput, actor *m
 		in.Status = nil
 	}
 
+	if err := validarInput(in, c); err != nil {
+		return nil, err
+	}
 	if in.CPF != nil {
 		novoCPF := normalizeCPF(*in.CPF)
-		if novoCPF != "" && c.CPF != nil && novoCPF != *c.CPF {
-			if existing, err := s.repo.FindByCPF(ctx, novoCPF); err == nil && existing.ID != c.ID {
-				return nil, ErrCPFDuplicado
-			}
+		if novoCPF != "" && (c.CPF == nil || novoCPF != *c.CPF) && s.repo.cpfEmUso(ctx, c.TenantID, novoCPF, c.ID) {
+			return nil, ErrCPFDuplicado
+		}
+	}
+	if in.Email != nil {
+		novo := normalizeEmail(*in.Email)
+		if novo != "" && (c.Email == nil || novo != *c.Email) && s.repo.emailEmUso(ctx, c.TenantID, novo, c.ID) {
+			return nil, ErrosCampos{{Campo: "email", Mensagem: "Já existe um cliente com este e-mail."}}
 		}
 	}
 
 	applyInput(c, in, true)
+
+	// Data do cadastro também é editável (painel lateral da lista).
+	if in.DataCriacao != nil && strings.TrimSpace(*in.DataCriacao) != "" {
+		if t, ok := dataDoCadastro(*in.DataCriacao); ok {
+			c.CreatedAt = t
+		}
+	}
 
 	if in.Status != nil && strings.TrimSpace(*in.Status) != "" {
 		st := strings.TrimSpace(*in.Status)
@@ -244,15 +289,17 @@ func (s *Service) Update(ctx context.Context, id uint, in ClienteInput, actor *m
 	}
 
 	// Transferência de userId — só admin/correspondente (§2.1 PUT).
-	if in.UserID != nil && (actor.IsAdministrador || actor.IsCorrespondente) {
-		if uid, err := strconv.ParseUint(*in.UserID, 10, 64); err == nil {
-			u := uint(uid)
-			c.UserID = &u
+	if in.UserID != nil && strings.TrimSpace(*in.UserID) != "" && (actor.IsAdministrador || actor.IsCorrespondente) {
+		uid, err := strconv.ParseUint(strings.TrimSpace(*in.UserID), 10, 64)
+		if err != nil || !s.repo.usuarioDaEmpresa(ctx, uint(uid), c.TenantID) {
+			return nil, ErrosCampos{{Campo: "userId", Mensagem: "Escolha um responsável da lista."}}
 		}
+		u := uint(uid)
+		c.UserID = &u
 	}
 
 	if err := s.repo.Save(ctx, c); err != nil {
-		return nil, err
+		return nil, conflitoUnico(err)
 	}
 	return c, nil
 }

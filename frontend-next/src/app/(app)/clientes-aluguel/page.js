@@ -66,16 +66,18 @@ export default async function ClientesAluguelPage({ searchParams }) {
       <PageHeader
         title="Inquilinos"
         subtitle={`${clientes.length} inquilino${clientes.length === 1 ? "" : "s"} · quem está em atraso aparece primeiro`}
+        actionHref="/clientes-aluguel/adicionar"
+        actionLabel="Cadastrar inquilino"
       />
 
       {clientes.length === 0 ? (
         <EmptyState
           icon={KeyRound}
           title="Nenhum inquilino cadastrado"
-          hint="Quando você fechar uma locação em Aluguéis, o inquilino aparece aqui com o vencimento."
+          hint="Cadastre quem aluga: nome, valor e dia do vencimento bastam para começar."
         >
-          <Link href="/alugueis" className="lst-botao lst-botao-principal">
-            Ir para Aluguéis
+          <Link href="/clientes-aluguel/adicionar" className="lst-botao lst-botao-principal">
+            Cadastrar inquilino
           </Link>
         </EmptyState>
       ) : (
@@ -113,7 +115,7 @@ export default async function ClientesAluguelPage({ searchParams }) {
                       <div className="flex items-center gap-3">
                         <Avatar name={c.nome} />
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-cx-text">{c.nome}</p>
+                          <Link href={`/clientes-aluguel/${c.id}`} className="block truncate font-medium text-cx-text hover:underline">{c.nome}</Link>
                           <p className="truncate text-xs text-cx-muted">{c.email || "sem e-mail"}</p>
                         </div>
                       </div>

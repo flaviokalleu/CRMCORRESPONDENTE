@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"log/slog"
+	"unicode/utf8"
 
 	"net/http"
 	"os"
@@ -108,6 +109,16 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	authRepo := auth.NewRepository(db)
 	authSvc := auth.NewService(cfg)
 	authHandler := auth.NewHandler(authRepo, authSvc)
+	// Cada login certo vira uma linha em `acessos` (tela /acessos). SQL cru:
+	// no login ainda não há tenant no contexto, então o tenant vai explícito,
+	// e action_type ('login') não existe no model Acesso.
+	authHandler.AoEntrar = func(ctx context.Context, u *models.User, ip, ua string) {
+		dev := acessos.ParseDeviceType(ua)
+		if err := db.WithContext(ctx).Exec(`INSERT INTO acessos (ip, user_agent, device_type, page, "timestamp", user_id, tenant_id, action_type)
+			VALUES (?, ?, ?, '/login', now(), ?, ?, 'login')`, ip, truncar(ua, 255), dev, u.ID, u.TenantID).Error; err != nil {
+			slog.Warn("acessos: login não registrado", "user", u.ID, "error", err)
+		}
+	}
 	// O link do e-mail de redefinição aponta para a primeira FRONTEND_URL.
 	resetBaseURL := "http://localhost:3000"
 	if len(cfg.FrontendURLs) > 0 {
@@ -444,3 +455,14 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 // jobsDeps é referenciado por main.go — mantido aqui apenas para não obrigar
 // outro import cíclico; ver internal/jobs.Deps para o contrato real.
 var _ = jobs.Deps{}
+
+// truncar corta s em n bytes sem partir caractere UTF-8 (colunas varchar(255)).
+func truncar(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}

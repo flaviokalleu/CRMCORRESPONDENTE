@@ -704,6 +704,12 @@
 .ass-barra { height: 6px; margin-top: 6px; border-radius: var(--ix-radius-pill); background: var(--slate-100); overflow: hidden; }
 .ass-barra > span { display: block; height: 100%; background: var(--ass-ink); }
 .ass-tom-ok.ass-barra > span { background: var(--green-500); }
+/* Veio pelo cadeado do menu: diz qual recurso falta e em que plano ele está. */
+.ass-aviso-recurso {
+  padding: var(--space-3) var(--space-4); border-radius: var(--ix-radius-md);
+  background: var(--amber-100); color: var(--amber-800);
+  font-size: var(--ix-text-sm); font-weight: 600;
+}
 
 /* ═══ Formulários — campo, erro, dinheiro, escolhas e barra de ações ═══
    Usado por components/ui/form-field.jsx, money-input.jsx, form-actions.jsx
@@ -1202,3 +1208,10 @@ a.fin-numero:hover { border-color: var(--innlex-navy-300); }
 .dash-vazio { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 28px; }
 .dash-vazio h2 { margin: 0; font-size: 1.25rem; }
 .dash-vazio p { margin: 0; max-width: 640px; color: var(--ink-muted); font-size: 1rem; line-height: 1.5; }
+
+/* Miniatura da foto de capa na linha da lista (aluguéis). */
+.lst-miniatura {
+  width: 56px; height: 42px; flex-shrink: 0; object-fit: cover;
+  border: 1px solid var(--border-default); border-radius: var(--ix-radius-md); background: var(--surface-sunken);
+}
+.lst-miniatura.lst-foto-vazia svg { width: 16px; height: 16px; }

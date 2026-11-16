@@ -7,15 +7,18 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/disintegration/imaging"
-	"gorm.io/gorm"
-
 	"crmimob/internal/auth"
 	"crmimob/internal/models"
+	"crmimob/internal/validacao"
 )
 
 var ErrDuplicate = errors.New("email ou username já cadastrado")
+
+// ErrProprioUsuario: ninguém exclui a si mesmo pela lista da equipe.
+var ErrProprioUsuario = errors.New("não é possível excluir o próprio usuário")
 
 // uploadDir replica uploads/imagem_correspondente do Node.
 //
@@ -43,10 +46,26 @@ func (s *Service) List(ctx context.Context) ([]models.User, error) {
 // NOTA DE SEGURANÇA (deliberada, ver 01-spec gotcha §7.5): o Node expunha esta
 // rota publicamente. Aqui ela é montada atrás de auth+tenant.
 func (s *Service) Create(ctx context.Context, req CreateRequest, photo *multipart.FileHeader) (*models.User, error) {
-	if _, err := s.repo.FindByEmailOrUsername(ctx, req.Email, req.Username, nil); err == nil {
-		return nil, ErrDuplicate
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+	req.Email = validacao.NormalizarEmail(req.Email)
+	req.Username = strings.TrimSpace(req.Username)
+	req.FirstName = strings.TrimSpace(req.FirstName)
+	if req.FirstName == "" {
+		return nil, &validacao.ErroCampo{Campo: "first_name", Mensagem: "Escreva o nome."}
+	}
+	if e := validacao.Primeiro(
+		validacao.Tamanho("first_name", req.FirstName, "O nome"),
+		validacao.Tamanho("last_name", req.LastName, "O sobrenome"),
+		validacao.Telefone(req.TelefoneValue()),
+		validacao.Email(req.Email),
+		validacao.Tamanho("pix_account", req.PixAccount, "A chave PIX"),
+		validacao.Tamanho("address", req.Address, "O endereço"),
+		validacao.Usuario(req.Username),
+		validacao.Senha(req.Password),
+	); e != nil {
+		return nil, e
+	}
+	if e := validacao.EmUso(ctx, s.repo.db, req.Email, req.Username, 0); e != nil {
+		return nil, e
 	}
 
 	hash, err := auth.HashPassword(req.Password)
@@ -60,6 +79,9 @@ func (s *Service) Create(ctx context.Context, req CreateRequest, photo *multipar
 		PixAccount: req.PixAccount, IsCorrespondente: true,
 	}
 	if err := s.repo.Create(ctx, u); err != nil {
+		if e := validacao.ConflitoUnico(err); e != nil {
+			return nil, e
+		}
 		return nil, err
 	}
 
@@ -74,21 +96,26 @@ func (s *Service) Create(ctx context.Context, req CreateRequest, photo *multipar
 }
 
 func (s *Service) Update(ctx context.Context, id uint, req UpdateRequest, photo *multipart.FileHeader) (*models.User, error) {
-	if req.Email != nil || req.Username != nil {
-		email, username := "", ""
-		if req.Email != nil {
-			email = *req.Email
-		}
-		if req.Username != nil {
-			username = *req.Username
-		}
-		if email != "" || username != "" {
-			if _, err := s.repo.FindByEmailOrUsername(ctx, email, username, &id); err == nil {
-				return nil, ErrDuplicate
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, err
-			}
-		}
+	if req.Email != nil {
+		v := validacao.NormalizarEmail(*req.Email)
+		req.Email = &v
+	}
+	if req.Username != nil {
+		v := strings.TrimSpace(*req.Username)
+		req.Username = &v
+	}
+	if e := validarEdicao(req); e != nil {
+		return nil, e
+	}
+	email, username := "", ""
+	if req.Email != nil {
+		email = *req.Email
+	}
+	if req.Username != nil {
+		username = *req.Username
+	}
+	if e := validacao.EmUso(ctx, s.repo.db, email, username, id); e != nil {
+		return nil, e
 	}
 
 	updates := map[string]any{}
@@ -132,14 +159,20 @@ func (s *Service) Update(ctx context.Context, id uint, req UpdateRequest, photo 
 
 	if len(updates) > 0 {
 		if err := s.repo.Update(ctx, id, updates); err != nil {
+			if e := validacao.ConflitoUnico(err); e != nil {
+				return nil, e
+			}
 			return nil, err
 		}
 	}
 	return s.repo.FindByID(ctx, id)
 }
 
-func (s *Service) Delete(ctx context.Context, id uint) error {
-	return s.repo.Delete(ctx, id)
+func (s *Service) Delete(ctx context.Context, id, herdeiro uint) error {
+	if id == herdeiro {
+		return ErrProprioUsuario
+	}
+	return s.repo.Delete(ctx, id, herdeiro)
 }
 
 // saveResizedPhoto decodifica, redimensiona (fit 800x800) e grava como JPEG
@@ -166,4 +199,39 @@ func saveResizedPhoto(id uint, fh *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("salvar imagem: %w", err)
 	}
 	return filename, nil
+}
+
+// validarEdicao aplica as regras do cadastro só aos campos enviados.
+// Senha vazia = manter a atual.
+func validarEdicao(req UpdateRequest) *validacao.ErroCampo {
+	lista := []*validacao.ErroCampo{}
+	if req.FirstName != nil {
+		if strings.TrimSpace(*req.FirstName) == "" {
+			return &validacao.ErroCampo{Campo: "first_name", Mensagem: "Escreva o nome."}
+		}
+		lista = append(lista, validacao.Tamanho("first_name", *req.FirstName, "O nome"))
+	}
+	if req.LastName != nil {
+		lista = append(lista, validacao.Tamanho("last_name", *req.LastName, "O sobrenome"))
+	}
+	if req.Telefone != nil {
+		lista = append(lista, validacao.Telefone(*req.Telefone))
+	}
+	if req.Email != nil {
+		lista = append(lista, validacao.Email(*req.Email))
+	}
+
+	if req.PixAccount != nil {
+		lista = append(lista, validacao.Tamanho("pix_account", *req.PixAccount, "A chave PIX"))
+	}
+	if req.Address != nil {
+		lista = append(lista, validacao.Tamanho("address", *req.Address, "O endereço"))
+	}
+	if req.Username != nil {
+		lista = append(lista, validacao.Usuario(*req.Username))
+	}
+	if req.Password != nil && *req.Password != "" {
+		lista = append(lista, validacao.Senha(*req.Password))
+	}
+	return validacao.Primeiro(lista...)
 }

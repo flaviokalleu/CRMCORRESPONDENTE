@@ -28,8 +28,10 @@ export function PageHeader({ title, subtitle, actionHref, actionLabel, actionIco
 }
 
 export function initialsOf(name) {
-  const p = (name || "").trim().split(/\s+/).filter(Boolean);
-  return p.length ? (p[0][0] + (p[1]?.[0] || "")).toUpperCase() : "?";
+  // 1ª letra/número de cada palavra, por code point: "x[0]" cortava emoji ao
+  // meio (meio par UTF-16) e o servidor e o navegador renderizavam diferente.
+  const p = (name || "").trim().split(/\s+/).map((w) => w.match(/[\p{L}\p{N}]/u)?.[0]).filter(Boolean);
+  return p.length ? (p[0] + (p[1] || "")).toUpperCase() : "?";
 }
 
 export function Avatar({ name, className = "" }) {

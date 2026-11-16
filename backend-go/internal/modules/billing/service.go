@@ -154,10 +154,23 @@ func (s *Service) GetPlanBySlug(ctx context.Context, slug string) (*models.Plan,
 
 func (s *Service) CreatePlan(ctx context.Context, req PlanRequest) (*models.Plan, error) {
 	p := req.ToModel()
+	ativo := p.Ativo // o INSERT devolve o default do banco em p.Ativo
 	if err := s.repo.CreatePlan(ctx, p); err != nil {
 		return nil, err
 	}
-	return p, nil
+	// O GORM troca valor zero pelo `default` da tag no INSERT: "0 = sem
+	// limite" virava 50 clientes / 2 usuários / 20 imóveis / 10 aluguéis e
+	// um plano criado fora da vitrine (ativo=false) nascia na vitrine.
+	// Regrava esses campos exatamente como vieram da tela.
+	if err := s.repo.UpdatePlan(ctx, p.ID, map[string]any{
+		"max_clientes": req.MaxClientes, "max_usuarios": req.MaxUsuarios,
+		"max_imoveis": req.MaxImoveis, "max_alugueis": req.MaxAlugueis,
+		"max_storage_mb": req.MaxStorageMB, "max_file_size_mb": req.MaxFileSizeMB,
+		"ativo": ativo, "ordem": req.Ordem, "trial_dias": req.TrialDias,
+	}); err != nil {
+		return nil, err
+	}
+	return s.repo.GetPlanByID(ctx, p.ID)
 }
 
 func (s *Service) UpdatePlan(ctx context.Context, id uint, req PlanRequest) (*models.Plan, error) {

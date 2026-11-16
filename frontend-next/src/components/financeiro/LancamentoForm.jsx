@@ -24,6 +24,10 @@ const TEXTOS = {
   },
 };
 
+// Teto da coluna numeric(12,2) do banco; categoria e descrição são varchar(255).
+const VALOR_MAXIMO = 9999999999.99;
+const MAX_TEXTO = 255;
+
 const vazio = () => ({ tipo: "", valor: "", descricao: "", data: hojeISO() });
 
 // Cadastro rápido que abre na própria lista (o usuário não perde de vista o
@@ -43,12 +47,16 @@ export function LancamentoForm({ tipo = "receita", categorias = [], abertoInicia
     if (erros[campo]) setErros((e) => ({ ...e, [campo]: undefined }));
   };
 
+  // Cancelar descarta o que foi digitado: reabrir começa limpo.
+  const fechar = () => { setForm(vazio()); setErros({}); setAberto(false); };
+
   const enviar = async (e) => {
     e.preventDefault();
     const valor = parseMoney(form.valor);
     const novos = {};
     if (!form.tipo.trim()) novos.tipo = "Diga do que se trata (a categoria).";
     if (!(valor > 0)) novos.valor = "Informe um valor maior que zero.";
+    else if (valor > VALOR_MAXIMO) novos.valor = "Valor alto demais. O máximo é R$ 9.999.999.999,99.";
     if (!form.data) novos.data = "Escolha a data.";
     setErros(novos);
     if (Object.keys(novos).length) return;
@@ -67,6 +75,7 @@ export function LancamentoForm({ tipo = "receita", categorias = [], abertoInicia
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (res.status === 400 && /valor/i.test(data.error || "")) setErros({ valor: data.error });
         toast.error(data.error || "Não foi possível salvar. Tente de novo.");
         return;
       }
@@ -93,7 +102,7 @@ export function LancamentoForm({ tipo = "receita", categorias = [], abertoInicia
     <form onSubmit={enviar} noValidate className="crm-form crm-card fin-novo w-full" aria-label={t.titulo}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-ink-heading">{t.titulo}</h2>
-        <Button type="button" variant="ghost" size="icon" onClick={() => setAberto(false)} aria-label="Fechar">
+        <Button type="button" variant="ghost" size="icon" onClick={fechar} aria-label="Fechar">
           <X className="size-4" />
         </Button>
       </div>
@@ -105,6 +114,7 @@ export function LancamentoForm({ tipo = "receita", categorias = [], abertoInicia
             value={form.tipo}
             onChange={(e) => muda("tipo", e.target.value)}
             placeholder={t.exemploTipo}
+            maxLength={MAX_TEXTO}
             autoComplete="off"
             autoFocus
           />
@@ -125,11 +135,11 @@ export function LancamentoForm({ tipo = "receita", categorias = [], abertoInicia
           <input type="date" value={form.data} onChange={(e) => muda("data", e.target.value)} />
         </FormField>
         <FormField id={`${idBase}-desc`} label="Descrição" optional className="fin-novo-largo">
-          <input type="text" value={form.descricao} onChange={(e) => muda("descricao", e.target.value)} placeholder={t.exemploDesc} />
+          <input type="text" value={form.descricao} onChange={(e) => muda("descricao", e.target.value)} placeholder={t.exemploDesc} maxLength={MAX_TEXTO} />
         </FormField>
       </div>
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => setAberto(false)}>Cancelar</Button>
+        <Button type="button" variant="outline" onClick={fechar}>Cancelar</Button>
         <Button type="submit" disabled={salvando}>{salvando ? "Salvando…" : t.salvar}</Button>
       </div>
     </form>

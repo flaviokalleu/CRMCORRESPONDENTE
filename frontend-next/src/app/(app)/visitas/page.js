@@ -8,7 +8,7 @@ export const metadata = { title: "Visitas" };
 // popular a lista e os selects do formulário de agendamento.
 export default async function VisitasPage() {
   const [visitasRes, clientesRes, imoveisRes] = await Promise.all([
-    apiGet("/visitas"),
+    apiGet("/visitas?limit=500"), // o padrão do Go é 20: a 21ª visita sumia da tela
     apiGet("/clientes?limit=500"),
     apiGet("/imoveis"),
   ]);

@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -517,7 +518,10 @@ export function ClientesLista({ initialSearch = "",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.error || "Não foi possível mudar o status. Tente de novo.");
+      }
       // A troca move o cliente de grupo; sem recontar, a aba fica mentindo.
       fetchContagens({ q, status, grupo, corretor, inicio, fim, page, limit: LIMIT });
       // Aprovado, condicionado e reprovado vêm de uma tela que a Caixa devolveu;
@@ -526,8 +530,11 @@ export function ClientesLista({ initialSearch = "",
         const atual = prev.find((c) => c.id === id);
         setTelaDe({ id, status: newStatus, nome: atual?.nome });
       }
-    } catch {
+    } catch (e) {
       setClientes(prev); // reverte
+      // Antes voltava ao status antigo sem dizer nada; quem arrastou o card
+      // achava que tinha mudado.
+      toast.error(e.message || "Não foi possível mudar o status. Tente de novo.");
     } finally {
       setSavingId(null);
     }
@@ -1051,6 +1058,7 @@ export function ClientesLista({ initialSearch = "",
                           onClick={() => setEditingId(c.id)}
                           role="button"
                           tabIndex={0}
+                          aria-label={`Abrir ${c.nome || "cliente"}`}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditingId(c.id); }
                           }}

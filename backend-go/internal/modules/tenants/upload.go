@@ -1,14 +1,26 @@
 package tenants
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"image"
+	_ "image/jpeg" // decoders para conferir que o arquivo é imagem
+	_ "image/png"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	_ "golang.org/x/image/webp"
+
+	"crmimob/internal/uploads"
 )
+
+// ErrLogoInvalido: extensão fora da lista ou conteúdo que não é imagem.
+var ErrLogoInvalido = errors.New("logo não é imagem PNG/JPG/WEBP")
 
 // saveLogo grava o logo em uploads/tenants/{tenantId}/logo_{timestamp}{ext},
 // removendo o antigo se existir (equivalente ao Node — ver 01-spec §2.4).
@@ -18,9 +30,21 @@ func saveLogo(tenantID uint, fh *multipart.FileHeader) (string, error) {
 	}
 	ext := strings.ToLower(filepath.Ext(fh.Filename))
 	if !map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}[ext] {
-		return "", fmt.Errorf("formato de logo não permitido")
+		return "", ErrLogoInvalido
 	}
-	dir := filepath.Join("uploads", "tenants", fmt.Sprintf("%d", tenantID))
+	// Confere o conteúdo: um texto renomeado para .png era gravado e servido.
+	src0, err := fh.Open()
+	if err != nil {
+		return "", err
+	}
+	cabeca, _ := io.ReadAll(io.LimitReader(src0, 5*1024*1024+1))
+	src0.Close()
+	if _, _, err := image.DecodeConfig(bytes.NewReader(cabeca)); err != nil {
+		return "", ErrLogoInvalido
+	}
+	// Mesma raiz que o router serve em /api/uploads/tenants. Antes a pasta era
+	// relativa ao processo (backend-go/uploads), e o logo enviado não abria.
+	dir := filepath.Join(uploads.Root(), "tenants", fmt.Sprintf("%d", tenantID))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}

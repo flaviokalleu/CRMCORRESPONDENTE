@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	"crmimob/internal/validacao"
 )
 
 type Handler struct{ svc *Service }
@@ -18,6 +20,7 @@ func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 func (h *Handler) Register(r *gin.RouterGroup) {
 	r.GET("/proprietarios", h.List)
 	r.POST("/proprietarios", h.Create)
+	r.PUT("/proprietarios/:id", h.Update)
 	r.DELETE("/proprietarios/:id", h.Delete)
 }
 
@@ -33,15 +36,47 @@ func (h *Handler) List(c *gin.Context) {
 func (h *Handler) Create(c *gin.Context) {
 	var req CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name é obrigatório"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Não deu para ler os dados enviados.", "campo": "name"})
 		return
 	}
 	p, err := h.svc.Create(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar proprietário"})
+		responder(c, err, "Erro ao cadastrar proprietário. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusCreated, p)
+}
+
+func (h *Handler) Update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+	var req CreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Não deu para ler os dados enviados.", "campo": "name"})
+		return
+	}
+	p, err := h.svc.Update(c.Request.Context(), uint(id), req)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Proprietário não encontrado"})
+			return
+		}
+		responder(c, err, "Erro ao salvar proprietário. Tente de novo.")
+		return
+	}
+	c.JSON(http.StatusOK, p)
+}
+
+func responder(c *gin.Context, err error, padrao string) {
+	var e *validacao.ErroCampo
+	if errors.As(err, &e) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": e.Mensagem, "campo": e.Campo})
+		return
+	}
+	c.JSON(http.StatusInternalServerError, gin.H{"error": padrao})
 }
 
 func (h *Handler) Delete(c *gin.Context) {

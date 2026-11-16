@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"crmimob/internal/uploads"
+	"crmimob/internal/validacao"
 )
 
 // uploadsRoot é a raiz compartilhada — a definição vive em internal/uploads.
@@ -58,9 +59,46 @@ func (h *Handler) RegisterPublicRoutes(rg *gin.RouterGroup) {
 		g.GET("", h.ListPublico)
 		g.GET("/", h.ListPublico)
 		g.GET("/busca", h.Busca)
-		g.GET("/:id/semelhantes", h.Semelhantes)
-		g.GET("/:id", h.Get)
+		g.GET("/:id/semelhantes", h.SemelhantesPublico)
+		g.GET("/:id", h.GetPublico)
 	}
+}
+
+// GetPublico só mostra imóvel disponível — a lista pública já escondia
+// vendidos/reservados, mas o link direto (/imoveis/:id) ainda abria.
+func (h *Handler) GetPublico(c *gin.Context) {
+	id, err := parseID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+	im, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil || !strings.EqualFold(strings.TrimSpace(im.SituacaoImovel), "disponivel") {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Imóvel não encontrado"})
+		return
+	}
+	c.JSON(http.StatusOK, im)
+}
+
+// SemelhantesPublico: igual a Semelhantes, sem vendidos/reservados.
+func (h *Handler) SemelhantesPublico(c *gin.Context) {
+	id, err := parseID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+	list, err := h.svc.Semelhantes(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Imóvel não encontrado"})
+		return
+	}
+	out := list[:0]
+	for _, im := range list {
+		if strings.EqualFold(strings.TrimSpace(im.SituacaoImovel), "disponivel") {
+			out = append(out, im)
+		}
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 // ListPublico é igual a List, mas força ApenasDisponiveis=true.
@@ -119,10 +157,16 @@ func (h *Handler) Create(c *gin.Context) {
 			tenantID = &tid
 		}
 	}
+	if e := validarArquivos(c); e != nil {
+		responderErroCampo(c, e)
+		return
+	}
 	in := readImovelInput(c)
 	im, err := h.svc.Create(c.Request.Context(), in, tenantID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos"})
+		if !responderErroCampo(c, err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Não foi possível salvar o imóvel. Confira os dados."})
+		}
 		return
 	}
 	h.processImages(c, im.ID)
@@ -137,6 +181,10 @@ func (h *Handler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
 		return
 	}
+	if e := validarArquivos(c); e != nil {
+		responderErroCampo(c, e)
+		return
+	}
 	in := readImovelInput(c)
 	im, err := h.svc.Update(c.Request.Context(), id, in)
 	if err != nil {
@@ -144,7 +192,9 @@ func (h *Handler) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Imóvel não encontrado"})
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos"})
+		if !responderErroCampo(c, err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Não foi possível salvar o imóvel. Confira os dados."})
+		}
 		return
 	}
 	h.processImages(c, im.ID)
@@ -162,6 +212,8 @@ func (h *Handler) Delete(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Imóvel não encontrado"})
 		return
 	}
+	// Apaga também as fotos/documentos do disco (antes ficavam órfãos).
+	_ = os.RemoveAll(filepath.Join(uploadsRoot(), "imoveis", strconv.FormatUint(uint64(id), 10)))
 	c.JSON(http.StatusOK, gin.H{"message": "Imóvel removido com sucesso"})
 }
 
@@ -293,6 +345,43 @@ func saveFile(fh *multipart.FileHeader, dir string) (relPath string, ok bool) {
 		return "", false
 	}
 	return filepath.ToSlash(rel), true
+}
+
+// responderErroCampo responde 400 com {error, campo} quando err é de validação.
+func responderErroCampo(c *gin.Context, err error) bool {
+	var e *validacao.ErroCampo
+	if errors.As(err, &e) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": e.Mensagem, "campo": e.Campo})
+		return true
+	}
+	return false
+}
+
+// validarArquivos recusa ANTES de gravar qualquer coisa: antes, foto grande ou
+// arquivo que não é imagem era descartado em silêncio e o cadastro dizia
+// "salvo" sem a foto.
+func validarArquivos(c *gin.Context) error {
+	form, err := c.MultipartForm()
+	if err != nil || form == nil {
+		return nil
+	}
+	campos := map[string]string{"imagem_capa": "Foto de capa", "imagens": "Fotos", "documentacao": "Documentação"}
+	for campo, rotulo := range campos {
+		for _, fh := range form.File[campo] {
+			ext := strings.ToLower(filepath.Ext(fh.Filename))
+			if !allowedPropertyUploadExt[ext] || (campo != "documentacao" && ext == ".pdf") {
+				aceitos := "JPG, PNG ou WEBP"
+				if campo == "documentacao" {
+					aceitos = "PDF, JPG, PNG ou WEBP"
+				}
+				return &validacao.ErroCampo{Campo: campo, Mensagem: rotulo + ": o arquivo \"" + fh.Filename + "\" não é aceito. Envie " + aceitos + "."}
+			}
+			if fh.Size > maxPropertyUploadBytes {
+				return &validacao.ErroCampo{Campo: campo, Mensagem: rotulo + ": o arquivo \"" + fh.Filename + "\" passa de 10 MB. Diminua a foto e tente de novo."}
+			}
+		}
+	}
+	return nil
 }
 
 const maxPropertyUploadBytes int64 = 10 << 20

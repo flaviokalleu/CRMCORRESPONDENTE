@@ -31,7 +31,11 @@ func (h *Handler) Register(rg *gin.RouterGroup) {
 func (h *Handler) create(c *gin.Context) {
 	var req UpsertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: confira categoria, valor e data."})
+		return
+	}
+	if msg := req.Validar(); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 	m := &models.Despesa{
@@ -40,7 +44,7 @@ func (h *Handler) create(c *gin.Context) {
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}
 	if err := h.repo.Create(c.Request.Context(), m); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar o lançamento. Tente de novo."})
 		return
 	}
 	c.JSON(http.StatusCreated, m)
@@ -85,7 +89,11 @@ func (h *Handler) update(c *gin.Context) {
 	}
 	var req UpsertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos: confira categoria, valor e data."})
+		return
+	}
+	if msg := req.Validar(); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 	updates := map[string]any{
@@ -94,7 +102,7 @@ func (h *Handler) update(c *gin.Context) {
 		"updatedAt": time.Now(),
 	}
 	if err := h.repo.Update(c.Request.Context(), uint(id), updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar o lançamento. Tente de novo."})
 		return
 	}
 	m, _ := h.repo.FindByID(c.Request.Context(), uint(id))

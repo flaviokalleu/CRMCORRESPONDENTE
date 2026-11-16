@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -113,7 +113,8 @@ function buildInitial(initial) {
 }
 
 // O Go recusa sem nome, endereço ou tipo ("Dados inválidos").
-const ORDEM_CAMPOS = ["nome_imovel", "tipo", "endereco", "valor_venda"];
+const ORDEM_CAMPOS = ["nome_imovel", "tipo", "situacao_imovel", "endereco", "localizacao", "quartos", "banheiro", "valor_venda", "valor_avaliacao", "descricao_imovel", "observacoes", "tags", "imagem_capa", "documentacao", "imagens"];
+const FOTOS = "image/jpeg,image/png,image/webp";
 
 export function ImovelForm({ mode = "create", imovelId, initial }) {
   const router = useRouter();
@@ -124,6 +125,9 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [erros, setErros] = useState({});
+  // Trava contra clique duplo: o estado `loading` só desabilita o botão no
+  // próximo render, e dois cliques rápidos criavam dois imóveis.
+  const enviando = useRef(false);
 
   const set = (name, value) => {
     setForm((p) => ({ ...p, [name]: value }));
@@ -147,6 +151,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (enviando.current) return;
     setError("");
 
     const novos = {};
@@ -161,7 +166,12 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
     }
 
     const fd = new FormData();
-    const put = (k, v) => { if (v !== undefined && v !== null && v.toString().trim() !== "") fd.append(k, v); };
+    // Na edição o campo apagado vai vazio, para o backend limpar o valor
+    // (antes era omitido e o valor antigo voltava).
+    const put = (k, v) => {
+      const vazio = v === undefined || v === null || v.toString().trim() === "";
+      if (!vazio || mode === "edit") fd.append(k, vazio ? "" : v);
+    };
 
     put("nome_imovel", form.nome_imovel);
     put("tipo", form.tipo);
@@ -171,7 +181,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
     put("quartos", soDigitos(form.quartos) || "0");
     put("banheiro", soDigitos(form.banheiro) || "0");
     put("valor_venda", form.vendaDigits);
-    if (form.avalDigits) put("valor_avaliacao", form.avalDigits);
+    put("valor_avaliacao", form.avalDigits);
     fd.append("exclusivo", form.exclusivo ? "true" : "false");
     fd.append("tem_inquilino", form.tem_inquilino ? "true" : "false");
     put("descricao_imovel", form.descricao_imovel);
@@ -182,13 +192,21 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
     galeria.forEach((f) => fd.append("imagens", f));
     if (documentacao[0]) fd.append("documentacao", documentacao[0]);
 
+    enviando.current = true;
     setLoading(true);
     try {
       const url = mode === "edit" ? `/api/backend/imoveis/${imovelId}` : "/api/backend/imoveis/";
       const res = await fetch(url, { method: mode === "edit" ? "PUT" : "POST", body: fd });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || data.message || `Erro (${res.status})`);
+        const msg = data.error || data.message || "Não foi possível salvar o imóvel. Tente de novo.";
+        // Erro de um campo: mostra embaixo dele e leva o foco até lá.
+        if (data.campo && ORDEM_CAMPOS.includes(data.campo)) {
+          setErros({ [data.campo]: msg });
+          focarPrimeiroErro({ [data.campo]: msg }, ORDEM_CAMPOS);
+          return;
+        }
+        throw new Error(msg);
       }
       const saved = await res.json().catch(() => ({}));
       router.refresh();
@@ -199,12 +217,18 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
         });
         router.push(saved?.id ? `/imovel/${saved.id}` : "/imoveis/lista");
       } else {
+        // As fotos novas já subiram: limpa a escolha para não reenviar
+        // as mesmas fotos (duplicadas) num segundo "Salvar".
+        setCapa([]);
+        setGaleria([]);
+        setDocumentacao([]);
         toast.success("Alterações salvas.");
       }
     } catch (err) {
       setError(err.message || "Não foi possível salvar o imóvel. Tente de novo.");
       (document.getElementById("conteudo") || window).scrollTo({ top: 0, behavior: "smooth" }); // a página rola dentro do <main> do layout
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   };
@@ -217,7 +241,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField id="nome_imovel" label="Nome do imóvel" required error={erros.nome_imovel}
             hint="Um nome curto para achar depois na lista." className="sm:col-span-2">
-            <input name="nome_imovel" value={form.nome_imovel} onChange={onText} placeholder="Ex.: Apartamento Jardim Europa" />
+            <input name="nome_imovel" maxLength={255} value={form.nome_imovel} onChange={onText} placeholder="Ex.: Apartamento Jardim Europa" />
           </FormField>
           <FormField id="tipo" label="Tipo" required error={erros.tipo}>
             <select name="tipo" value={form.tipo} onChange={onText}>
@@ -225,24 +249,26 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
               {tiposOptions.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </FormField>
-          <FormField id="situacao_imovel" label="Situação">
+          <FormField id="situacao_imovel" label="Situação" error={erros.situacao_imovel}>
             <select name="situacao_imovel" value={form.situacao_imovel} onChange={onText}>
               {SITUACOES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </FormField>
           <FormField id="endereco" label="Rua, número e bairro" required error={erros.endereco} className="sm:col-span-2">
-            <input name="endereco" autoComplete="street-address" value={form.endereco} onChange={onText} placeholder="Ex.: Rua das Flores, 123, Centro" />
+            <input name="endereco" maxLength={255} autoComplete="street-address" value={form.endereco} onChange={onText} placeholder="Ex.: Rua das Flores, 123, Centro" />
           </FormField>
-          <FormField id="localizacao" label="Cidade – UF" className="sm:col-span-2">
-            <input name="localizacao" value={form.localizacao} onChange={onText} placeholder="Ex.: Valparaíso de Goiás – GO" />
+          <FormField id="localizacao" label="Cidade – UF" error={erros.localizacao} className="sm:col-span-2">
+            <input name="localizacao" maxLength={255} value={form.localizacao} onChange={onText} placeholder="Ex.: Valparaíso de Goiás – GO" />
           </FormField>
           <div className="crm-field">
             <p className="crm-field-label">Quartos</p>
             <Contagem id="quartos" label="Quartos" value={form.quartos} onChange={(v) => set("quartos", v)} />
+            {erros.quartos && <p className="crm-field-error" role="alert">{erros.quartos}</p>}
           </div>
           <div className="crm-field">
             <p className="crm-field-label">Banheiros</p>
             <Contagem id="banheiro" label="Banheiros" value={form.banheiro} onChange={(v) => set("banheiro", v)} />
+            {erros.banheiro && <p className="crm-field-error" role="alert">{erros.banheiro}</p>}
           </div>
         </div>
       </Section>
@@ -252,7 +278,7 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
           <FormField id="valor_venda" label="Valor de venda" required error={erros.valor_venda}>
             <MoneyInput semCentavos value={formatMilhar(form.vendaDigits)} onChange={(v) => set("vendaDigits", soDigitos(v))} placeholder="300.000" />
           </FormField>
-          <FormField id="valor_avaliacao" label="Valor de avaliação" optional hint="Quanto o banco avaliou, se já souber.">
+          <FormField id="valor_avaliacao" label="Valor de avaliação" optional error={erros.valor_avaliacao} hint="Quanto o banco avaliou, se já souber.">
             <MoneyInput semCentavos value={formatMilhar(form.avalDigits)} onChange={(v) => set("avalDigits", soDigitos(v))} placeholder="320.000" />
           </FormField>
         </div>
@@ -264,14 +290,14 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
 
       <Section icon={FileText} title="Descrição" subtitle="Diferenciais e anotações">
         <div className="space-y-4">
-          <FormField id="descricao_imovel" label="Descrição" optional>
-            <textarea name="descricao_imovel" value={form.descricao_imovel} onChange={onText} rows={3} placeholder="Diferenciais, acabamento, lazer…" />
+          <FormField id="descricao_imovel" label="Descrição" optional error={erros.descricao_imovel}>
+            <textarea name="descricao_imovel" maxLength={10000} value={form.descricao_imovel} onChange={onText} rows={3} placeholder="Diferenciais, acabamento, lazer…" />
           </FormField>
-          <FormField id="observacoes" label="Anotações internas" optional hint="Só a equipe vê. O cliente não vê.">
-            <textarea name="observacoes" value={form.observacoes} onChange={onText} rows={2} />
+          <FormField id="observacoes" label="Anotações internas" optional error={erros.observacoes} hint="Só a equipe vê. O cliente não vê.">
+            <textarea name="observacoes" maxLength={10000} value={form.observacoes} onChange={onText} rows={2} />
           </FormField>
-          <FormField id="tags" label="Palavras-chave" optional hint="Separe por vírgula. Ajudam a achar o imóvel na busca.">
-            <input name="tags" value={form.tags} onChange={onText} placeholder="piscina, financiável, aceita permuta" />
+          <FormField id="tags" label="Palavras-chave" optional error={erros.tags} hint="Separe por vírgula. Ajudam a achar o imóvel na busca.">
+            <input name="tags" maxLength={255} value={form.tags} onChange={onText} placeholder="piscina, financiável, aceita permuta" />
           </FormField>
         </div>
       </Section>
@@ -296,17 +322,20 @@ export function ImovelForm({ mode = "create", imovelId, initial }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="crm-field">
             <p className="crm-field-label">Foto de capa</p>
-            <Dropzone id="imagem_capa" imagem accept="image/*" files={capa} onChange={setCapa} texto="Toque para escolher a foto principal" />
+            {erros.imagem_capa && <p className="crm-field-error" role="alert">{erros.imagem_capa}</p>}
+            <Dropzone id="imagem_capa" imagem accept={FOTOS} files={capa} onChange={setCapa} texto="Toque para escolher a foto principal" />
           </div>
           <div className="crm-field">
             <p className="crm-field-label">Documentação (PDF)</p>
-            <Dropzone id="documentacao" accept="application/pdf,image/*" files={documentacao} onChange={setDocumentacao} texto="Toque para escolher o documento" />
+            {erros.documentacao && <p className="crm-field-error" role="alert">{erros.documentacao}</p>}
+            <Dropzone id="documentacao" accept={`application/pdf,${FOTOS}`} files={documentacao} onChange={setDocumentacao} texto="Toque para escolher o documento" />
           </div>
         </div>
 
         <div className="crm-field mt-4">
           <p className="crm-field-label">Mais fotos</p>
-          <Dropzone id="imagens" imagem multiple accept="image/*" files={galeria} onChange={setGaleria} texto="Toque para escolher várias fotos" />
+          {erros.imagens && <p className="crm-field-error" role="alert">{erros.imagens}</p>}
+          <Dropzone id="imagens" imagem multiple accept={FOTOS} files={galeria} onChange={setGaleria} texto="Toque para escolher várias fotos" />
         </div>
       </Section>
 

@@ -56,7 +56,10 @@ export function SimuladorForm() {
   const valorFinanciado = Math.max(0, valorImovel - valorEntrada);
   const percentualEntrada = valorImovel > 0 ? (valorEntrada / valorImovel) * 100 : 0;
   const prazoNum = parseInt(prazoMeses, 10) || 0;
-  const taxaNum = parseFloat(String(taxaJurosAnual).replace(",", ".")) || 0;
+  // pt-BR: "1.000,5" → 1000.5 (antes virava 1%, em silêncio). Sem vírgula,
+  // o ponto é o separador decimal ("9.37").
+  const taxaTexto = String(taxaJurosAnual);
+  const taxaNum = parseFloat(taxaTexto.includes(",") ? taxaTexto.replace(/\./g, "").replace(",", ".") : taxaTexto) || 0;
 
   // Validação por etapa, campo a campo. O botão fica sempre ativo: ao tocar
   // com algo faltando, o erro aparece embaixo do campo e o foco vai até ele.
@@ -71,6 +74,7 @@ export function SimuladorForm() {
     const e = {};
     if (prazoNum < 12 || prazoNum > 420) e.prazo = "O prazo deve ficar entre 12 e 420 meses (1 a 35 anos).";
     if (taxaNum <= 0) e.taxa = "Informe os juros ao ano. Exemplo: 9,37";
+    else if (taxaNum > 50) e.taxa = "Juros ao ano acima de 50% não existem em financiamento imobiliário. Confira o número.";
     return e;
   }, [prazoNum, taxaNum]);
   const erroVisivel = (id) => (tentou ? (etapa === 1 ? errosEtapa1 : errosEtapa2)[id] : undefined);

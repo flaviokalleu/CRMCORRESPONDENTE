@@ -9,6 +9,7 @@ import (
 	"gorm.io/datatypes"
 
 	"crmimob/internal/models"
+	"crmimob/internal/validacao"
 )
 
 // InquilinoService implementa o CRUD de ClienteAluguel (inquilino) + a
@@ -47,6 +48,65 @@ func parseDatePtr(s string) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+// validarInquilino confere o cadastro (antes: CPF/telefone/data inválidos
+// eram gravados ou viravam nulo em silêncio; texto longo dava 500).
+func validarInquilino(req ClienteAluguelRequest) *validacao.ErroCampo {
+	e := validacao.Primeiro(
+		validacao.Texto("nome", req.Nome, "Nome do inquilino", true),
+		validacao.CPF("cpf", req.CPF),
+		validacao.EmailOpcional("email", req.Email),
+		validacao.TelefoneOpcional("telefone", req.Telefone),
+		validacao.Data("data_nascimento", req.DataNascimento, "Data de nascimento"),
+		validacao.Texto("cidade_nascimento", req.CidadeNascimento, "Cidade de nascimento", false),
+		validacao.Data("data_inicio_contrato", req.DataInicioContrato, "Início do contrato"),
+		validacao.Data("data_fim_contrato", req.DataFimContrato, "Fim do contrato"),
+		validacao.Texto("proprietario_nome", req.ProprietarioNome, "Nome do proprietário", false),
+		validacao.TelefoneOpcional("proprietario_telefone", req.ProprietarioTelefone),
+		validacao.Texto("proprietario_pix", req.ProprietarioPix, "Pix do proprietário", false),
+		validacao.Texto("corretor_nome", req.CorretorNome, "Nome do corretor", false),
+		validacao.Texto("corretor_pix", req.CorretorPix, "Pix do corretor", false),
+	)
+	if e != nil {
+		return e
+	}
+	if req.ValorAluguel <= 0 {
+		return &validacao.ErroCampo{Campo: "valor_aluguel", Mensagem: "Informe o valor do aluguel."}
+	}
+	if req.ValorAluguel > 99999999 {
+		return &validacao.ErroCampo{Campo: "valor_aluguel", Mensagem: "Valor do aluguel alto demais. Confira o número."}
+	}
+	if e := validacao.Faixa("dia_vencimento", req.DiaVencimento, "Dia do vencimento", 1, 31); e != nil {
+		return e
+	}
+	if req.TaxaAdministracao < 0 || req.TaxaAdministracao > 100 {
+		return &validacao.ErroCampo{Campo: "taxa_administracao", Mensagem: "Taxa de administração: use de 0 a 100%."}
+	}
+	if req.CorretorPercentual < 0 || req.CorretorPercentual > 100 {
+		return &validacao.ErroCampo{Campo: "corretor_percentual", Mensagem: "Comissão do corretor: use de 0 a 100%."}
+	}
+	switch req.IndiceReajuste {
+	case "", "IGPM", "IPCA", "INPC", "IGP-M":
+	default:
+		return &validacao.ErroCampo{Campo: "indice_reajuste", Mensagem: "Escolha IGP-M, IPCA ou INPC."}
+	}
+	if ini, fim := parseDatePtr(req.DataInicioContrato), parseDatePtr(req.DataFimContrato); ini != nil && fim != nil && !fim.After(*ini) {
+		return &validacao.ErroCampo{Campo: "data_fim_contrato", Mensagem: "O fim do contrato precisa ser depois do início."}
+	}
+	if req.TemFiador {
+		if e := validacao.Primeiro(
+			validacao.Texto("fiador_nome", req.FiadorNome, "Nome do fiador", true),
+			validacao.CPF("fiador_cpf", req.FiadorCPF),
+			validacao.EmailOpcional("fiador_email", req.FiadorEmail),
+			validacao.TelefoneOpcional("fiador_telefone", req.FiadorTelefone),
+			validacao.Data("fiador_data_nascimento", req.FiadorDataNascimento, "Nascimento do fiador"),
+			validacao.Texto("fiador_cidade_nascimento", req.FiadorCidadeNascimento, "Cidade do fiador", false),
+		); e != nil {
+			return e
+		}
+	}
+	return nil
 }
 
 func fromReq(req ClienteAluguelRequest) *models.ClienteAluguel {
@@ -121,6 +181,9 @@ func fromReq(req ClienteAluguelRequest) *models.ClienteAluguel {
 // chamador — ver handler, que lê req.tenant.asaas_api_key). Mantido como
 // parâmetro explícito para não acoplar este service ao modelo Tenant.
 func (s *InquilinoService) Create(ctx context.Context, req ClienteAluguelRequest, tenantID *uint, asaasAPIKey string) (*models.ClienteAluguel, error) {
+	if e := validarInquilino(req); e != nil {
+		return nil, e
+	}
 	c := fromReq(req)
 	c.TenantID = tenantID
 	c.HistoricoPagamentos = datatypes.JSON([]byte("[]"))
@@ -166,8 +229,24 @@ func (s *InquilinoService) Update(ctx context.Context, id uint, req ClienteAlugu
 		return nil, ErrNotFound
 	}
 
+	if e := validarInquilino(req); e != nil {
+		return nil, e
+	}
 	valorAnterior := c.ValorAluguel
 	novo := fromReq(req)
+	// Campos que o formulário não manda: antes eram zerados a cada edição
+	// (contrato gerado, documentos anexados, pago, multa/juros).
+	novo.Pago = c.Pago
+	novo.PercentualMulta = c.PercentualMulta
+	novo.PercentualJurosMora = c.PercentualJurosMora
+	novo.ContratoPath = c.ContratoPath
+	novo.ContratoDocumentos = c.ContratoDocumentos
+	if req.AluguelID == nil {
+		novo.AluguelID = c.AluguelID
+	}
+	if req.ProprietarioID == nil {
+		novo.ProprietarioID = c.ProprietarioID
+	}
 	novo.ID = c.ID
 	novo.TenantID = c.TenantID
 	novo.HistoricoPagamentos = c.HistoricoPagamentos
@@ -205,6 +284,12 @@ func (s *InquilinoService) Delete(ctx context.Context, id uint, asaasAPIKey stri
 // --- Histórico de pagamentos manual (JSON embutido) ---
 
 func (s *InquilinoService) AddPagamentoManual(ctx context.Context, id uint, req PagamentoManualRequest) (*models.ClienteAluguel, error) {
+	if req.Valor <= 0 {
+		return nil, &validacao.ErroCampo{Campo: "valor", Mensagem: "Informe o valor pago."}
+	}
+	if e := validacao.Data("data", req.Data, "Data do pagamento"); e != nil || req.Data == "" {
+		return nil, &validacao.ErroCampo{Campo: "data", Mensagem: "Escolha a data do pagamento."}
+	}
 	c, err := s.repo.FindInquilinoByID(ctx, id)
 	if err != nil {
 		return nil, ErrNotFound
@@ -275,16 +360,19 @@ func (s *InquilinoService) ListCobrancas(ctx context.Context, clienteAluguelID u
 }
 
 func (s *InquilinoService) CriarCobrancaAvulsa(ctx context.Context, id uint, req CobrancaAvulsaRequest, asaasAPIKey string) (*models.CobrancaAluguel, error) {
+	if req.Valor <= 0 {
+		return nil, &validacao.ErroCampo{Campo: "valor", Mensagem: "Informe o valor da cobrança."}
+	}
+	venc, err := time.Parse("2006-01-02", req.DataVencimento)
+	if err != nil {
+		return nil, &validacao.ErroCampo{Campo: "data_vencimento", Mensagem: "Escolha a data de vencimento."}
+	}
 	c, err := s.repo.FindInquilinoByID(ctx, id)
 	if err != nil {
 		return nil, ErrNotFound
 	}
 	if c.AsaasCustomerID == nil {
 		return nil, ErrAsaasCustomerRequired
-	}
-	venc, err := time.Parse("2006-01-02", req.DataVencimento)
-	if err != nil {
-		return nil, err
 	}
 
 	cob := &models.CobrancaAluguel{

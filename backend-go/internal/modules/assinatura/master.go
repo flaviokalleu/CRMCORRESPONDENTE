@@ -30,6 +30,7 @@ func (h *Handler) RegisterMaster(g *gin.RouterGroup) {
 	g.POST("/assinaturas/:tenantId/bloquear", h.masterBloquear)
 	g.POST("/assinaturas/:tenantId/desbloquear", h.masterDesbloquear)
 	g.PUT("/assinaturas/:tenantId/condicoes", h.masterCondicoes)
+	g.PUT("/assinaturas/:tenantId/plano", h.masterTrocarPlano)
 	g.GET("/assinaturas/:tenantId", h.masterVer)
 }
 
@@ -172,6 +173,10 @@ func (h *Handler) masterCondicoes(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Preço não pode ser negativo"})
 			return
 		}
+		if *body.PrecoCombinado > 99999999.99 { // numeric(10,2)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Preço alto demais. O máximo é R$ 99.999.999,99."})
+			return
+		}
 		upd["preco_combinado"] = *body.PrecoCombinado
 	}
 	if body.ToleranciaDias != nil {
@@ -186,7 +191,11 @@ func (h *Handler) masterCondicoes(c *gin.Context) {
 		return
 	}
 	res := h.db.WithContext(ctxGlobal(c)).Model(&models.Subscription{}).Where("tenant_id = ?", tid).Updates(upd)
-	if res.Error != nil || res.RowsAffected == 0 {
+	if res.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar as condições"})
+		return
+	}
+	if res.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Assinatura não encontrada"})
 		return
 	}
@@ -211,4 +220,68 @@ func (h *Handler) masterVer(c *gin.Context) {
 	acesso, _ := h.svc.AcessoDoTenant(ctx, tid)
 	faturas, _ := h.svc.ListarFaturas(ctx, tid)
 	c.JSON(http.StatusOK, gin.H{"tenant": t, "assinatura": sub, "plano": plano, "acesso": acesso, "faturas": faturas})
+}
+
+// masterTrocarPlano troca plano/ciclo AGORA e ajusta a fatura em aberto.
+// A rota antiga (PUT /subscriptions/:id/change-plan) mexia só na assinatura:
+// a fatura aberta continuava no plano antigo e, ao dar baixa nela, DarBaixa
+// gravava de volta o plano/ciclo/valor da fatura — a troca se desfazia.
+func (h *Handler) masterTrocarPlano(c *gin.Context) {
+	tid, ok := idParam(c, "tenantId")
+	if !ok {
+		return
+	}
+	var body struct {
+		PlanID uint   `json:"plan_id"`
+		Ciclo  string `json:"ciclo"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.PlanID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Escolha um plano"})
+		return
+	}
+	if body.Ciclo != "anual" {
+		body.Ciclo = "mensal"
+	}
+	ctx := ctxGlobal(c)
+	var p models.Plan
+	if err := h.db.WithContext(ctx).First(&p, body.PlanID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Plano não encontrado"})
+		return
+	}
+	_, sub, _, err := h.svc.Carregar(ctx, tid)
+	if err != nil || sub == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Assinatura não encontrada"})
+		return
+	}
+	valor := ValorDaMensalidade(sub, &p, body.Ciclo)
+	err = h.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Subscription{}).Where("id = ?", sub.ID).Updates(map[string]any{
+			"plan_id": p.ID, "ciclo": body.Ciclo, "valor": valor, "plano_agendado_id": nil,
+		}).Error; err != nil {
+			return err
+		}
+		var abertas []models.FaturaAssinatura
+		if err := tx.Where("tenant_id = ? AND status IN ? AND chave LIKE ?", tid,
+			[]string{models.FaturaPendente, models.FaturaVencida}, "renovacao:%").Find(&abertas).Error; err != nil {
+			return err
+		}
+		for _, f := range abertas {
+			if f.GatewayPaymentID != nil && h.svc.asaas != nil {
+				_ = h.svc.asaas.DeletePayment(ctx, *f.GatewayPaymentID)
+			}
+			if err := tx.Model(&models.FaturaAssinatura{}).Where("id = ?", f.ID).Updates(map[string]any{
+				"plan_id": p.ID, "ciclo": body.Ciclo, "valor": valor,
+				"descricao":          descricaoFatura(&p, body.Ciclo, diaDaFatura(f.Vencimento)),
+				"gateway_payment_id": nil, "link_pagamento": nil,
+			}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível trocar o plano"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "valor": valor})
 }

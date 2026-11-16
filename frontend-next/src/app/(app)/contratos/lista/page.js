@@ -13,7 +13,7 @@ export const metadata = { title: "Contratos" };
 const PRE_REQUISITOS = [
   { chave: "proprietarios", titulo: "Cadastre o proprietário", texto: "Quem é o dono do imóvel.", href: "/proprietarios/lista", acao: "Cadastrar proprietário" },
   { chave: "imoveis", titulo: "Cadastre o imóvel para alugar", texto: "Endereço, valor do aluguel e dia de vencimento.", href: "/alugueis/adicionar", acao: "Cadastrar imóvel" },
-  { chave: "inquilinos", titulo: "Cadastre o inquilino", texto: "Quem vai morar ou usar o imóvel.", href: "/clientes-aluguel", acao: "Ver inquilinos" },
+  { chave: "inquilinos", titulo: "Cadastre o inquilino", texto: "Quem vai morar ou usar o imóvel.", href: "/clientes-aluguel/adicionar", acao: "Cadastrar inquilino" },
 ];
 
 export default async function ContratosListPage() {
@@ -76,7 +76,8 @@ export default async function ContratosListPage() {
             {lista.map((c) => (
               <Row key={c.id}>
                 <Td className="font-medium text-cx-text">{c.nome || c.inquilino_nome || "—"}</Td>
-                <Td muted>{c.imovel?.nome_imovel || "Não vinculado"}</Td>
+                {/* O backend não manda o imóvel junto: busca pelo aluguel_id nas opções. */}
+                <Td muted>{c.imovel?.nome_imovel || (opcoes.imoveis || []).find((i) => i.id === c.aluguel_id)?.nome_imovel || "Não vinculado"}</Td>
                 <Td muted>{c.proprietario?.name || c.proprietario_nome || "—"}</Td>
                 <Td muted>
                   <span className="inline-flex items-center gap-1.5">

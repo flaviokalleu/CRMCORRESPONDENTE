@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText, Trash2 } from "@/components/icons";
 
 // Client Component: deletar contrato e baixar documento vinculado.
 // Referência de lógica: frontend/src/components/ListaContratos.jsx.
@@ -11,7 +12,7 @@ export function ContratoRowActions({ contrato }) {
   const [error, setError] = useState("");
 
   async function handleDelete() {
-    if (!window.confirm("Tem certeza que deseja deletar este contrato?")) return;
+    if (!window.confirm(`Desfazer o contrato de ${contrato.nome}? O inquilino continua cadastrado; só o vínculo com o imóvel, o proprietário e os documentos sai.`)) return;
     setLoading(true);
     setError("");
     try {
@@ -47,29 +48,31 @@ export function ContratoRowActions({ contrato }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex flex-wrap justify-end gap-2">
         {documentos.map((doc, idx) => (
           <button
             key={doc.id ?? idx}
             type="button"
             onClick={() => handleDownload(doc, idx)}
-            className="rounded-md border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50"
+            className="lst-botao"
             title={doc.nome_arquivo || doc.nome}
           >
-            Doc {idx + 1}
+            <FileText aria-hidden="true" /> Doc {idx + 1}
           </button>
         ))}
         <button
           type="button"
           onClick={handleDelete}
           disabled={loading}
-          className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
+          className="lst-acao lst-acao-perigo"
+          aria-label={`Desfazer o contrato de ${contrato.nome}`}
+          title="Desfazer contrato (o inquilino continua cadastrado)"
         >
-          {loading ? "..." : "Deletar"}
+          <Trash2 aria-hidden="true" />
         </button>
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="lst-erro" role="alert">{error}</p>}
     </div>
   );
 }

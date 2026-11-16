@@ -36,12 +36,12 @@ func ToResponseList(list []models.User) []Response {
 // CreateRequest — campos aceitos na criação de corretor. `photo` vem via
 // multipart separadamente (c.FormFile). Ver 01-spec §2.7.
 type CreateRequest struct {
-	Username   string `form:"username" binding:"required"`
-	Email      string `form:"email" binding:"required,email"`
-	FirstName  string `form:"first_name" binding:"required"`
+	Username   string `form:"username"`
+	Email      string `form:"email"`
+	FirstName  string `form:"first_name"`
 	LastName   string `form:"last_name"`
 	Telefone   string `form:"telefone"`
-	Password   string `form:"password" binding:"required,min=6"`
+	Password   string `form:"password"`
 	Creci      string `form:"creci"`
 	Address    string `form:"address"`
 	PixAccount string `form:"pix_account"`

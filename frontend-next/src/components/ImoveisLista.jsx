@@ -37,12 +37,15 @@ export function ImoveisLista({ initialData }) {
   );
   const contaSituacao = (s) => imoveis.filter((i) => (i.situacao_imovel || "").toLowerCase() === s).length;
 
-  const term = q.trim().toLowerCase();
+  // Sem acento e sem maiúscula: "conceicao" acha "Conceição".
+  const norm = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const term = norm(q.trim());
   const filtrados = imoveis.filter((i) => {
     if (tipo && i.tipo !== tipo) return false;
     if (situacao && (i.situacao_imovel || "").toLowerCase() !== situacao) return false;
     if (term) {
-      const hay = `${i.nome_imovel || ""} ${i.endereco || ""} ${i.localizacao || ""}`.toLowerCase();
+      // Palavras-chave (tags) entram na busca, como promete o formulário.
+      const hay = norm(`${i.nome_imovel || ""} ${i.endereco || ""} ${i.localizacao || ""} ${i.tags || ""}`);
       if (!hay.includes(term)) return false;
     }
     return true;

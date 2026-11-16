@@ -9,6 +9,8 @@ import {
 import { STATUS_LIST, statusInfo } from "@/lib/cliente-status";
 import { ClienteDocumentos } from "@/components/ClienteDocumentos";
 import { TelaAprovacaoModal, pedeTelaAprovacao } from "@/components/TelaAprovacaoModal";
+import { maskPhone } from "@/lib/masks";
+import { cpfValido, emailValido, telefoneValido } from "@/lib/validar";
 
 // Painel lateral de edição do cliente.
 //
@@ -63,8 +65,8 @@ const SECOES = [
     icon: User,
     campos: [
       { key: "nome", label: "Nome completo", type: "text", upper: true, full: true },
-      { key: "email", label: "E-mail", type: "email", upper: true, full: true },
-      { key: "telefone", label: "Telefone", type: "text" },
+      { key: "email", label: "E-mail", type: "email", full: true },
+      { key: "telefone", label: "Telefone", type: "tel" },
       { key: "cpf", label: "CPF", type: "cpf" },
       { key: "estado_civil", label: "Estado civil", type: "select", options: ESTADO_CIVIL },
       { key: "naturalidade", label: "Naturalidade", type: "text", upper: true },
@@ -94,8 +96,8 @@ const SECOES = [
     icon: Heart,
     campos: [
       { key: "conjuge_nome", label: "Nome do cônjuge", type: "text", upper: true, full: true },
-      { key: "conjuge_email", label: "E-mail", type: "email", upper: true, full: true },
-      { key: "conjuge_telefone", label: "Telefone", type: "text" },
+      { key: "conjuge_email", label: "E-mail", type: "email", full: true },
+      { key: "conjuge_telefone", label: "Telefone", type: "tel" },
       { key: "conjuge_cpf", label: "CPF", type: "cpf" },
       { key: "conjuge_profissao", label: "Profissão", type: "text", upper: true },
       { key: "conjuge_data_nascimento", label: "Data de nascimento", type: "date" },
@@ -111,8 +113,8 @@ const SECOES = [
     campos: [
       { key: "possui_fiador", label: "Possui fiador", type: "bool", full: true },
       { key: "fiador_nome", label: "Nome do fiador", type: "text", upper: true, full: true },
-      { key: "fiador_email", label: "E-mail", type: "email", upper: true, full: true },
-      { key: "fiador_telefone", label: "Telefone", type: "text" },
+      { key: "fiador_email", label: "E-mail", type: "email", full: true },
+      { key: "fiador_telefone", label: "Telefone", type: "tel" },
       { key: "fiador_cpf", label: "CPF", type: "cpf" },
     ],
   },
@@ -132,6 +134,28 @@ const MONEY_KEYS = new Set(["valor_renda", "conjuge_valor_renda"]);
 const CPF_KEYS = new Set(["cpf", "conjuge_cpf", "fiador_cpf"]);
 const BOOL_KEYS = new Set(TODOS_CAMPOS.filter((c) => c.type === "bool").map((c) => c.key));
 const DATE_KEYS = new Set(TODOS_CAMPOS.filter((c) => c.type === "date").map((c) => c.key));
+const ROTULO = Object.fromEntries(TODOS_CAMPOS.map((c) => [c.key, c.label]));
+const MAX = { origem: 80, interesse: 160 };
+
+// Mesmas regras do cadastro completo, aplicadas só ao que mudou (um cadastro
+// antigo com dado fora do padrão continua editável nos outros campos).
+function validar(form, alterados) {
+  const e = {};
+  const hoje = new Date().toLocaleDateString("sv-SE");
+  for (const k of alterados) {
+    const v = form[k];
+    const txt = typeof v === "string" ? v.trim() : v;
+    if (["nome", "email", "cpf", "telefone"].includes(k) && !txt) { e[k] = "Este campo não pode ficar vazio."; continue; }
+    if (!txt || typeof v !== "string") continue;
+    if (k.endsWith("email") && !emailValido(v)) e[k] = "Confira o e-mail. Exemplo: maria@email.com";
+    else if (CPF_KEYS.has(k) && !cpfValido(v)) e[k] = "CPF inválido. Confira os 11 números.";
+    else if (k.endsWith("telefone") && !telefoneValido(v)) e[k] = "Escreva o telefone com DDD.";
+    else if (DATE_KEYS.has(k) && (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v < "1900-01-01")) e[k] = "Data inválida.";
+    else if (DATE_KEYS.has(k) && v > hoje) e[k] = "A data não pode ser no futuro.";
+    else if (v.length > (MAX[k] ?? 255)) e[k] = `Use no máximo ${MAX[k] ?? 255} caracteres.`;
+  }
+  return e;
+}
 
 function estadoInicial(c) {
   const out = {};
@@ -142,6 +166,7 @@ function estadoInicial(c) {
       const fmt = campo.key === "valor_renda" ? c.valor_renda_formatado : c.conjuge_valor_renda_formatado;
       out[campo.key] = onlyDigits(fmt || bruto);
     } else if (CPF_KEYS.has(campo.key)) out[campo.key] = onlyDigits(bruto);
+    else if (campo.key === "data_criacao") out[campo.key] = dateOnly(c.created_at);
     else if (DATE_KEYS.has(campo.key)) out[campo.key] = dateOnly(bruto);
     else if (campo.type === "select") out[campo.key] = lower(bruto);
     else out[campo.key] = bruto ?? "";
@@ -156,6 +181,7 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [erro, setErro] = useState("");
+  const [erros, setErros] = useState({});
   const [aberta, setAberta] = useState({ identificacao: true, renda: true, situacao: true });
   // null enquanto o painel de documentos não foi montado — assim o contador só
   // aparece depois de existir número de verdade para mostrar.
@@ -169,9 +195,9 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   }, [onClose, saving]);
 
   useEffect(() => {
+    // O painel monta do zero a cada cliente aberto (ClientesLista só o
+    // renderiza com editingId), então loading já nasce true.
     let cancelado = false;
-    setLoading(true);
-    setErro("");
     (async () => {
       try {
         const res = await fetch(`/api/backend/clientes/${clienteId}`, { cache: "no-store" });
@@ -192,7 +218,20 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
     return () => { cancelado = true; };
   }, [clienteId]);
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setErros((p) => (p[k] ? { ...p, [k]: undefined } : p));
+  };
+
+  // Abre a seção do campo com erro (senão o aviso fica escondido) e o foca.
+  const mostrarErros = (novos) => {
+    const chaves = Object.keys(novos);
+    setErros(novos);
+    setErro(`Confira: ${chaves.map((k) => ROTULO[k] || k).join(", ")}.`);
+    const secoes = SECOES.filter((sec) => sec.campos.some((c) => chaves.includes(c.key))).map((sec) => sec.id);
+    setAberta((a) => ({ ...a, ...Object.fromEntries(secoes.map((id) => [id, true])) }));
+    requestAnimationFrame(() => document.getElementById(`d-${chaves[0]}`)?.focus());
+  };
 
   const alterados = useMemo(() => {
     if (!form || !original) return [];
@@ -201,8 +240,11 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
 
   const salvar = async () => {
     if (!alterados.length) return;
+    const invalidos = validar(form, alterados);
+    if (Object.keys(invalidos).length) { mostrarErros(invalidos); return; }
     setSaving(true);
     setErro("");
+    setErros({});
     try {
       const fd = new FormData();
       // Só a diferença: campo ausente o backend trata como "não mexer".
@@ -217,7 +259,13 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
 
       const res = await fetch(`/api/backend/clientes/${clienteId}`, { method: "PUT", body: fd });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || "Não foi possível salvar");
+      if (!res.ok) {
+        const porCampo = {};
+        for (const d of Array.isArray(data?.details) ? data.details : []) if (d?.field && ROTULO[d.field]) porCampo[d.field] = d.message;
+        if (!Object.keys(porCampo).length && data?.campo && ROTULO[data.campo]) porCampo[data.campo] = data.error;
+        if (Object.keys(porCampo).length) { mostrarErros(porCampo); return; }
+        throw new Error(data?.error || "Não foi possível falar com o servidor. Tente de novo em instantes.");
+      }
 
       setOriginal(form);
       // Atualiza a linha/card na lista sem refetch da carteira inteira.
@@ -317,12 +365,15 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
                     </button>
 
                     {aberto && (
-                      <div className="grid grid-cols-2 gap-3 p-3.5">
+                      // Uma coluna no celular: o layout global força 1 coluna abaixo de 768px
+                      // e um col-span-2 fixo criava uma coluna fantasma de 0px.
+                      <div className="grid grid-cols-1 gap-3 p-3.5 md:grid-cols-2">
                         {secao.campos.map((campo) => (
                           <Campo
                             key={campo.key}
                             campo={campo}
                             valor={form[campo.key]}
+                            erro={erros[campo.key]}
                             onChange={(v) => set(campo.key, v)}
                           />
                         ))}
@@ -367,27 +418,27 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
           )}
         </div>
 
-        <footer className="flex items-center justify-between gap-3 border-t border-cx-border px-5 py-3.5">
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-cx-border px-5 py-3.5">
           <Link
             href={`/editar-cliente/${clienteId}`}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-cx-blue hover:underline"
           >
             <ExternalLink className="h-3.5 w-3.5" /> Cadastro completo
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             {alterados.length > 0 && (
-              <span className="text-[11px] text-cx-muted">
+              <span className="hidden text-[11px] text-cx-muted sm:inline">
                 {alterados.length} {alterados.length === 1 ? "campo alterado" : "campos alterados"}
               </span>
             )}
-            <button type="button" onClick={() => !saving && onClose()} className="cx-btn cx-btn-outline px-4 py-2 text-xs">
+            <button type="button" onClick={() => !saving && onClose()} className="cx-btn cx-btn-outline whitespace-nowrap px-4 py-2 text-xs">
               Cancelar
             </button>
             <button
               type="button"
               onClick={salvar}
               disabled={!alterados.length || saving || loading}
-              className="cx-btn cx-btn-primary px-4 py-2 text-xs"
+              className="cx-btn cx-btn-primary whitespace-nowrap px-4 py-2 text-xs"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               {saving ? "Salvando…" : "Salvar"}
@@ -407,9 +458,9 @@ export function ClienteDrawer({ clienteId, onClose, onSaved }) {
   );
 }
 
-function Campo({ campo, valor, onChange }) {
+function Campo({ campo, valor, erro, onChange }) {
   const id = `d-${campo.key}`;
-  const wrap = campo.full ? "col-span-2" : "";
+  const wrap = campo.full ? "md:col-span-2" : "";
 
   if (campo.type === "bool") {
     return (
@@ -459,20 +510,27 @@ function Campo({ campo, valor, onChange }) {
       ) : (
         <input
           id={id}
-          type={campo.type === "date" ? "date" : campo.type === "email" ? "email" : "text"}
+          type={campo.type === "date" ? "date" : campo.type === "email" ? "email" : campo.type === "tel" ? "tel" : "text"}
+          inputMode={campo.type === "cpf" ? "numeric" : campo.type === "tel" ? "tel" : undefined}
+          maxLength={campo.type === "date" ? undefined : MAX[campo.key] ?? 255}
           value={campo.type === "cpf" ? maskCPF(valor) : valor}
           onChange={(e) =>
             onChange(
               campo.type === "cpf"
                 ? onlyDigits(e.target.value)
-                : campo.upper
+                : campo.type === "tel"
+                  ? maskPhone(e.target.value)
+                  : campo.upper
                   ? e.target.value.toUpperCase()
                   : e.target.value,
             )
           }
           className="cx-input"
+          aria-invalid={erro ? true : undefined}
+          aria-describedby={erro ? `${id}-erro` : undefined}
         />
       )}
+      {erro && <p id={`${id}-erro`} className="crm-field-error" role="alert">{erro}</p>}
     </div>
   );
 }

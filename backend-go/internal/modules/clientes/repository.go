@@ -2,6 +2,7 @@ package clientes
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -61,8 +62,16 @@ func (r *Repository) aplicaFiltros(q *gorm.DB, f ListFilters) *gorm.DB {
 		}
 	}
 	if f.Search != "" {
-		like := "%" + f.Search + "%"
-		q = q.Where("nome ILIKE ? OR email ILIKE ? OR cpf ILIKE ?", like, like, like)
+		// % e _ digitados na busca são texto, não curinga: antes buscar "%"
+		// devolvia a carteira inteira.
+		termo := strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(strings.TrimSpace(f.Search))
+		like := "%" + termo + "%"
+		// CPF digitado com máscara (529.982.247-25) também acha o cliente.
+		likeCPF := like
+		if d := onlyDigits.ReplaceAllString(termo, ""); len(d) >= 3 && strings.Trim(termo, "0123456789.- ") == "" {
+			likeCPF = "%" + d + "%"
+		}
+		q = q.Where("(nome ILIKE ? OR email ILIKE ? OR cpf ILIKE ? OR cpf ILIKE ?)", like, like, like, likeCPF)
 	}
 	if f.Inicio != nil {
 		q = q.Where("created_at >= ?", *f.Inicio)

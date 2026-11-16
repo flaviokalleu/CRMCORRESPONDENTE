@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cpfValido } from "@/lib/validar";
 
 // Página PÚBLICA (fora do grupo `(app)`): o Portal do Inquilino tem seu
 // próprio login por CPF com JWT separado (tipo "inquilino"), guardado no
@@ -36,8 +37,13 @@ export default function PortalInquilinoPage() {
 
   async function login(e) {
     e.preventDefault();
-    setLoading(true);
     setErro("");
+    // Confere o CPF aqui: antes "123" ou "111.111.111-11" iam ao servidor.
+    if (!cpfValido(cpf)) {
+      setErro(cpf.replace(/\D/g, "") ? "CPF inválido. Confira os 11 números." : "Digite o seu CPF.");
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch("/api/portal/login", {
         method: "POST",
@@ -156,7 +162,7 @@ export default function PortalInquilinoPage() {
             <p className="text-gray-500 mt-2">Acesse suas cobranças, recibos e contrato</p>
           </div>
 
-          <form onSubmit={login} className="space-y-4">
+          <form onSubmit={login} noValidate className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Seu CPF</label>
               <input

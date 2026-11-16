@@ -72,7 +72,7 @@ export function AluguelRowActions({ aluguel }) {
   // texto "Baixar fotos" quebrava letra por letra na coluna estreita.
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
           onClick={handleToggleStatus}

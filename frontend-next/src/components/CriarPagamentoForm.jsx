@@ -32,11 +32,12 @@ const ENDPOINT = {
 
 const ORDEM = ["cliente", "valor", "titulo", "data_vencimento"];
 
-const daquiASete = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return d.toISOString().split("T")[0];
-};
+// Datas no fuso de Brasília (toISOString usa UTC e, à noite, pulava um dia).
+const diaBR = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
+const hojeBR = () => diaBR(new Date());
+const daquiASete = () => diaBR(new Date(Date.now() + 7 * 864e5));
+// Teto da coluna valor_numerico numeric(10,2); título é varchar(255).
+const VALOR_MAXIMO = 99999999.99;
 
 const VAZIO = () => ({
   cliente_id: "",
@@ -101,9 +102,11 @@ export function CriarPagamentoForm() {
     const valor = parseMoney(formData.valor);
     const novos = {};
     if (!formData.cliente_id) novos.cliente = "Escolha para quem é a cobrança.";
-    if (valor <= 0) novos.valor = "Informe o valor da cobrança.";
+    if (!(valor > 0)) novos.valor = "Informe o valor da cobrança.";
+    else if (valor > VALOR_MAXIMO) novos.valor = "Valor alto demais. O máximo é R$ 99.999.999,99.";
     if (!formData.titulo.trim()) novos.titulo = "Diga em poucas palavras o que está sendo cobrado.";
     if (formData.tipo !== "pix" && !formData.data_vencimento) novos.data_vencimento = "Escolha a data de vencimento.";
+    else if (formData.tipo !== "pix" && formData.data_vencimento < hojeBR()) novos.data_vencimento = "A data de vencimento não pode ser no passado.";
     if (Object.keys(novos).length) {
       setErros(novos);
       focarPrimeiroErro(novos, ORDEM);
@@ -131,6 +134,8 @@ export function CriarPagamentoForm() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const bruto = String(data.error || "");
+        // 400/422/502: o servidor já manda a explicação em português simples.
+        if ([400, 422, 502].includes(res.status) && bruto) throw new Error(bruto);
         // Erro do Asaas da imobiliária (chave ausente/errada): explica o que fazer.
         if (/asaas/i.test(bruto)) {
           throw new Error("A conta de cobranças (Asaas) da imobiliária recusou o pedido. Peça ao administrador para conferir a chave do Asaas nas configurações da empresa.");
@@ -271,14 +276,14 @@ export function CriarPagamentoForm() {
               <MoneyInput grande value={formData.valor} onChange={(v) => set("valor", v)} />
             </FormField>
             <FormField id="titulo" label="O que está sendo cobrado?" required error={erros.titulo}>
-              <input value={formData.titulo} onChange={(e) => set("titulo", e.target.value)} placeholder="Ex.: Taxa de avaliação" />
+              <input value={formData.titulo} onChange={(e) => set("titulo", e.target.value)} placeholder="Ex.: Taxa de avaliação" maxLength={255} />
             </FormField>
           </div>
 
           {/* 3. Vencimento (Pix não tem) */}
           {formData.tipo !== "pix" && (
             <FormField id="data_vencimento" label="Vence em" required error={erros.data_vencimento} hint="Já sugerimos daqui a 7 dias." className="max-w-xs">
-              <input type="date" value={formData.data_vencimento} onChange={(e) => set("data_vencimento", e.target.value)} />
+              <input type="date" min={hojeBR()} value={formData.data_vencimento} onChange={(e) => set("data_vencimento", e.target.value)} />
             </FormField>
           )}
 

@@ -2,12 +2,14 @@ package alugueis
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"crmimob/internal/tenant"
+	"crmimob/internal/validacao"
 )
 
 type Handler struct {
@@ -57,6 +59,24 @@ func idParam(c *gin.Context) (uint, bool) {
 	return uint(id), true
 }
 
+// erroDeLeitura: corpo com tipo errado (ex.: letras num campo de número).
+// Antes ia a mensagem crua do Go em inglês.
+func erroDeLeitura(c *gin.Context) {
+	c.JSON(http.StatusBadRequest, gin.H{"error": "Não deu para ler os dados enviados. Confira os números e datas e tente de novo."})
+}
+
+// responderErro: erro de validação vira 400 com {error, campo}; o resto vira
+// 500 com mensagem simples (o detalhe técnico fica só no log).
+func responderErro(c *gin.Context, err error, padrao string) {
+	var e *validacao.ErroCampo
+	if errors.As(err, &e) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": e.Mensagem, "campo": e.Campo})
+		return
+	}
+	slog.Error("alugueis", "rota", c.FullPath(), "error", err)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": padrao})
+}
+
 func currentTenantID(c *gin.Context) *uint {
 	scope, ok := tenant.From(c.Request.Context())
 	if !ok {
@@ -96,12 +116,12 @@ func (h *Handler) ListAlugueisDisponiveis(c *gin.Context) {
 func (h *Handler) CreateAluguel(c *gin.Context) {
 	var req AluguelRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	a, err := h.svc.CreateAluguel(c, req, currentTenantID(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responderErro(c, err, "Não foi possível cadastrar o imóvel. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusCreated, a)
@@ -114,7 +134,7 @@ func (h *Handler) UpdateAluguel(c *gin.Context) {
 	}
 	var req AluguelRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	a, err := h.svc.UpdateAluguel(c, id, req)
@@ -123,7 +143,7 @@ func (h *Handler) UpdateAluguel(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Imóvel não encontrado"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responderErro(c, err, "Não foi possível salvar o imóvel. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusOK, a)
@@ -207,12 +227,12 @@ func (h *Handler) GetInquilino(c *gin.Context) {
 func (h *Handler) CreateInquilino(c *gin.Context) {
 	var req ClienteAluguelRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	out, err := h.inquilinoSvc.Create(c.Request.Context(), req, currentTenantID(c), h.asaasKey(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responderErro(c, err, "Não foi possível cadastrar o inquilino. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusCreated, out)
@@ -225,7 +245,7 @@ func (h *Handler) UpdateInquilino(c *gin.Context) {
 	}
 	var req ClienteAluguelRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	out, err := h.inquilinoSvc.Update(c.Request.Context(), id, req, h.asaasKey(c))
@@ -234,7 +254,7 @@ func (h *Handler) UpdateInquilino(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responderErro(c, err, "Não foi possível salvar o inquilino. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusOK, out)
@@ -263,7 +283,7 @@ func (h *Handler) AddPagamentoManual(c *gin.Context) {
 	}
 	var req PagamentoManualRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	out, err := h.inquilinoSvc.AddPagamentoManual(c.Request.Context(), id, req)
@@ -272,7 +292,7 @@ func (h *Handler) AddPagamentoManual(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		responderErro(c, err, "Não foi possível registrar o pagamento. Tente de novo.")
 		return
 	}
 	c.JSON(http.StatusOK, out)
@@ -294,9 +314,9 @@ func (h *Handler) DeletePagamentoManual(c *gin.Context) {
 		case errors.Is(err, ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 		case errors.Is(err, ErrPagamentoNaoEncontrado):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Este pagamento já foi apagado. Atualize a página."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			responderErro(c, err, "Não foi possível apagar o pagamento. Tente de novo.")
 		}
 		return
 	}
@@ -310,7 +330,7 @@ func (h *Handler) CriarCobrancaAvulsa(c *gin.Context) {
 	}
 	var req CobrancaAvulsaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		erroDeLeitura(c)
 		return
 	}
 	out, err := h.inquilinoSvc.CriarCobrancaAvulsa(c.Request.Context(), id, req, h.asaasKey(c))
@@ -319,9 +339,9 @@ func (h *Handler) CriarCobrancaAvulsa(c *gin.Context) {
 		case errors.Is(err, ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 		case errors.Is(err, ErrAsaasCustomerRequired):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "A cobrança automática de aluguel (Asaas) ainda não está ligada para este inquilino. Por enquanto, gere a cobrança em Pagamentos e registre aqui quando ele pagar."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			responderErro(c, err, "Não foi possível criar a cobrança. Tente de novo.")
 		}
 		return
 	}
@@ -352,9 +372,9 @@ func (h *Handler) SincronizarAsaas(c *gin.Context) {
 		case errors.Is(err, ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Inquilino não encontrado"})
 		case errors.Is(err, ErrAsaasNotConfigured):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "A cobrança automática de aluguel (Asaas) não está configurada nesta empresa."})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadGateway, gin.H{"error": "O Asaas não respondeu como esperado. Tente de novo em alguns minutos."})
 		}
 		return
 	}

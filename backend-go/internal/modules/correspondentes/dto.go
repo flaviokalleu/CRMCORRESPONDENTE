@@ -34,13 +34,13 @@ func ToResponseList(list []models.User) []Response {
 
 // CreateRequest — Node aceitava `phone` como alias de `telefone`; mantemos os dois.
 type CreateRequest struct {
-	Username   string `form:"username" binding:"required"`
-	Email      string `form:"email" binding:"required,email"`
-	FirstName  string `form:"first_name" binding:"required"`
+	Username   string `form:"username"`
+	Email      string `form:"email"`
+	FirstName  string `form:"first_name"`
 	LastName   string `form:"last_name"`
 	Telefone   string `form:"telefone"`
 	Phone      string `form:"phone"`
-	Password   string `form:"password" binding:"required,min=6"`
+	Password   string `form:"password"`
 	Address    string `form:"address"`
 	PixAccount string `form:"pix_account"`
 }

@@ -17,7 +17,10 @@ async function chamar(caminho, corpo) {
 
 // Tela "Minha assinatura". Ordem pensada para quem só quer resolver:
 // 1) situação + UMA ação principal (pagar); 2) plano; 3) histórico.
-export function MinhaAssinatura({ resumo, faturas, planos }) {
+// Nome em português dos recursos que o cadeado do menu pode pedir.
+const NOME_RECURSO = { has_whatsapp: "o WhatsApp", has_pagamentos: "as cobranças online", has_relatorios_avancados: "os relatórios avançados" };
+
+export function MinhaAssinatura({ resumo, faturas, planos, recurso }) {
   const t = situacaoEmTexto(resumo.acesso);
   const fatura = resumo.fatura_aberta;
 
@@ -38,7 +41,7 @@ export function MinhaAssinatura({ resumo, faturas, planos }) {
         )}
       </section>
 
-      <Plano resumo={resumo} planos={planos} />
+      <Plano resumo={resumo} planos={planos} recurso={recurso} />
 
       <Historico faturas={faturas} />
     </div>
@@ -94,6 +97,7 @@ function Pagamento({ fatura, resumo }) {
               value={documento}
               onChange={(e) => setDocumento(e.target.value)}
               placeholder="Só os números"
+              maxLength={18}
               className="cx-input mt-1 h-12 w-full text-base"
             />
           </label>
@@ -107,9 +111,11 @@ function Pagamento({ fatura, resumo }) {
   );
 }
 
-function Plano({ resumo, planos }) {
+function Plano({ resumo, planos, recurso }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
+  const nomeRecurso = recurso && NOME_RECURSO[recurso];
+  const comRecurso = nomeRecurso ? planos.filter((p) => p[recurso]).map((p) => p.nome) : [];
+  const [aberto, setAberto] = useState(Boolean(nomeRecurso && resumo.pode_gerenciar));
   const [salvando, setSalvando] = useState(null);
   const [aviso, setAviso] = useState("");
   const atual = resumo.plano;
@@ -148,6 +154,14 @@ function Plano({ resumo, planos }) {
           </Button>
         )}
       </div>
+
+      {nomeRecurso && (
+        <p role="note" className="ass-aviso-recurso mt-4">
+          O plano {atual?.nome || "atual"} não inclui {nomeRecurso}.
+          {comRecurso.length ? ` Está incluído no ${comRecurso.join(" e no ")}.` : ""}
+          {resumo.pode_gerenciar ? "" : " Peça ao administrador da empresa para mudar de plano."}
+        </p>
+      )}
 
       <Uso limites={resumo.limites} />
 

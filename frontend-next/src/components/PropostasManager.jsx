@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FileText, FileSignature, FileClock, Home as HomeIcon, Receipt, Plus, Search,
   Filter, ChevronLeft, ChevronRight, ChevronDown, MoreVertical, Check, Handshake,
-  Send, X, Trash2, Loader2, Inbox, AlertTriangle, Lightbulb, MessageCircle,
+  Send, X, Trash2, Loader2, Inbox, AlertTriangle, Lightbulb, MessageCircle, Pencil,
 } from "@/components/icons";
+import { MoneyInput } from "@/components/ui/money-input";
+import { maskMoney, parseMoney } from "@/lib/masks";
 import { linkWhatsApp } from "@/components/ui/contato-rapido";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -86,6 +88,21 @@ const MODELOS_POPULARES = [
   { tipo: "locacao_residencial", label: "Contrato de locação", desc: "Residencial", Icon: HomeIcon },
   { tipo: "recibo_sinal", label: "Recibo de sinal", desc: "Reserva de imóvel", Icon: Receipt },
 ];
+
+// numeric(12,2) no banco: acima disso o Go devolvia erro 500.
+const VALOR_MAX = 9999999999.99;
+const pad2 = (n) => String(n).padStart(2, "0");
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+// "2026-12-01" → meio-dia no fuso do aparelho. Mandar "T00:00:00Z" gravava
+// meia-noite UTC, que no Brasil é 21h do dia ANTERIOR.
+const validadeComFuso = (dia) => {
+  const off = -new Date(`${dia}T12:00:00`).getTimezoneOffset();
+  const a = Math.abs(off);
+  return `${dia}T12:00:00${off >= 0 ? "+" : "-"}${pad2(Math.floor(a / 60))}:${pad2(a % 60)}`;
+};
+const diaDe = (iso) => { if (!iso) return ""; const d = new Date(iso); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const FORM_VAZIO = { id: null, cliente_id: "", imovel_id: "", valor_ofertado: "", forma_pagamento: "financiamento", data_validade: "", condicoes: "", observacoes: "" };
+const centavos = (n) => maskMoney(String(Math.round(Number(n || 0) * 100)));
 
 const formatCurrency = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
@@ -196,9 +213,13 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    cliente_id: "", imovel_id: "", valor_ofertado: "", forma_pagamento: "financiamento", data_validade: "", observacoes: "",
-  });
+  const [form, setForm] = useState(FORM_VAZIO);
+  const [ferr, setFerr] = useState({}); // erros por campo do diálogo
+  const enviando = useRef(false);
+  // Negociação: { id, modo: "contra" | "aprovar" | "reprovar", valor, texto }.
+  const [neg, setNeg] = useState(null);
+  const nomeCliente = useMemo(() => Object.fromEntries((clientes || []).map((c) => [String(c.id), c.nome])), [clientes]);
+  const nomeImovel = useMemo(() => Object.fromEntries((imoveis || []).map((i) => [String(i.id), i.nome_imovel || i.endereco])), [imoveis]);
 
   // Corretores para o filtro "Responsável" — só quem de fato aparece na
   // carteira carregada, não a equipe inteira.
@@ -254,10 +275,16 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
           )}
           {emAberto && (
             <>
-              <DropdownMenuItem onClick={() => updateStatus(p.id, "aceita", { valor_aceito: p.valor_ofertado }, "aprovar")}>
+              <DropdownMenuItem onClick={() => abrirEdicao(p)}>
+                <Pencil /> Editar proposta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setNeg({ id: p.id, modo: "contra", valor: p.valor_contra_proposta ? centavos(p.valor_contra_proposta) : "", texto: "" })}>
+                <Send /> Registrar contraproposta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setNeg({ id: p.id, modo: "aprovar", valor: centavos(p.valor_contra_proposta || p.valor_ofertado), texto: "" })}>
                 <Check /> Aprovar proposta
               </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => updateStatus(p.id, "recusada", {}, "reprovar")}>
+              <DropdownMenuItem variant="destructive" onClick={() => setNeg({ id: p.id, modo: "reprovar", valor: "", texto: p.motivo_recusa || "" })}>
                 <X /> Reprovar proposta
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -339,34 +366,102 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
     }
   };
 
+  const abrirNova = () => { setForm(FORM_VAZIO); setFerr({}); setOpen(true); };
+  const abrirEdicao = (p) => {
+    setForm({
+      id: p.id, cliente_id: String(p.cliente_id ?? p.cliente?.id ?? ""), imovel_id: String(p.imovel_id ?? p.imovel?.id ?? ""),
+      valor_ofertado: centavos(p.valor_ofertado), forma_pagamento: p.forma_pagamento || "financiamento",
+      data_validade: diaDe(p.data_validade), condicoes: p.condicoes || "", observacoes: p.observacoes || "",
+    });
+    setFerr({});
+    setOpen(true);
+  };
+
+  // Junta a resposta do Go com cliente/imóvel/corretor já conhecidos (o POST
+  // e o PUT não devolvem esses objetos — a linha nova aparecia "não informado").
+  const completar = (nova, antiga) => ({
+    ...antiga, ...nova,
+    cliente: nova.cliente || antiga?.cliente || clientes?.find((c) => String(c.id) === String(nova.cliente_id)),
+    imovel: nova.imovel || antiga?.imovel || imoveis?.find((i) => String(i.id) === String(nova.imovel_id)),
+    corretor: nova.corretor || antiga?.corretor,
+  });
+
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (saving) return;
-    if (!form.cliente_id || !form.imovel_id || !form.valor_ofertado) return;
+    if (enviando.current) return;
+    const v = parseMoney(form.valor_ofertado);
+    const erros = {};
+    if (!form.cliente_id) erros.cliente = "Escolha o cliente.";
+    if (!form.imovel_id) erros.imovel = "Escolha o imóvel.";
+    if (!(v > 0)) erros.valor = "Escreva o valor oferecido.";
+    else if (v > VALOR_MAX) erros.valor = "Valor alto demais. O máximo é R$ 9.999.999.999,99.";
+    if (form.data_validade && !form.id && form.data_validade < hojeISO()) erros.validade = "A validade não pode ser um dia que já passou.";
+    if (form.data_validade && (form.data_validade < "2000-01-01" || form.data_validade > "2100-12-31")) erros.validade = "Data inválida. Escolha o dia no calendário.";
+    setFerr(erros);
+    if (Object.keys(erros).length) return;
+    enviando.current = true;
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/backend/propostas", {
-        method: "POST",
+      const comum = {
+        valor_ofertado: v,
+        forma_pagamento: form.forma_pagamento,
+        // Na edição "" limpa a validade; na criação vazio vai como null.
+        data_validade: form.data_validade ? validadeComFuso(form.data_validade) : form.id ? "" : null,
+        condicoes: form.condicoes.trim(),
+        observacoes: form.observacoes.trim(),
+      };
+      const res = await fetch(form.id ? `/api/backend/propostas/${form.id}` : "/api/backend/propostas", {
+        method: form.id ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          cliente_id: Number(form.cliente_id),
-          imovel_id: Number(form.imovel_id),
-          valor_ofertado: Number(form.valor_ofertado),
-          data_validade: form.data_validade ? `${form.data_validade}T00:00:00Z` : null,
-        }),
+        body: JSON.stringify(form.id ? comum : { ...comum, cliente_id: Number(form.cliente_id), imovel_id: Number(form.imovel_id) }),
       });
-      if (!res.ok) throw new Error();
-      const nova = await res.json();
-      setPropostas((prev) => [nova.data || nova, ...prev]);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (body.campo) { setFerr({ [body.campo]: body.message }); return; }
+        throw new Error(body.message || "Erro ao salvar a proposta. Confira os dados e tente novamente.");
+      }
+      const salva = body.data || body;
+      if (form.id) setPropostas((prev) => prev.map((p) => (p.id === salva.id ? completar(salva, p) : p)));
+      else { setPropostas((prev) => [completar(salva), ...prev]); setPage(1); }
       setOpen(false);
-      setPage(1);
-      setForm({ cliente_id: "", imovel_id: "", valor_ofertado: "", forma_pagamento: "financiamento", data_validade: "", observacoes: "" });
-    } catch {
-      setError("Erro ao criar a proposta. Confira os dados e tente novamente.");
+      setForm(FORM_VAZIO);
+    } catch (err) {
+      setFerr({ geral: err.message });
     } finally {
+      enviando.current = false;
       setSaving(false);
+    }
+  };
+
+  // Contraproposta, aprovação (com valor fechado) e reprovação (com motivo).
+  const salvarNegociacao = async (e) => {
+    e.preventDefault();
+    if (enviando.current) return;
+    const valor = parseMoney(neg.valor);
+    const corpo = {};
+    if (neg.modo === "contra" || neg.modo === "aprovar") {
+      if (!(valor > 0)) return setNeg((n) => ({ ...n, erro: "Escreva o valor." }));
+      if (valor > VALOR_MAX) return setNeg((n) => ({ ...n, erro: "Valor alto demais. O máximo é R$ 9.999.999.999,99." }));
+    }
+    if (neg.modo === "contra") Object.assign(corpo, { status: "em_negociacao", valor_contra_proposta: valor });
+    if (neg.modo === "aprovar") Object.assign(corpo, { status: "aceita", valor_aceito: valor });
+    if (neg.modo === "reprovar") Object.assign(corpo, { status: "recusada", motivo_recusa: neg.texto.trim() });
+    enviando.current = true;
+    setBusyId(neg.id);
+    try {
+      const res = await fetch(`/api/backend/propostas/${neg.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corpo),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return setNeg((n) => ({ ...n, erro: body.message || "Não foi possível salvar. Tente de novo." }));
+      setPropostas((prev) => prev.map((p) => (p.id === neg.id ? completar(body.data || corpo, p) : p)));
+      setNeg(null);
+    } finally {
+      enviando.current = false;
+      setBusyId(null);
     }
   };
 
@@ -380,7 +475,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Ação principal primeiro: no celular ela fica no topo, ao alcance. */}
-          <Button onClick={() => setOpen(true)} className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark sm:order-2">
+          <Button onClick={abrirNova} className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark sm:order-2">
             <Plus /> Nova proposta
           </Button>
           <Button
@@ -444,7 +539,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                   className="h-11 border-cx-border pl-10! text-sm"
                 />
               </div>
-              <Select value={corretorId} onValueChange={(v) => { setCorretorId(v ?? ""); setPage(1); }}>
+              <Select items={{ "": "Todos os corretores", ...Object.fromEntries(corretores.map((c) => [c.id, c.nome])) }} value={corretorId} onValueChange={(v) => { setCorretorId(v ?? ""); setPage(1); }}>
                 <SelectTrigger aria-label="Filtrar responsável" className="h-11 w-full border-cx-border text-sm sm:w-[190px]">
                   <SelectValue placeholder="Todos os corretores" />
                 </SelectTrigger>
@@ -473,7 +568,7 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
             <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
               <CollapsibleContent>
                 <div className="ikit-filters flex flex-wrap items-center gap-2">
-                  <Select value={payment} onValueChange={(v) => { setPayment(v ?? ""); setPage(1); }}>
+                  <Select items={{ "": "Todas as formas", ...FORMA_MAP }} value={payment} onValueChange={(v) => { setPayment(v ?? ""); setPage(1); }}>
                     <SelectTrigger aria-label="Filtrar forma de pagamento" className="h-11 w-full border-cx-border text-sm sm:w-[200px]">
                       <SelectValue placeholder="Forma de pagamento" />
                     </SelectTrigger>
@@ -510,6 +605,8 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                       <p className="lst-item-texto">{p.imovel?.nome_imovel || p.imovel?.endereco || "Imóvel não informado"}</p>
                       <div className="lst-item-meta">
                         <span className="font-semibold text-cx-text tabular-nums">{formatCurrency(p.valor_ofertado)}</span>
+                        {p.valor_contra_proposta ? <span className="tabular-nums">Contraproposta {formatCurrency(p.valor_contra_proposta)}</span> : null}
+                        {p.status === "aceita" && p.valor_aceito ? <span className="tabular-nums">Fechado {formatCurrency(p.valor_aceito)}</span> : null}
                         <StatusPill status={p.status} />
                       </div>
                     </div>
@@ -608,6 +705,12 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
                           </TableCell>
                           <TableCell className="px-3! py-3! text-center font-semibold whitespace-nowrap text-cx-text tabular-nums">
                             {formatCurrency(p.valor_ofertado)}
+                            {p.valor_contra_proposta ? (
+                              <span className="block text-xs font-normal text-cx-muted">Contra: {formatCurrency(p.valor_contra_proposta)}</span>
+                            ) : null}
+                            {p.status === "aceita" && p.valor_aceito ? (
+                              <span className="block text-xs font-normal text-cx-muted">Fechado: {formatCurrency(p.valor_aceito)}</span>
+                            ) : null}
                           </TableCell>
                           <TableCell className="px-3! py-3! text-center">
                             <StatusPill status={p.status} />
@@ -717,52 +820,53 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
         </aside>
       </div>
 
-      {/* Diálogo de criação */}
+      {/* Diálogo de criação e edição */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nova proposta</DialogTitle>
+            <DialogTitle>{form.id ? "Editar proposta" : "Nova proposta"}</DialogTitle>
             <DialogDescription>Preencha os dados abaixo. Campos com * são obrigatórios.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
+          <form onSubmit={handleCreate} noValidate className="grid gap-3 sm:grid-cols-2">
+            {ferr.geral && <p role="alert" className="crm-field-error sm:col-span-2"><AlertTriangle aria-hidden="true" /> {ferr.geral}</p>}
             <div className="sm:col-span-2">
               <Label htmlFor="proposta-cliente" className="mb-1.5">Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={(v) => setForm((p) => ({ ...p, cliente_id: v ?? "" }))}>
-                <SelectTrigger id="proposta-cliente" className="w-full border-cx-border">
+              {/* `items` faz o campo mostrar o NOME escolhido (sem ele aparecia o id: "21"). */}
+              <Select items={nomeCliente} value={form.cliente_id} disabled={!!form.id} onValueChange={(v) => { setForm((p) => ({ ...p, cliente_id: v ?? "" })); setFerr((f) => ({ ...f, cliente: undefined })); }}>
+                <SelectTrigger id="proposta-cliente" aria-invalid={ferr.cliente ? true : undefined} className="w-full border-cx-border">
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent className="min-w-64!">
                   {(clientes || []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {ferr.cliente && <p id="proposta-cliente-erro" className="crm-field-error" role="alert"><AlertTriangle aria-hidden="true" /> {ferr.cliente}</p>}
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="proposta-imovel" className="mb-1.5">Imóvel *</Label>
-              <Select value={form.imovel_id} onValueChange={(v) => setForm((p) => ({ ...p, imovel_id: v ?? "" }))}>
-                <SelectTrigger id="proposta-imovel" className="w-full border-cx-border">
+              <Select items={nomeImovel} value={form.imovel_id} disabled={!!form.id} onValueChange={(v) => { setForm((p) => ({ ...p, imovel_id: v ?? "" })); setFerr((f) => ({ ...f, imovel: undefined })); }}>
+                <SelectTrigger id="proposta-imovel" aria-invalid={ferr.imovel ? true : undefined} className="w-full border-cx-border">
                   <SelectValue placeholder="Selecione o imóvel" />
                 </SelectTrigger>
                 <SelectContent className="min-w-64!">
                   {(imoveis || []).map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.nome_imovel || i.endereco}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {ferr.imovel && <p id="proposta-imovel-erro" className="crm-field-error" role="alert"><AlertTriangle aria-hidden="true" /> {ferr.imovel}</p>}
             </div>
             <div>
-              <Label htmlFor="proposta-valor" className="mb-1.5">Valor ofertado (R$) *</Label>
-              <Input
+              <Label htmlFor="proposta-valor" className="mb-1.5">Valor oferecido *</Label>
+              <MoneyInput
                 id="proposta-valor"
-                type="number"
-                min="0"
-                step="0.01"
                 value={form.valor_ofertado}
-                onChange={(e) => setForm((p) => ({ ...p, valor_ofertado: e.target.value }))}
-                required
-                className="border-cx-border"
+                onChange={(v) => { setForm((p) => ({ ...p, valor_ofertado: v })); setFerr((f) => ({ ...f, valor: undefined })); }}
+                aria-invalid={ferr.valor ? true : undefined}
               />
+              {ferr.valor && <p id="proposta-valor-erro" className="crm-field-error" role="alert"><AlertTriangle aria-hidden="true" /> {ferr.valor}</p>}
             </div>
             <div>
               <Label htmlFor="proposta-forma" className="mb-1.5">Forma de pagamento</Label>
-              <Select value={form.forma_pagamento} onValueChange={(v) => setForm((p) => ({ ...p, forma_pagamento: v || "financiamento" }))}>
+              <Select items={FORMA_MAP} value={form.forma_pagamento} onValueChange={(v) => setForm((p) => ({ ...p, forma_pagamento: v || "financiamento" }))}>
                 <SelectTrigger id="proposta-forma" className="w-full border-cx-border">
                   <SelectValue />
                 </SelectTrigger>
@@ -772,12 +876,27 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
               </Select>
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="proposta-validade" className="mb-1.5">Validade</Label>
+              <Label htmlFor="proposta-validade" className="mb-1.5">Válida até</Label>
               <Input
                 id="proposta-validade"
                 type="date"
+                min={form.id ? undefined : hojeISO()}
+                max="2100-12-31"
                 value={form.data_validade}
-                onChange={(e) => setForm((p) => ({ ...p, data_validade: e.target.value }))}
+                aria-invalid={ferr.validade ? true : undefined}
+                onChange={(e) => { setForm((p) => ({ ...p, data_validade: e.target.value })); setFerr((f) => ({ ...f, validade: undefined })); }}
+                className="border-cx-border"
+              />
+              {ferr.validade && <p id="proposta-validade-erro" className="crm-field-error" role="alert"><AlertTriangle aria-hidden="true" /> {ferr.validade}</p>}
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="proposta-condicoes" className="mb-1.5">Condições</Label>
+              <Input
+                id="proposta-condicoes"
+                maxLength={1000}
+                placeholder="Ex.: entrada de 20% e saldo financiado"
+                value={form.condicoes}
+                onChange={(e) => setForm((p) => ({ ...p, condicoes: e.target.value }))}
                 className="border-cx-border"
               />
             </div>
@@ -785,17 +904,61 @@ export function PropostasManager({ initialPropostas, clientes, imoveis, loadErro
               <Label htmlFor="proposta-obs" className="mb-1.5">Observações</Label>
               <Input
                 id="proposta-obs"
+                maxLength={1000}
                 value={form.observacoes}
                 onChange={(e) => setForm((p) => ({ ...p, observacoes: e.target.value }))}
                 className="border-cx-border"
               />
             </div>
             <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-cx-border">Cancelar</Button>
               <Button type="submit" disabled={saving} className="gap-2 bg-cx-orange text-white hover:bg-cx-orange-dark">
-                {saving ? <><Loader2 className="animate-spin" /> Salvando...</> : "Criar proposta"}
+                {saving ? <><Loader2 className="animate-spin" /> Salvando...</> : form.id ? "Salvar alterações" : "Criar proposta"}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de negociação: contraproposta, aprovação e reprovação. */}
+      <Dialog open={!!neg} onOpenChange={(v) => { if (!v) setNeg(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {neg?.modo === "contra" ? "Registrar contraproposta" : neg?.modo === "aprovar" ? "Aprovar proposta" : "Reprovar proposta"}
+            </DialogTitle>
+            <DialogDescription>
+              {neg?.modo === "contra"
+                ? "Valor que o proprietário pediu de volta. A proposta passa para Em negociação."
+                : neg?.modo === "aprovar"
+                  ? "Confira o valor fechado no negócio."
+                  : "Conte o motivo, se quiser. Ajuda a entender o que não deu certo."}
+            </DialogDescription>
+          </DialogHeader>
+          {neg && (
+            <form onSubmit={salvarNegociacao} noValidate className="grid gap-3">
+              {neg.modo === "reprovar" ? (
+                <div>
+                  <Label htmlFor="neg-texto" className="mb-1.5">Motivo (opcional)</Label>
+                  <Input id="neg-texto" maxLength={1000} value={neg.texto} onChange={(e) => setNeg((n) => ({ ...n, texto: e.target.value }))} className="border-cx-border" />
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="neg-valor" className="mb-1.5">{neg.modo === "contra" ? "Valor da contraproposta *" : "Valor fechado *"}</Label>
+                  <MoneyInput id="neg-valor" value={neg.valor} aria-invalid={neg.erro ? true : undefined}
+                    onChange={(v) => setNeg((n) => ({ ...n, valor: v, erro: undefined }))} />
+                </div>
+              )}
+              {neg.erro && <p role="alert" className="crm-field-error"><AlertTriangle aria-hidden="true" /> {neg.erro}</p>}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setNeg(null)} className="border-cx-border">Cancelar</Button>
+                <Button type="submit" disabled={busyId === neg.id} variant={neg.modo === "reprovar" ? "destructive" : "default"}>
+                  {busyId === neg.id ? <Loader2 className="animate-spin" /> : null}
+                  {neg.modo === "contra" ? "Salvar contraproposta" : neg.modo === "aprovar" ? "Aprovar" : "Reprovar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

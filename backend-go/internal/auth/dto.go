@@ -23,6 +23,8 @@ type UserPayload struct {
 	IsAdministrador  bool   `json:"is_administrador"`
 	TenantID         *uint  `json:"tenant_id"`
 	IsSuperAdmin     bool   `json:"is_super_admin"`
+	// Photo: a foto do topo da tela (Header.jsx) lia user.photo, que não vinha.
+	Photo string `json:"photo"`
 }
 
 func userPayload(u *models.User) UserPayload {
@@ -37,6 +39,7 @@ func userPayload(u *models.User) UserPayload {
 		IsAdministrador:  u.IsAdministrador,
 		TenantID:         u.TenantID,
 		IsSuperAdmin:     u.IsSuperAdmin,
+		Photo:            u.Photo,
 	}
 }
 

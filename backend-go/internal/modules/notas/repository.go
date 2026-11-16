@@ -29,6 +29,10 @@ func (r *Repository) MarkConcluida(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Model(&models.Nota{}).Where("id = ?", id).Update("nova", &falseVal).Error
 }
 
+func (r *Repository) AtualizarTexto(ctx context.Context, id uint, texto string) error {
+	return r.db.WithContext(ctx).Model(&models.Nota{}).Where("id = ?", id).Update("texto", texto).Error
+}
+
 func (r *Repository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&models.Nota{}, id).Error
 }

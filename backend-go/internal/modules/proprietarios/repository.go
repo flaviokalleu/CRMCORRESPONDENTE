@@ -27,6 +27,10 @@ func (r *Repository) Create(ctx context.Context, p *models.Proprietario) error {
 	return r.db.WithContext(ctx).Create(p).Error
 }
 
+func (r *Repository) Save(ctx context.Context, p *models.Proprietario) error {
+	return r.db.WithContext(ctx).Save(p).Error
+}
+
 func (r *Repository) FindByID(ctx context.Context, id uint) (*models.Proprietario, error) {
 	var p models.Proprietario
 	if err := r.db.WithContext(ctx).First(&p, id).Error; err != nil {

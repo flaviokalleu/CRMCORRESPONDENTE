@@ -27,7 +27,13 @@ function textoLimite(valor, nome) {
   return valor ? `Até ${valor.toLocaleString("pt-BR")} ${nome}` : `${nome[0].toUpperCase()}${nome.slice(1)} sem limite`;
 }
 
-const brl = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
+// Centavos só quando existem: R$ 97 fica "R$ 97", mas R$ 297,90 não pode
+// virar "R$ 298" (arredondava e mostrava um preço que não é o cobrado).
+const brl = (v) => {
+  const n = Number(v) || 0;
+  const casas = Number.isInteger(n) ? 0 : 2;
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: casas, maximumFractionDigits: casas }).format(n);
+};
 
 export function CartoesDePlanos({ planos }) {
   if (!planos.length) {
@@ -39,8 +45,11 @@ export function CartoesDePlanos({ planos }) {
   return (
     <div className={`grid grid-cols-1 gap-5 ${planos.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"} mx-auto max-w-5xl`}>
       {planos.map((p, i) => {
+        // "Tudo do X, mais:" só quando é verdade: este plano tem todos os
+        // recursos do anterior. Senão, lista os recursos dele inteiros.
         const anterior = planos[i - 1];
-        const novos = RECURSOS.filter(([k]) => p[k] && !(anterior && anterior[k]));
+        const herda = anterior && RECURSOS.every(([k]) => !anterior[k] || p[k]);
+        const novos = RECURSOS.filter(([k]) => p[k] && !(herda && anterior[k]));
         const destaque = p.id === recomendado;
         return (
           <article key={p.id} className={`pricing-card relative flex flex-col rounded-2xl border p-7 text-left ${destaque ? "highlighted" : ""}`}>
@@ -63,7 +72,7 @@ export function CartoesDePlanos({ planos }) {
             )}
 
             <ul className="mt-6 flex-1 space-y-2.5">
-              {anterior && <li className="pricing-card-kicker text-sm font-semibold">Tudo do {anterior.nome}, mais:</li>}
+              {herda && <li className="pricing-card-kicker text-sm font-semibold">Tudo do {anterior.nome}, mais:</li>}
               {LIMITES.map(([k, nome]) => (
                 <li key={k} className="pricing-card-feature enabled flex items-center gap-2 text-base">
                   <Check className="h-4 w-4 shrink-0" /> {textoLimite(p[k], nome)}

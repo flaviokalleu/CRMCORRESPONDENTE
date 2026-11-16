@@ -1,5 +1,5 @@
 import { apiGet } from "@/lib/api-server";
-import { ProprietarioAddForm } from "@/components/ProprietarioAddForm";
+import { ProprietarioAddForm, ProprietarioRowActions } from "@/components/ProprietarioAddForm";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
 import { UserSquare, MapPin } from "@/components/icons";
 import { ContatoRapido } from "@/components/ui/contato-rapido";
@@ -30,6 +30,7 @@ export default async function ListaProprietariosPage() {
               <Th>Proprietário</Th>
               <Th>Falar com</Th>
               <Th>Endereço</Th>
+              <Th right>Ações</Th>
             </Thead>
             <tbody>
               {proprietarios.map((p) => (
@@ -48,6 +49,7 @@ export default async function ListaProprietariosPage() {
                       <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-cx-muted" /> {p.address}</span>
                     ) : "—"}
                   </Td>
+                  <Td right><ProprietarioRowActions proprietario={p} /></Td>
                 </Row>
               ))}
             </tbody>

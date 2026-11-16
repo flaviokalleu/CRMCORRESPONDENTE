@@ -16,7 +16,13 @@ export async function POST(request) {
   const { remember, ...credentials } = body || {};
   const goRes = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    // Aparelho e IP de quem entrou: o Go registra o login na tela Acessos.
+    // Sem isso ele via sempre o Node ("node", 127.0.0.1).
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": request.headers.get("user-agent") || "",
+      ...(request.headers.get("x-forwarded-for") ? { "X-Forwarded-For": request.headers.get("x-forwarded-for") } : {}),
+    },
     body: JSON.stringify(credentials),
   });
 

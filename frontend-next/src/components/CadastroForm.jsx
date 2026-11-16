@@ -10,7 +10,12 @@ import { maskPhone, soDigitos } from "@/lib/masks";
 const slugify = (t) =>
   t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "imobiliaria";
 
-const brl = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
+// Centavos só quando existem (R$ 297,90 não pode aparecer como R$ 298).
+const brl = (v) => {
+  const n = Number(v) || 0;
+  const casas = Number.isInteger(n) ? 0 : 2;
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: casas, maximumFractionDigits: casas }).format(n);
+};
 
 // Cadastro em 5 campos (lei de Hick): o que não é preciso para começar —
 // CNPJ, endereço, logo — fica para "Minha empresa", depois de entrar.
@@ -38,6 +43,9 @@ export function CadastroForm({ planos, planoInicial }) {
     if (v.nome.trim().split(/\s+/).length < 2) e.nome = "Informe nome e sobrenome.";
     if (!/^\S+@\S+\.\S+$/.test(v.email.trim())) e.email = "Confira o e-mail.";
     if (v.senha.length < 6) e.senha = "Use pelo menos 6 caracteres.";
+    else if (new TextEncoder().encode(v.senha).length > 72) e.senha = "Use no máximo 72 caracteres.";
+    const fone = soDigitos(v.telefone);
+    if (fone && (fone.length < 10 || fone.length > 11)) e.telefone = "Escreva o WhatsApp com DDD. Ex.: (61) 99999-9999";
     return e;
   }
 
@@ -46,7 +54,7 @@ export function CadastroForm({ planos, planoInicial }) {
     setErroGeral("");
     const e = validar();
     setErros(e);
-    const primeiro = ["empresa", "nome", "email", "senha"].find((k) => e[k]);
+    const primeiro = ["empresa", "nome", "email", "telefone", "senha"].find((k) => e[k]);
     if (primeiro) {
       focar(primeiro);
       return;
@@ -78,9 +86,14 @@ export function CadastroForm({ planos, planoInicial }) {
         break;
       }
       if (!res.ok) {
-        if (/email/i.test(dados.error || "")) {
+        // O servidor diz qual campo errou (`campo`); e-mail/usuário em uso vêm com 409.
+        const campo = { password: "senha", username: "email" }[dados.campo] || dados.campo;
+        if (res.status === 409 && (campo === "email" || /e-?mail/i.test(dados.error || ""))) {
           setErros({ email: "Este e-mail já tem conta. Entre ou use outro e-mail." });
           focar("email");
+        } else if (campo && Object.hasOwn(v, campo)) {
+          setErros({ [campo]: dados.error });
+          focar(campo);
         } else {
           setErroGeral(dados.error || "Não foi possível criar a conta. Tente de novo.");
         }
@@ -116,10 +129,10 @@ export function CadastroForm({ planos, planoInicial }) {
 
   return (
     <form onSubmit={enviar} className="lg-form" noValidate>
-      {campo("empresa", "Nome da imobiliária", Building2, { autoComplete: "organization", placeholder: "Ex.: Imobiliária Central" })}
-      {campo("nome", "Seu nome e sobrenome", User, { autoComplete: "name", placeholder: "Ex.: Maria Souza" })}
-      {campo("email", "E-mail", Mail, { type: "email", autoComplete: "email", inputMode: "email", placeholder: "seu@email.com.br" })}
-      {campo("telefone", "WhatsApp (opcional)", Phone, { type: "tel", autoComplete: "tel", inputMode: "tel", placeholder: "(61) 99999-9999" })}
+      {campo("empresa", "Nome da imobiliária", Building2, { autoComplete: "organization", placeholder: "Ex.: Imobiliária Central", maxLength: 255 })}
+      {campo("nome", "Seu nome e sobrenome", User, { autoComplete: "name", placeholder: "Ex.: Maria Souza", maxLength: 255 })}
+      {campo("email", "E-mail", Mail, { type: "email", autoComplete: "email", inputMode: "email", placeholder: "seu@email.com.br", maxLength: 255 })}
+      {campo("telefone", "WhatsApp (opcional)", Phone, { type: "tel", autoComplete: "tel", inputMode: "tel", placeholder: "(61) 99999-9999", maxLength: 16 })}
 
       <div className="lg-field">
         <label htmlFor="cad-senha" className="lg-label">Crie uma senha</label>
@@ -132,6 +145,7 @@ export function CadastroForm({ planos, planoInicial }) {
             onChange={set("senha")}
             autoComplete="new-password"
             placeholder="Pelo menos 6 caracteres"
+            maxLength={72}
             aria-invalid={erros.senha ? true : undefined}
             aria-describedby={erros.senha ? "cad-senha-erro" : undefined}
             className="lg-input lg-input-pass"

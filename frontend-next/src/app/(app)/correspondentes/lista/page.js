@@ -1,6 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
 import { ContatoRapido } from "@/components/ui/contato-rapido";
+import { EquipeRowActions } from "@/components/EquipeRowActions";
 import { UsersRound, MapPin } from "@/components/icons";
 
 export const metadata = { title: "Lista de Correspondentes" };
@@ -27,6 +28,7 @@ export default async function ListaCorrespondentesPage() {
             <Th>Usuário</Th>
             <Th>Falar com</Th>
             <Th>Endereço</Th>
+            <Th right>Ações</Th>
           </Thead>
           <tbody>
             {correspondentes.map((c) => (
@@ -48,6 +50,9 @@ export default async function ListaCorrespondentesPage() {
                   {c.address ? (
                     <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-cx-muted" /> {c.address}</span>
                   ) : "—"}
+                </Td>
+                <Td right>
+                  <EquipeRowActions tipo="correspondente" pessoa={c} />
                 </Td>
               </Row>
             ))}

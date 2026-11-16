@@ -5,9 +5,7 @@ import { ConfiguracoesEmpresaForm } from "@/components/ConfiguracoesEmpresaForm"
 export const metadata = { title: "Minha empresa" };
 
 // Server Component: busca as configurações do tenant no servidor (SSR).
-// TODO: o guard de role (`hasRole('administrador')`) é client-side via
-// AuthContext — aqui a página é renderizada normalmente para qualquer usuário
-// autenticado; um guard real de servidor fica para uma iteração futura.
+// Só administrador: a guarda de servidor fica em ./layout.js (GuardaPapel).
 export default async function ConfiguracoesEmpresaPage() {
   const data = await apiGet("/tenant-settings/settings");
 

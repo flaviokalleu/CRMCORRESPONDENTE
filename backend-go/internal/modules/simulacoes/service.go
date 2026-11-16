@@ -22,7 +22,7 @@ const (
 )
 
 // ErrValorFinanciadoInvalido é devolvido quando valor_imovel - valor_entrada <= 0.
-var ErrValorFinanciadoInvalido = errors.New("valor financiado deve ser maior que zero")
+var ErrValorFinanciadoInvalido = errors.New("A entrada precisa ser menor que o valor do imóvel.")
 
 // CalculoInput são os parâmetros de entrada do cálculo (compartilhado por
 // /calcular e POST /).
@@ -89,8 +89,21 @@ func Calcular(in CalculoInput) (*Resultado, error) {
 	if valorFinanciado <= 0 {
 		return nil, ErrValorFinanciadoInvalido
 	}
-	if in.PrazoMeses <= 0 {
-		return nil, errors.New("prazo_meses deve ser maior que zero")
+	if in.ValorEntrada < 0 {
+		return nil, errors.New("A entrada não pode ser negativa.")
+	}
+	// Limites da tela (12 a 420 meses) também aqui: sem teto, um prazo enorme
+	// montava milhões de parcelas na memória do servidor.
+	if in.PrazoMeses < 12 || in.PrazoMeses > 420 {
+		return nil, errors.New("O prazo deve ficar entre 12 e 420 meses (1 a 35 anos).")
+	}
+	// Juros acima de 50% ao ano davam resultado sem sentido (amortização zero
+	// e saldo "zerado" à força na última parcela).
+	if in.TaxaJurosAnual <= 0 || in.TaxaJurosAnual > 50 {
+		return nil, errors.New("Os juros devem ficar entre 0,01% e 50% ao ano.")
+	}
+	if sistema != SistemaSAC && sistema != SistemaPRICE {
+		return nil, errors.New("Escolha SAC ou PRICE.")
 	}
 
 	taxaMensal := math.Pow(1+in.TaxaJurosAnual/100, 1.0/12) - 1

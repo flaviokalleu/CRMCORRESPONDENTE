@@ -17,6 +17,7 @@ import (
 	"crmimob/internal/auth"
 	"crmimob/internal/models"
 	"crmimob/internal/modules/billing"
+	"crmimob/internal/validacao"
 )
 
 var (
@@ -66,6 +67,9 @@ func (s *Service) ListPublicPlans(ctx context.Context) ([]models.Plan, error) {
 // valida → checa duplicatas → cria tenant+admin+subscription → gera tokens.
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (*models.Tenant, *models.User, *models.Subscription, string, string, error) {
 	req.Normalize()
+	if err := s.validarCadastro(ctx, &req); err != nil {
+		return nil, nil, nil, "", "", err
+	}
 	e, a := req.Empresa, req.Admin
 
 	if e.Slug == "" || !slugRegex.MatchString(e.Slug) {
@@ -130,6 +134,13 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*models.Te
 	}
 
 	if err := s.repo.RegisterTransaction(ctx, tenant, admin, sub); err != nil {
+		// Dois envios ao mesmo tempo: o 2º bate na UNIQUE e vira 409, não 500.
+		if strings.Contains(err.Error(), "tenants_slug_key") {
+			return nil, nil, nil, "", "", ErrSlugTaken
+		}
+		if ec := validacao.ConflitoUnico(err); ec != nil {
+			return nil, nil, nil, "", "", ec
+		}
 		return nil, nil, nil, "", "", err
 	}
 
@@ -206,9 +217,20 @@ func (s *Service) GetSettings(ctx context.Context, tenantID uint) (*models.Tenan
 }
 
 func (s *Service) UpdateSettings(ctx context.Context, tenantID uint, req UpdateSettingsRequest) (*models.Tenant, error) {
+	if e := validarEmpresa(&req); e != nil {
+		return nil, e
+	}
 	updates := req.ToUpdates()
+	// CNPJ vazio vira NULL: a coluna é UNIQUE e duas empresas com "" batiam
+	// na constraint (erro 500 ao salvar sem CNPJ).
+	if v, ok := updates["cnpj"].(string); ok && v == "" {
+		updates["cnpj"] = nil
+	}
 	if len(updates) > 0 {
 		if err := s.repo.Update(ctx, tenantID, updates); err != nil {
+			if validacao.ConflitoUnico(err) != nil {
+				return nil, &validacao.ErroCampo{Campo: "cnpj", Mensagem: "Este CNPJ já está cadastrado em outra empresa."}
+			}
 			return nil, err
 		}
 	}
@@ -300,4 +322,68 @@ func TestAsaasConnection(apiKey string) string {
 	var body map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&body)
 	return fmt.Sprintf("Asaas respondeu status %d — verifique a chave", resp.StatusCode)
+}
+
+// validarEmpresa confere os dados de "Minha empresa" antes de gravar. Antes
+// nada era validado: CNPJ com dígito errado era aceito, UF/CEP/CNPJ maiores
+// que a coluna (2/10/18) e textos acima de 255 davam erro 500.
+func validarEmpresa(r *UpdateSettingsRequest) *validacao.ErroCampo {
+	limpa := func(p *string) {
+		if p != nil {
+			*p = strings.TrimSpace(*p)
+		}
+	}
+	for _, p := range []*string{r.Nome, r.CNPJ, r.Email, r.Telefone, r.Endereco, r.Cidade, r.Estado, r.CEP} {
+		limpa(p)
+	}
+	if r.Nome != nil && *r.Nome == "" {
+		return &validacao.ErroCampo{Campo: "nome", Mensagem: "Escreva o nome da empresa."}
+	}
+	if r.Email != nil {
+		v := validacao.NormalizarEmail(*r.Email)
+		r.Email = &v
+		if e := validacao.Email(v); e != nil {
+			return &validacao.ErroCampo{Campo: "email", Mensagem: e.Mensagem}
+		}
+	}
+	if r.CNPJ != nil && *r.CNPJ != "" {
+		if !validacao.CNPJValido(*r.CNPJ) {
+			return &validacao.ErroCampo{Campo: "cnpj", Mensagem: "CNPJ inválido. Confira os números."}
+		}
+		d := validacao.SoDigitos(*r.CNPJ)
+		v := d[0:2] + "." + d[2:5] + "." + d[5:8] + "/" + d[8:12] + "-" + d[12:14]
+		r.CNPJ = &v
+	}
+	if r.Telefone != nil && *r.Telefone != "" {
+		if e := validacao.Telefone(*r.Telefone); e != nil {
+			return e
+		}
+	}
+	if r.CEP != nil && *r.CEP != "" {
+		d := validacao.SoDigitos(*r.CEP)
+		if len(d) != 8 {
+			return &validacao.ErroCampo{Campo: "cep", Mensagem: "O CEP tem 8 números. Exemplo: 70000-000"}
+		}
+		v := d[:5] + "-" + d[5:]
+		r.CEP = &v
+	}
+	if r.Estado != nil && *r.Estado != "" {
+		v := strings.ToUpper(*r.Estado)
+		r.Estado = &v
+		if !validacao.UFValida(v) {
+			return &validacao.ErroCampo{Campo: "estado", Mensagem: "Escolha o estado na lista."}
+		}
+	}
+	return validacao.Primeiro(
+		ptrTam("nome", r.Nome, "O nome"),
+		ptrTam("endereco", r.Endereco, "O endereço"),
+		ptrTam("cidade", r.Cidade, "A cidade"),
+	)
+}
+
+func ptrTam(campo string, p *string, rotulo string) *validacao.ErroCampo {
+	if p == nil {
+		return nil
+	}
+	return validacao.Tamanho(campo, *p, rotulo)
 }

@@ -3,7 +3,9 @@ package notas
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"crmimob/internal/models"
 )
@@ -12,7 +14,32 @@ var (
 	ErrClienteNaoEncontrado = errors.New("notas: cliente não encontrado")
 	ErrUsuarioNaoEncontrado = errors.New("notas: usuário não encontrado")
 	ErrNaoEncontrada        = errors.New("notas: nota não encontrada")
+	ErrTextoInvalido        = errors.New("Escreva a nota (até 5.000 caracteres).")
 )
+
+// MaxTexto limita a nota: a coluna é text, mas um colar acidental de um
+// documento inteiro não deve virar nota.
+const MaxTexto = 5000
+
+func textoValido(t string) (string, bool) {
+	t = strings.TrimSpace(t)
+	return t, t != "" && utf8.RuneCountInString(t) <= MaxTexto
+}
+
+// Editar troca o texto de uma nota (antes não havia como corrigir uma nota).
+func (s *Service) Editar(ctx context.Context, id uint, texto string) (*models.Nota, error) {
+	t, ok := textoValido(texto)
+	if !ok {
+		return nil, ErrTextoInvalido
+	}
+	if _, err := s.repo.FindByID(ctx, id); err != nil {
+		return nil, ErrNaoEncontrada
+	}
+	if err := s.repo.AtualizarTexto(ctx, id, t); err != nil {
+		return nil, err
+	}
+	return s.repo.FindByID(ctx, id)
+}
 
 type Service struct{ repo *Repository }
 
@@ -23,6 +50,11 @@ func NewService(repo *Repository) *Service { return &Service{repo: repo} }
 // fora do escopo desta tarefa — ver internal/integrations/whatsapp (módulo
 // separado); aqui só deixamos o hook documentado.
 func (s *Service) Create(ctx context.Context, req CreateRequest) (*models.Nota, error) {
+	t, ok := textoValido(req.Texto)
+	if !ok {
+		return nil, ErrTextoInvalido
+	}
+	req.Texto = t
 	if _, err := s.repo.FindCliente(ctx, req.ClienteID); err != nil {
 		return nil, ErrClienteNaoEncontrado
 	}

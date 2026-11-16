@@ -161,6 +161,22 @@ export default function WhatsAppQRPage() {
     return () => { cancelled = true; };
   }, [qrCode]);
 
+  // Enquanto espera o QR (ou a leitura dele), confere o estado a cada 3 s.
+  // A tela dependia só do WebSocket; quando ele não conecta (ex.: Next e Go
+  // em portas diferentes, sem NEXT_PUBLIC_WS_URL), o QR nunca aparecia.
+  useEffect(() => {
+    if (isConnected || (!connecting && !qrCode)) return undefined;
+    const t = setInterval(checkStatus, 3000);
+    // Sem QR em 90 s: para de esperar e avisa (antes ficava girando para sempre).
+    const limite = connecting && !qrCode
+      ? setTimeout(() => {
+          setConnecting(false);
+          setError("O QR Code não chegou. Toque em Mostrar QR Code de novo em um minuto.");
+        }, 90000)
+      : null;
+    return () => { clearInterval(t); if (limite) clearTimeout(limite); };
+  }, [connecting, qrCode, isConnected, checkStatus]);
+
   const handleConnect = async () => {
     setConnecting(true);
     setError("");
@@ -174,10 +190,13 @@ export default function WhatsAppQRPage() {
       });
       const data = await res.json();
       if (res.status === 403 && data?.code === "FEATURE_NOT_AVAILABLE") { setSemPlano(true); return; }
-      if (data.hasQrCode && data.qrCode) setQrCode(data.qrCode);
+      if (data.hasQrCode && data.qrCode) {
+        setQrCode(data.qrCode);
+        setConnecting(false);
+      }
+      // Sem QR ainda: continua "Gerando…" e o efeito acima busca o estado.
     } catch {
       setError("Não foi possível gerar o QR Code agora. Espere um minuto e tente de novo.");
-    } finally {
       setConnecting(false);
     }
   };

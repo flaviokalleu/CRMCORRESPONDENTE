@@ -1,6 +1,7 @@
 import { apiGet } from "@/lib/api-server";
 import { PageHeader, Avatar, EmptyState, Table, Thead, Th, Row, Td } from "@/components/ui/page";
 import { ContatoRapido } from "@/components/ui/contato-rapido";
+import { EquipeRowActions } from "@/components/EquipeRowActions";
 import { UsersRound, BadgeCheck } from "@/components/icons";
 
 export const metadata = { title: "Lista de Corretores" };
@@ -27,6 +28,7 @@ export default async function ListaCorretoresPage() {
             <Th>Usuário</Th>
             <Th>Falar com</Th>
             <Th>CRECI</Th>
+            <Th right>Ações</Th>
           </Thead>
           <tbody>
             {corretores.map((c) => (
@@ -48,6 +50,9 @@ export default async function ListaCorretoresPage() {
                   {c.creci ? (
                     <span className="inline-flex items-center gap-1.5"><BadgeCheck className="h-3.5 w-3.5 text-cx-muted" /> {c.creci}</span>
                   ) : "—"}
+                </Td>
+                <Td right>
+                  <EquipeRowActions tipo="corretor" pessoa={c} />
                 </Td>
               </Row>
             ))}

@@ -91,13 +91,13 @@ export default async function BuscaPage({ searchParams }) {
             {(sugestoes.tipos.length > 0 || sugestoes.cidades.length > 0) && (
               <nav aria-label="Atalhos" className="mt-4 flex flex-wrap justify-center gap-2">
                 {sugestoes.tipos.map((t) => (
-                  <Link key={t} href={`/imoveis?tipo=${encodeURIComponent(t)}`} className="lst-filtro">
-                    {t}
+                  <Link key={t} href={`/imoveis?tipo=${encodeURIComponent(t)}`} className="lst-filtro max-w-full" title={t}>
+                    <span className="truncate">{t}</span>
                   </Link>
                 ))}
                 {sugestoes.cidades.map((c) => (
-                  <Link key={c} href={`/imoveis?cidade=${encodeURIComponent(c)}`} className="lst-filtro">
-                    {c}
+                  <Link key={c} href={`/imoveis?cidade=${encodeURIComponent(c)}`} className="lst-filtro max-w-full" title={c}>
+                    <span className="truncate">{c}</span>
                   </Link>
                 ))}
               </nav>

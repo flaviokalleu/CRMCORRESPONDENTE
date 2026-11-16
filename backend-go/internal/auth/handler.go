@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -20,6 +21,10 @@ type Handler struct {
 	// mas nenhum e-mail sai.
 	mailer      Mailer
 	frontendURL string
+
+	// AoEntrar é chamado depois de um login certo (o router grava a linha em
+	// `acessos`). A tela Acessos lia essa tabela, mas nada a preenchia.
+	AoEntrar func(ctx context.Context, u *models.User, ip, userAgent string)
 }
 
 func NewHandler(repo *Repository, svc *Service) *Handler {
@@ -86,6 +91,9 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	if h.AoEntrar != nil {
+		h.AoEntrar(ctx, user, c.ClientIP(), c.GetHeader("User-Agent"))
+	}
 	c.JSON(http.StatusOK, LoginResponse{Token: access, RefreshToken: refresh, User: userPayload(user)})
 }
 

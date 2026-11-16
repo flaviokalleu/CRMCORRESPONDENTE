@@ -1,0 +1,1 @@
+ALTER TABLE whatsapp_sessions ALTER COLUMN data DROP DEFAULT;

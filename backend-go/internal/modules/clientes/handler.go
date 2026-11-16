@@ -657,18 +657,28 @@ func readClienteInput(c *gin.Context) ClienteInput {
 }
 
 func respondClienteErr(c *gin.Context, err error) {
+	var campos ErrosCampos
+	if errors.As(err, &campos) {
+		details := make([]gin.H, 0, len(campos))
+		for _, e := range campos {
+			details = append(details, gin.H{"field": e.Campo, "message": e.Mensagem})
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": campos[0].Mensagem, "campo": campos[0].Campo, "details": details})
+		return
+	}
 	switch {
 	case errors.Is(err, ErrNaoEncontrado), errors.Is(err, gorm.ErrRecordNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "Cliente não encontrado"})
 	case errors.Is(err, ErrSemPermissao):
 		c.JSON(http.StatusForbidden, gin.H{"error": "Sem permissão para esta operação"})
 	case errors.Is(err, ErrCPFDuplicado):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "CPF já cadastrado"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Já existe um cliente com este CPF.", "campo": "cpf",
+			"details": []gin.H{{"field": "cpf", "message": "Já existe um cliente com este CPF."}}})
 	case errors.Is(err, ErrStatusInvalido):
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Status inválido"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Escolha um status da lista.", "campo": "status"})
 	case errors.Is(err, ErrDadosInvalidos):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dados inválidos"})
 	default:
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro interno"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Não foi possível salvar agora. Tente de novo em instantes."})
 	}
 }

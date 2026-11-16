@@ -1,6 +1,8 @@
 "use client";
 
 import { FormIntro } from "@/components/ui/form-intro";
+import { focarPrimeiroErro } from "@/components/ui/form-field";
+import { cnpjValido, emailValido } from "@/lib/validar";
 import { maskCep, maskCnpj, maskPhone, soDigitos } from "@/lib/masks";
 import { Building, CheckCircle2, AlertCircle } from "@/components/icons";
 
@@ -32,6 +34,7 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
     cep: maskCep(initialData?.cep || ""),
   });
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [erros, setErros] = useState({});
   const [saving, setSaving] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
 
@@ -75,6 +78,7 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
     const mascara = MASCARAS[name];
     const valor = mascara ? mascara(value) : value;
     setForm((p) => ({ ...p, [name]: valor }));
+    setErros((p) => (p[name] ? { ...p, [name]: undefined } : p));
     if (message.type === "success") setMessage({ type: "", text: "" });
     if (name === "cep" && soDigitos(valor).length === 8 && soDigitos(valor) !== soDigitos(form.cep)) {
       buscarCep(soDigitos(valor));
@@ -111,17 +115,46 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
     }
   };
 
+  // Ordem dos campos na tela, para levar o foco ao primeiro erro.
+  const ORDEM = ["settings-nome", "settings-cnpj", "settings-telefone", "settings-email", "settings-cep", "settings-endereco", "settings-cidade", "settings-estado"];
+  const validar = () => {
+    const e = {};
+    if (!form.nome.trim()) e.nome = "Escreva o nome da empresa.";
+    if (form.cnpj && !cnpjValido(form.cnpj)) e.cnpj = "CNPJ inválido. Confira os números.";
+    const tel = soDigitos(form.telefone);
+    if (tel && (tel.length < 10 || tel.length > 11)) e.telefone = "Escreva o telefone com DDD.";
+    if (!form.email.trim()) e.email = "Escreva o e-mail da empresa.";
+    else if (!emailValido(form.email)) e.email = "Confira o e-mail. Exemplo: contato@imobiliaria.com";
+    if (form.cep && soDigitos(form.cep).length !== 8) e.cep = "O CEP tem 8 números. Exemplo: 70000-000";
+    return e;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    if (saving) return;
     setMessage({ type: "", text: "" });
+    const novos = validar();
+    if (Object.keys(novos).length) {
+      setErros(novos);
+      focarPrimeiroErro(Object.fromEntries(Object.keys(novos).map((k) => [`settings-${k}`, true])), ORDEM);
+      return;
+    }
+    setSaving(true);
     try {
       const res = await fetch("/api/backend/tenant-settings/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error("Não foi possível salvar. Confira os dados e tente de novo.");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.campo && ORDEM.includes(`settings-${data.campo}`)) {
+          setErros({ [data.campo]: data.error });
+          focarPrimeiroErro({ [`settings-${data.campo}`]: true }, ORDEM);
+          throw new Error("Confira o campo marcado.");
+        }
+        throw new Error(data.error || "Não foi possível salvar. Confira os dados e tente de novo.");
+      }
       setMessage({ type: "success", text: "Pronto! Os dados da empresa foram salvos." });
     } catch (err) {
       setMessage({ type: "error", text: err.message || "Não foi possível salvar. Tente de novo." });
@@ -133,7 +166,7 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
   const mostrarLogo = logo && !logoFalhou;
 
   return (
-    <form onSubmit={handleSubmit} className="crm-form crm-form-composed space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="crm-form crm-form-composed space-y-4">
       <div className="crm-card rounded-xl border border-cx-border bg-cx-surface p-5 space-y-4">
         <FormIntro title="Logo da empresa" description="Aparece no topo dos documentos que você gera pelo sistema." />
         <div className="flex flex-wrap items-center gap-4">
@@ -178,10 +211,10 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
 
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
         <div className="md:col-span-2"><FormIntro title="Dados da empresa" description="Nome e contatos que seus clientes vão ver." /></div>
-        <Field label="Nome da empresa" name="nome" value={form.nome} onChange={handleChange} className="md:col-span-2" />
-        <Field label="CNPJ" name="cnpj" value={form.cnpj} onChange={handleChange} placeholder="00.000.000/0000-00" inputMode="numeric" />
-        <Field label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} placeholder="(00) 00000-0000" type="tel" />
-        <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" className="md:col-span-2" />
+        <Field label="Nome da empresa" name="nome" value={form.nome} onChange={handleChange} className="md:col-span-2" erro={erros.nome} maxLength={255} />
+        <Field label="CNPJ" name="cnpj" value={form.cnpj} onChange={handleChange} placeholder="00.000.000/0000-00" inputMode="numeric" erro={erros.cnpj} />
+        <Field label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} placeholder="(00) 00000-0000" type="tel" erro={erros.telefone} />
+        <Field label="E-mail" name="email" value={form.email} onChange={handleChange} type="email" className="md:col-span-2" erro={erros.email} maxLength={255} />
       </div>
 
       <div className="crm-card grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-cx-border bg-cx-surface p-5">
@@ -194,10 +227,11 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
           placeholder="00000-000"
           inputMode="numeric"
           dica={buscandoCep ? "Buscando o endereço…" : null}
+          erro={erros.cep}
         />
         <div className="hidden md:block" aria-hidden="true" />
-        <Field label="Endereço" name="endereco" value={form.endereco} onChange={handleChange} placeholder="Rua, número e bairro" className="md:col-span-2" />
-        <Field label="Cidade" name="cidade" value={form.cidade} onChange={handleChange} />
+        <Field label="Endereço" name="endereco" value={form.endereco} onChange={handleChange} placeholder="Rua, número e bairro" className="md:col-span-2" erro={erros.endereco} maxLength={255} />
+        <Field label="Cidade" name="cidade" value={form.cidade} onChange={handleChange} erro={erros.cidade} maxLength={255} />
         <div>
           <label htmlFor="settings-estado" className="block text-sm text-cx-muted mb-2">Estado</label>
           <select
@@ -230,7 +264,8 @@ export function ConfiguracoesEmpresaForm({ initialData }) {
   );
 }
 
-function Field({ label, name, value, onChange, type = "text", placeholder, inputMode, dica, className = "" }) {
+function Field({ label, name, value, onChange, type = "text", placeholder, inputMode, dica, erro, maxLength, className = "" }) {
+  const ids = [erro && `settings-${name}-erro`, dica && `settings-${name}-dica`].filter(Boolean).join(" ") || undefined;
   return (
     <div className={className}>
       <label htmlFor={`settings-${name}`} className="block text-sm text-cx-muted mb-2">{label}</label>
@@ -242,9 +277,16 @@ function Field({ label, name, value, onChange, type = "text", placeholder, input
         onChange={onChange}
         placeholder={placeholder}
         inputMode={inputMode}
-        aria-describedby={dica ? `settings-${name}-dica` : undefined}
+        maxLength={maxLength}
+        aria-invalid={erro ? true : undefined}
+        aria-describedby={ids}
         className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
       />
+      {erro && (
+        <p id={`settings-${name}-erro`} className="crm-field-error" role="alert">
+          <AlertCircle aria-hidden="true" /> {erro}
+        </p>
+      )}
       {dica && <p id={`settings-${name}-dica`} className="form-dica" role="status">{dica}</p>}
     </div>
   );
