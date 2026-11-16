@@ -25,6 +25,11 @@ type Subscription struct {
 	CanceladoEm           *time.Time     `gorm:"column:cancelado_em" json:"cancelado_em,omitempty"`
 	MotivoCancelamento    *string        `gorm:"column:motivo_cancelamento" json:"motivo_cancelamento,omitempty"`
 	Metadata              datatypes.JSON `gorm:"column:metadata" json:"metadata"`
+	// Assinatura SaaS (migração 0012). DataFim = "pago até".
+	ToleranciaDias    int        `gorm:"column:tolerancia_dias;default:3" json:"tolerancia_dias"`
+	PrecoCombinado    *float64   `gorm:"column:preco_combinado" json:"preco_combinado,omitempty"`
+	PlanoAgendadoID   *uint      `gorm:"column:plano_agendado_id" json:"plano_agendado_id,omitempty"`
+	UltimoPagamentoEm *time.Time `gorm:"column:ultimo_pagamento_em" json:"ultimo_pagamento_em,omitempty"`
 	CreatedAt             time.Time      `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt             time.Time      `gorm:"column:updated_at" json:"updated_at"`
 }

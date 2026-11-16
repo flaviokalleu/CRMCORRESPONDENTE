@@ -26,6 +26,7 @@ import (
 	"crmimob/internal/models"
 	"crmimob/internal/modules/acessos"
 	"crmimob/internal/modules/alugueis"
+	"crmimob/internal/modules/assinatura"
 	"crmimob/internal/modules/billing"
 	"crmimob/internal/modules/chamados"
 	"crmimob/internal/modules/clientes"
@@ -187,6 +188,24 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	tenantsSvc := tenants.NewService(tenantsRepo, billingSvc, authSvc, authRepo)
 	tenantsHandler := tenants.NewHandler(tenantsSvc)
 
+	// Assinatura SaaS (plataforma cobra a imobiliária). `liberada` barra com
+	// 402 toda rota da imobiliária quando o acesso está suspenso; ficam de fora
+	// login, assinatura, configurações da empresa e o painel master.
+	assinaturaSvc := assinatura.NewService(db, email.New(email.LoadConfigFromEnv()), resetBaseURL)
+	assinaturaSvc.Iniciar(context.Background())
+	assinaturaHandler := assinatura.NewHandler(assinaturaSvc, db)
+	liberada := assinatura.ExigirLiberada(assinaturaSvc)
+	// `plano` aplica limites (clientes, usuários, imóveis, aluguéis) e recursos
+	// pagos às rotas — tabela em middleware/regras_do_plano.go.
+	plano := middleware.RegrasDoPlano(db)
+	tenantsSvc.AoCadastrar = func(ctx context.Context, tenantID uint) {
+		if _, err := assinaturaSvc.GarantirFaturaDeRenovacao(ctx, tenantID); err != nil {
+			slog.Error("assinatura: fatura do cadastro não criada", "tenant", tenantID, "error", err)
+		}
+	}
+	assinaturaHandler.RegisterWebhook(api)
+	assinaturaHandler.Register(api.Group("/assinatura", authed(), tenantScoped))
+
 	superadminHandler := superadmin.NewHandler(superadmin.NewService(superadmin.NewRepository(db)))
 
 	tenantGroup := api.Group("/tenant")
@@ -195,17 +214,19 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 
 	tenantGroupAuth := api.Group("/tenant")
 	tenantGroupAuth.Use(authed(), tenantScoped)
-	tenantsHandler.RegisterAuthenticated(tenantGroupAuth)
+	tenantGroupAuth.POST("/change-plan", assinaturaHandler.TrocarPlano)
 
 	settingsGroup := api.Group("/tenant-settings")
 	settingsGroup.Use(authed(), tenantScoped)
 	tenantsHandler.RegisterSettings(settingsGroup)
 
 	superAdminGroup := api.Group("/super-admin")
-	superAdminGroup.Use(authed(), tenantScoped, middleware.RequireSuperAdmin())
+	superAdminGroup.Use(authed(), tenantScoped, middleware.RequireSuperAdmin(), assinatura.EscopoGlobal())
 	superadminHandler.Register(superAdminGroup)
 	planHandler.Register(superAdminGroup)
 	subscriptionHandler.RegisterSuperAdmin(superAdminGroup)
+	assinaturaHandler.RegisterMaster(superAdminGroup)
+	assinaturaHandler.RegisterPainel(superAdminGroup)
 
 	billingGroup := api.Group("")
 	billingGroup.Use(authed(), tenantScoped)
@@ -215,15 +236,15 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	storageHandler.Register(billingGroup)
 
 	userGroup := api.Group("/user")
-	userGroup.Use(authed(), tenantScoped)
+	userGroup.Use(authed(), tenantScoped, liberada, plano)
 	usersHandler.Register(userGroup)
 
 	corretorGroup := api.Group("/corretor")
-	corretorGroup.Use(authed(), tenantScoped)
+	corretorGroup.Use(authed(), tenantScoped, liberada, plano)
 	corretoresHandler.Register(corretorGroup)
 
 	correspondenteGroup := api.Group("/correspondente")
-	correspondenteGroup.Use(authed(), tenantScoped)
+	correspondenteGroup.Use(authed(), tenantScoped, liberada, plano)
 	correspondentesHandler.Register(correspondenteGroup)
 
 	// ================= Cluster 02 — Clientes/Imóveis/Uploads =================
@@ -253,7 +274,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	imoveisHandler.RegisterPublicRoutes(publicGroup)
 
 	cluster02 := api.Group("")
-	cluster02.Use(authed(), tenantScoped)
+	cluster02.Use(authed(), tenantScoped, liberada, plano)
 	{
 		acessosHandler.RegisterRoutes(cluster02)
 		lembretesHandler.RegisterRoutes(cluster02)
@@ -276,12 +297,12 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	pagamentosSvc := pagamentos.NewService(pagamentos.NewRepository(db))
 	pagamentosHandler := pagamentos.NewHandler(pagamentosSvc, authHandler.Required())
 	pagamentosGroup := api.Group("/pagamentos")
-	pagamentosHandler.Register(pagamentosGroup, tenantScoped)
+	pagamentosHandler.Register(pagamentosGroup, tenantScoped, liberada, plano)
 
 	// Receitas, despesas, fluxo de caixa, comissões e repasses expõem o resultado
 	// financeiro da empresa inteira, então o grupo é restrito a administrador —
 	// autenticado + mesmo tenant não basta aqui.
-	financeiroAuth := []gin.HandlerFunc{authed(), tenantScoped, middleware.RequireAdministrador()}
+	financeiroAuth := []gin.HandlerFunc{authed(), tenantScoped, liberada, middleware.RequireAdministrador()}
 
 	receitasHandler := receitas.NewHandler(receitas.NewRepository(db))
 	receitasHandler.Register(api.Group("/receitas", financeiroAuth...))
@@ -337,7 +358,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	chamadosHandler.RegisterPortal(api)
 
 	cluster04 := api.Group("")
-	cluster04.Use(authed(), tenantScoped)
+	cluster04.Use(authed(), tenantScoped, liberada, plano)
 	{
 		alugueisHandler.Register(cluster04)
 		contratosHandler.Register(cluster04)
@@ -350,7 +371,9 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	// ================= Cluster 05 — WhatsApp/Realtime =================
 
 	if deps.WhatsApp != nil && deps.WhatsAppRepo != nil {
-		modwhatsapp.NewHandler(deps.WhatsApp, deps.WhatsAppRepo, db, authSvc).Register(api)
+		modwhatsapp.NewHandler(deps.WhatsApp, deps.WhatsAppRepo, db, authSvc).Register(api,
+			assinatura.ExigirLiberadaDoTenant(assinaturaSvc, modwhatsapp.TenantDoPedido),
+			middleware.RequireFeatureDoTenant(db, "has_whatsapp", modwhatsapp.TenantDoPedido))
 	}
 	if deps.Hub != nil {
 		ws.NewHandler(deps.Hub, authSvc, cfg.FrontendURLs).Register(api)
@@ -367,7 +390,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	systemConfigHandler := configuracoes.NewSystemHandler(db)
 
 	cluster06 := api.Group("")
-	cluster06.Use(authed(), tenantScoped)
+	cluster06.Use(authed(), tenantScoped, liberada, plano)
 	{
 		dashboards.Register(cluster06.Group("/dashboard"), dashHandler)
 		relatorios.Register(cluster06.Group("/report"), relatoriosHandler)
@@ -380,7 +403,7 @@ func New(cfg *config.Config, db *gorm.DB, deps Deps) *gin.Engine {
 	}
 
 	// ---- Smoke-test de auth (mantido da fundação) ----
-	api.GET("/protected/protected", authed(), tenantScoped, func(c *gin.Context) {
+	api.GET("/protected/protected", authed(), tenantScoped, liberada, func(c *gin.Context) {
 		u, _ := auth.UserFrom(c)
 		c.JSON(http.StatusOK, gin.H{"message": "autenticado", "user_id": u.ID, "tenant_id": u.TenantID})
 	})

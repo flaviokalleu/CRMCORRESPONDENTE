@@ -28,13 +28,14 @@ func NewHandler(svc *Service, authRequired gin.HandlerFunc) *Handler {
 // Register monta as rotas no grupo `/api/pagamentos`. `rg` já deve estar
 // isolado por tenant via middleware.ResolveTenant nas rotas autenticadas —
 // aplicamos isso por rota abaixo, preservando as duas públicas sem tenant.
-func (h *Handler) Register(rg *gin.RouterGroup, resolveTenant gin.HandlerFunc) {
+func (h *Handler) Register(rg *gin.RouterGroup, resolveTenant gin.HandlerFunc, extras ...gin.HandlerFunc) {
 	// Públicas (sem auth) — espelham as rotas acima do `router.use(authenticateToken)` no Node.
 	rg.GET("/publico/:id", h.publico)
 	rg.GET("/config", h.config)
 
 	protected := rg.Group("")
 	protected.Use(h.authRequired, resolveTenant)
+	protected.Use(extras...)
 	{
 		protected.POST("/boleto", h.criarBoleto)
 		protected.POST("/pix", h.criarPix)

@@ -1,5 +1,5 @@
 import "server-only";
-import { getAccessToken } from "./session";
+import { getAccessToken, getVerEmpresa } from "./session";
 
 // API_URL é PRIVADA (sem prefixo NEXT_PUBLIC) — o browser nunca precisa saber
 // o endereço do backend Go, porque toda chamada client-side passa pelo proxy
@@ -16,6 +16,8 @@ export async function apiFetch(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", headers.get("Content-Type") || "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const verEmpresa = await getVerEmpresa();
+  if (verEmpresa && !headers.has("X-Tenant-Id")) headers.set("X-Tenant-Id", verEmpresa);
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers, cache: options.cache ?? "no-store" });
   return res;

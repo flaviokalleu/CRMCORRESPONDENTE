@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { AvisoAssinatura } from "./assinatura/AvisoAssinatura";
+import { FaixaVerComo } from "./assinatura/FaixaVerComo";
 
 // Equivalente ao MainLayout.jsx da SPA — porta 1:1 a lógica de
 // responsivo/toggle, só trocando o roteamento para next/navigation.
-export function AppShell({ children }) {
+export function AppShell({ children, assinatura, verComo }) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -51,7 +53,7 @@ export function AppShell({ children }) {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar onClose={() => setSidebarOpen(false)} />
+          <Sidebar onClose={() => setSidebarOpen(false)} recursos={assinatura?.plataforma ? null : assinatura?.recursos} />
         </aside>
       )}
 
@@ -79,7 +81,10 @@ export function AppShell({ children }) {
             conteúdo — sem ele o usuário precisa tabular por todo o menu a
             cada página. `id` para o link de pular navegação. */}
         <main id="conteudo" className="app-shell-scroll cx-page flex-1 w-full overflow-y-auto">
-          <div className="crm-content min-h-full w-full" data-page={pathname}>{children}</div>
+          <div className="crm-content min-h-full w-full" data-page={pathname}>
+            {verComo && <FaixaVerComo empresa={verComo} />}
+            <AvisoAssinatura resumo={assinatura}>{children}</AvisoAssinatura>
+          </div>
         </main>
       </div>
     </div>

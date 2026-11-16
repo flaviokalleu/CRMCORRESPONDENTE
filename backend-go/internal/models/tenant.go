@@ -53,6 +53,13 @@ type Tenant struct {
 	AsaasAPIKey       *string `gorm:"column:asaas_api_key" json:"-"` // segredo — nunca serializar
 	AsaasWebhookToken *string `gorm:"column:asaas_webhook_token" json:"-"`
 
+	// Assinatura SaaS (migração 0012): bloqueio manual pelo master e CPF/CNPJ
+	// usado para emitir a cobrança da assinatura.
+	Bloqueado         bool       `gorm:"column:bloqueado;default:false" json:"bloqueado"`
+	BloqueadoMotivo   *string    `gorm:"column:bloqueado_motivo" json:"bloqueado_motivo,omitempty"`
+	BloqueadoEm       *time.Time `gorm:"column:bloqueado_em" json:"bloqueado_em,omitempty"`
+	DocumentoCobranca *string    `gorm:"column:documento_cobranca" json:"documento_cobranca,omitempty"`
+
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { hasSession } from "@/lib/session";
+import { hasSession, getVerEmpresa } from "@/lib/session";
 import { apiGet } from "@/lib/api-server";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppShell } from "@/components/AppShell";
@@ -22,9 +22,20 @@ export default async function AppLayout({ children }) {
     redirect("/api/auth/renew?next=/dashboard");
   }
 
+  // Situação da assinatura: decide a faixa de prazo e a tela de bloqueio.
+  const assinatura = await apiGet("/assinatura");
+
+  // Superadmin vendo o sistema como outra empresa ("Entrar como").
+  let verComo = null;
+  const idVer = await getVerEmpresa();
+  if (idVer && me.user?.is_super_admin) {
+    const ficha = await apiGet(`/super-admin/assinaturas/${idVer}`, { headers: { "X-Tenant-Id": "" } });
+    if (ficha?.tenant) verComo = { id: ficha.tenant.id, nome: ficha.tenant.nome };
+  }
+
   return (
     <AuthProvider initialUser={me.user}>
-      <AppShell>{children}</AppShell>
+      <AppShell assinatura={assinatura} verComo={verComo}>{children}</AppShell>
     </AuthProvider>
   );
 }

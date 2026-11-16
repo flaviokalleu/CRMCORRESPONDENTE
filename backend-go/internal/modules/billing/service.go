@@ -202,16 +202,25 @@ func (s *Service) ChangePlanForTenant(ctx context.Context, tenantID, planID uint
 		valor = plan.PrecoAnual
 	}
 
-	if err := s.repo.CancelActiveForTenant(ctx, tenantID); err != nil {
+	// Uma assinatura por empresa (índice único desde a migração 0012): troca
+	// no lugar, preservando o "pago até" (data_fim) e a tolerância.
+	var sub models.Subscription
+	err = s.repo.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Order("id DESC").First(&sub).Error
+	if err != nil {
+		sub = models.Subscription{
+			TenantID: tenantID, PlanID: planID, Status: "active", Ciclo: ciclo,
+			DataInicio: time.Now(), Valor: valor, ToleranciaDias: 3,
+		}
+		if err := s.repo.CreateSubscription(ctx, &sub); err != nil {
+			return nil, err
+		}
+		return &sub, nil
+	}
+	if err := s.repo.UpdateSubscription(ctx, sub.ID, map[string]any{
+		"plan_id": planID, "ciclo": ciclo, "valor": valor, "plano_agendado_id": nil,
+	}); err != nil {
 		return nil, err
 	}
-
-	sub := &models.Subscription{
-		TenantID: tenantID, PlanID: planID, Status: "active", Ciclo: ciclo,
-		DataInicio: time.Now(), Valor: valor,
-	}
-	if err := s.repo.CreateSubscription(ctx, sub); err != nil {
-		return nil, err
-	}
-	return sub, nil
+	sub.PlanID, sub.Ciclo, sub.Valor = planID, ciclo, valor
+	return &sub, nil
 }

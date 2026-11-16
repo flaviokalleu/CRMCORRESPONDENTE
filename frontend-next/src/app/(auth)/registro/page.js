@@ -23,7 +23,7 @@ export default function RegistroPage() {
   const [plans, setPlans] = useState([]);
   const [empresa, setEmpresa] = useState({ nome: "", slug: "", cnpj: "", email: "", telefone: "" });
   const [admin, setAdmin] = useState({ first_name: "", last_name: "", email: "", password: "", confirm_password: "", telefone: "" });
-  const [planId, setPlanId] = useState("");
+  const [planId, setPlanId] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +32,12 @@ export default function RegistroPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const list = data?.plans || data || [];
-        if (Array.isArray(list)) setPlans(list);
+        if (!Array.isArray(list)) return;
+        setPlans(list);
+        // Vem de /precos?plano=basic: já deixa o plano marcado; senão, o mais barato.
+        const pedido = new URLSearchParams(window.location.search).get("plano");
+        const escolhido = list.find((p) => p.slug === pedido) || list[0];
+        if (escolhido) setPlanId(escolhido.id);
       })
       .catch(() => {});
   }, []);
@@ -41,8 +46,8 @@ export default function RegistroPage() {
     e.preventDefault();
     setError("");
 
-    if (!empresa.nome || !empresa.slug || !empresa.cnpj || !empresa.email) {
-      setError("Preencha todos os dados da empresa.");
+    if (!empresa.nome || !empresa.slug) {
+      setError("Informe o nome da empresa.");
       return;
     }
     if (!admin.first_name || !admin.last_name || !admin.email || !admin.password) {
@@ -68,7 +73,8 @@ export default function RegistroPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          empresa,
+          // E-mail da empresa = e-mail de quem cadastra (um campo a menos).
+          empresa: { ...empresa, email: empresa.email || admin.email },
           admin: {
             first_name: admin.first_name,
             last_name: admin.last_name,
@@ -76,7 +82,7 @@ export default function RegistroPage() {
             password: admin.password,
             telefone: admin.telefone,
           },
-          plan_id: planId,
+          plan_id: Number(planId),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -96,7 +102,8 @@ export default function RegistroPage() {
   return (
     <div className="auth-register-page min-h-screen bg-cx-bg flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-cx-text text-center mb-6">Crie sua conta no CRM IMOB</h1>
+        <h1 className="text-2xl font-bold text-cx-text text-center">Crie sua conta no CRM IMOB</h1>
+        <p className="mb-6 mt-1 text-center text-base text-cx-muted">7 dias grátis, sem cartão. Você só paga se decidir continuar.</p>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-cx-border bg-cx-surface p-6">
           {error && (
@@ -107,10 +114,7 @@ export default function RegistroPage() {
             <h2 className="text-sm font-semibold text-cx-muted">Dados da empresa</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Nome da empresa" value={empresa.nome} onChange={(v) => setEmpresa((p) => ({ ...p, nome: v, slug: slugify(v) }))} />
-              <Field label="Slug" value={empresa.slug} onChange={(v) => setEmpresa((p) => ({ ...p, slug: slugify(v) }))} />
-              <Field label="CNPJ" value={empresa.cnpj} onChange={(v) => setEmpresa((p) => ({ ...p, cnpj: v }))} />
-              <Field label="E-mail da empresa" type="email" value={empresa.email} onChange={(v) => setEmpresa((p) => ({ ...p, email: v }))} />
-              <Field label="Telefone" value={empresa.telefone} onChange={(v) => setEmpresa((p) => ({ ...p, telefone: v }))} />
+              <Field label="CNPJ (opcional)" value={empresa.cnpj} onChange={(v) => setEmpresa((p) => ({ ...p, cnpj: v }))} />
             </div>
           </section>
 
@@ -127,19 +131,29 @@ export default function RegistroPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-cx-muted">Plano</h2>
-            <select
-              value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-              className="w-full rounded-lg border border-cx-border bg-cx-surface px-3 py-2.5 text-sm text-cx-text outline-none focus:border-caixa-orange/50"
-            >
-              <option value="">Selecione um plano...</option>
-              {plans.map((p) => (
-                <option key={p.id || p.slug} value={p.id || p.slug}>
-                  {p.name || p.nome} {p.price != null ? `- R$ ${Number(p.price).toFixed(2)}/mês` : ""}
-                </option>
-              ))}
-            </select>
+            <h2 className="text-sm font-semibold text-cx-muted">Escolha o plano</h2>
+            <div role="radiogroup" aria-label="Plano" className="grid gap-3 sm:grid-cols-3">
+              {plans.map((p) => {
+                const marcado = p.id === planId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={marcado}
+                    onClick={() => setPlanId(p.id)}
+                    className={`rounded-xl border-2 p-4 text-left transition-colors ${marcado ? "border-cx-blue bg-cx-blue-soft" : "border-cx-border bg-cx-surface hover:border-cx-blue"}`}
+                  >
+                    <span className="block text-base font-bold text-cx-text">{p.nome || p.name}</span>
+                    <span className="block text-lg font-extrabold text-cx-text">
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco_mensal ?? p.price ?? 0))}
+                      <span className="text-sm font-medium text-cx-muted">/mês</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-sm text-cx-muted">Dá para mudar de plano depois, quando quiser.</p>
           </section>
 
           <button
@@ -147,7 +161,7 @@ export default function RegistroPage() {
             disabled={submitting}
             className="w-full rounded-lg bg-cx-orange px-5 py-3 text-sm font-semibold text-white hover:bg-cx-orange-dark disabled:opacity-50"
           >
-            {submitting ? "Criando conta..." : "Criar conta"}
+            {submitting ? "Criando conta..." : "Começar teste grátis"}
           </button>
 
           <p className="text-center text-sm text-cx-muted">

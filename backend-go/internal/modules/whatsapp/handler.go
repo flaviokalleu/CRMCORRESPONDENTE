@@ -34,9 +34,10 @@ func NewHandler(mgr *whatsapp.Manager, repo *whatsapp.SessionRepo, db *gorm.DB, 
 
 // Register monta o grupo /api/whatsapp com o middleware de resolução de
 // tenant (auth OPCIONAL — ver middleware.go).
-func (h *Handler) Register(api *gin.RouterGroup) {
+func (h *Handler) Register(api *gin.RouterGroup, extras ...gin.HandlerFunc) {
 	g := api.Group("/whatsapp")
 	g.Use(ResolveWhatsAppTenant(h.authSvc))
+	g.Use(extras...)
 
 	g.GET("/qr-code", h.QRCode)
 	g.POST("/connect", h.Connect)

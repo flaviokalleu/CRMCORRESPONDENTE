@@ -71,6 +71,17 @@ func NewClient(apiKey string) *Client {
 	}
 }
 
+// NewClientAmbiente cria um client com ambiente explícito (sandbox|production).
+// Usado pela cobrança da assinatura da plataforma, que tem chave e ambiente
+// próprios (ASAAS_PLATAFORMA_*), independentes das chaves das imobiliárias.
+func NewClientAmbiente(apiKey, env string) *Client {
+	return &Client{
+		httpClient: &http.Client{Timeout: 15 * time.Second},
+		baseURL:    baseURLFor(env),
+		apiKey:     apiKey,
+	}
+}
+
 // NewClientForTenant resolve a chave (tenant → fallback global) e devolve um
 // client pronto para uso. É o ponto de entrada recomendado nos services.
 func NewClientForTenant(tenantAPIKey *string) *Client {

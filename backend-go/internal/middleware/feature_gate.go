@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,10 @@ var resourceTable = map[string]string{
 	"usuarios": "users",
 	"imoveis":  "imoveis",
 	"alugueis": "alugueis",
+}
+
+var nomeDoRecurso = map[string]string{
+	"clientes": "clientes", "usuarios": "usuários", "imoveis": "imóveis", "alugueis": "aluguéis",
 }
 
 var resourceLimitField = map[string]string{
@@ -95,7 +100,7 @@ func RequireFeature(db *gorm.DB, feature string) gin.HandlerFunc {
 		}
 		if !resolver.IsFeatureEnabled(tenant, plan, feature) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":              "Recurso não disponível no seu plano",
+				"error":              "Este recurso não faz parte do seu plano. Veja os planos em Minha assinatura.",
 				"code":               "FEATURE_NOT_AVAILABLE",
 				"feature":            feature,
 				"plano_atual":        plan.Nome,
@@ -150,7 +155,7 @@ func RequireLimit(db *gorm.DB, resource string) gin.HandlerFunc {
 		}
 		if count >= int64(maxAllowed) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error":   "Limite do plano atingido",
+				"error":   fmt.Sprintf("Você chegou ao limite de %d %s do seu plano. Mude de plano em Minha assinatura para cadastrar mais.", maxAllowed, nomeDoRecurso[resource]),
 				"code":    "LIMIT_REACHED",
 				"limite":  maxAllowed,
 				"atual":   count,

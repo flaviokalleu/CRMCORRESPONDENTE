@@ -93,3 +93,15 @@ func tenantFrom(c *gin.Context) (uint, bool) {
 	id, ok := v.(uint)
 	return id, ok
 }
+
+// TenantDoPedido expõe o tenant resolvido e se quem chama é superadmin — usado
+// pelo bloqueio da assinatura e pelo recurso do plano no router.
+func TenantDoPedido(c *gin.Context) (tenantID uint, superAdmin bool, ok bool) {
+	tenantID, ok = tenantFrom(c)
+	if v, existe := c.Get(auth.CtxClaims); existe {
+		if cl, certo := v.(*auth.Claims); certo && cl != nil {
+			superAdmin = cl.IsSuperAdmin
+		}
+	}
+	return tenantID, superAdmin, ok
+}

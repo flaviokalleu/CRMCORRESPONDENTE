@@ -36,7 +36,12 @@ type Service struct {
 	billingSvc *billing.Service
 	authSvc    *auth.Service
 	authRepo   *auth.Repository
+	// AoCadastrar roda depois do cadastro (cria a fatura do 1º mês). Opcional.
+	AoCadastrar func(ctx context.Context, tenantID uint)
 }
+
+// diasDeTeste: teste grátis padrão (decisão de 2026-11-16: 7 dias, sem cartão).
+const diasDeTeste = 7
 
 func NewService(repo *Repository, billingSvc *billing.Service, authSvc *auth.Service, authRepo *auth.Repository) *Service {
 	return &Service{repo: repo, billingSvc: billingSvc, authSvc: authSvc, authRepo: authRepo}
@@ -110,20 +115,24 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*models.Te
 		Telefone: a.Telefone, IsAdministrador: true,
 	}
 
-	status := "active"
-	var dataFimTrial *time.Time
-	if plan.TrialDias > 0 {
-		status = "trialing"
-		t := time.Now().AddDate(0, 0, plan.TrialDias)
-		dataFimTrial = &t
+	// Toda empresa nova nasce em teste grátis; a fatura do 1º mês vence no
+	// fim do teste (criada por AoCadastrar).
+	dias := plan.TrialDias
+	if dias <= 0 {
+		dias = diasDeTeste
 	}
+	fimTeste := time.Now().AddDate(0, 0, dias)
 	sub := &models.Subscription{
-		PlanID: plan.ID, Status: status, Ciclo: "mensal", DataInicio: time.Now(),
-		DataFimTrial: dataFimTrial, Valor: plan.PrecoMensal,
+		PlanID: plan.ID, Status: "trialing", Ciclo: "mensal", DataInicio: time.Now(),
+		DataFimTrial: &fimTeste, Valor: plan.PrecoMensal, ToleranciaDias: 3,
 	}
 
 	if err := s.repo.RegisterTransaction(ctx, tenant, admin, sub); err != nil {
 		return nil, nil, nil, "", "", err
+	}
+
+	if s.AoCadastrar != nil {
+		s.AoCadastrar(ctx, tenant.ID)
 	}
 
 	access, err := s.authSvc.GenerateAccess(admin)
@@ -150,19 +159,20 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*models.Te
 func (s *Service) resolvePlan(ctx context.Context, planID *uint, planSlug *string) (*models.Plan, error) {
 	if planID != nil {
 		p, err := s.billingSvc.GetPlan(ctx, *planID)
-		if err != nil {
+		if err != nil || !p.Ativo {
 			return nil, ErrPlanNotFound
 		}
 		return p, nil
 	}
 	// Fallback: plan_slug informado ou 'free' (gotcha 01-spec §7.14 — o plano
 	// free precisa existir via seed, senão o onboarding quebra aqui).
-	slug := "free"
+	// Sem plano escolhido, começa no Basic (o Free saiu da vitrine).
+	slug := "basic"
 	if planSlug != nil && *planSlug != "" {
 		slug = *planSlug
 	}
 	p, err := s.billingSvc.GetPlanBySlug(ctx, slug)
-	if err != nil {
+	if err != nil || !p.Ativo {
 		return nil, ErrPlanNotFound
 	}
 	return p, nil

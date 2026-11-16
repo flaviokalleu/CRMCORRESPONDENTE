@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAccessToken, getRefreshToken, setSession, clearSession } from "@/lib/session";
+import { getAccessToken, getRefreshToken, setSession, clearSession, getVerEmpresa } from "@/lib/session";
 import { API_URL } from "@/lib/api-server";
 
 // Proxy genérico: Client Components chamam `/api/backend/<qualquer-rota-go>`
@@ -15,6 +15,9 @@ async function forward(request, path) {
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("Content-Type", contentType);
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  // "Entrar como" do superadmin (o backend ignora para quem não é superadmin).
+  const verEmpresa = await getVerEmpresa();
+  if (verEmpresa) headers.set("X-Tenant-Id", verEmpresa);
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const init = {

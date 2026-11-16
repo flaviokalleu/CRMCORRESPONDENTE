@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   UserCog, Activity, ShieldCheck, Building2, Banknote, QrCode, X, Crown, Building,
   FileText, CreditCard, ChartNoAxesColumn, House, Wallet, TrendingUp, TrendingDown,
-  ChartLine, CalendarDays, Contact, SlidersHorizontal, Users,
+  ChartLine, CalendarDays, Contact, SlidersHorizontal, Users, Lock,
 } from "@/components/icons";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,18 @@ import { cn } from "@/lib/utils";
 // Sidebar do shell InnLex: trilho navy de 264px, rótulos de grupo em caixa
 // alta e o "scoop" no item ativo. Menu plano (sem seções recolhíveis), como
 // no kit de referência; "Sair" fica na topbar.
-function NavItem({ href, icon: Icon, label, isActive, badge }) {
+function NavItem({ href, icon: Icon, label, isActive, badge, bloqueado }) {
+  // Recurso fora do plano: continua visível (a pessoa descobre que existe) e
+  // leva para Minha assinatura, com cadeado — convite, não beco sem saída.
+  if (bloqueado) {
+    return (
+      <Link href="/minha-assinatura" className="isidebar-link isidebar-locked" title="Disponível em outro plano">
+        <Icon className="isidebar-icon" />
+        <span className="isidebar-label">{label}</span>
+        <Lock className="isidebar-lock" aria-label="Disponível em outro plano" />
+      </Link>
+    );
+  }
   return (
     <Link href={href} aria-current={isActive ? "page" : undefined} className={cn("isidebar-link", isActive && "is-active")}>
       <Icon className="isidebar-icon" />
@@ -57,7 +68,7 @@ function useSidebarBadges(pathname, { isStaff, operacional }) {
   return badges;
 }
 
-export function Sidebar({ onClose }) {
+export function Sidebar({ onClose, recursos }) {
   const { hasRole, isSuperAdmin } = useAuth();
   const pathname = usePathname();
   const isStaffRole = hasRole("administrador") || hasRole("correspondente");
@@ -96,7 +107,7 @@ export function Sidebar({ onClose }) {
             { href: "/financeiro/receitas", icon: TrendingUp, label: "Receitas" },
             { href: "/financeiro/despesas", icon: TrendingDown, label: "Despesas" },
           ] : []),
-          ...(isStaff ? [{ href: "/pagamentos/lista", icon: Banknote, label: "Pagamentos" }] : []),
+          ...(isStaff ? [{ href: "/pagamentos/lista", icon: Banknote, label: "Pagamentos", recurso: "has_pagamentos" }] : []),
         ],
       },
       {
@@ -110,7 +121,7 @@ export function Sidebar({ onClose }) {
       {
         label: "Sistema",
         items: [
-          ...(isStaff ? [{ href: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp" }] : []),
+          ...(isStaff ? [{ href: "/whatsapp-qr", icon: QrCode, label: "QR Code WhatsApp", recurso: "has_whatsapp" }] : []),
           ...(isAdmin ? [
             { href: "/acessos", icon: Activity, label: "Acessos" },
             { href: "/configuracoes-empresa", icon: Building, label: "Minha empresa" },
@@ -148,7 +159,13 @@ export function Sidebar({ onClose }) {
           <div key={group.label} className="isidebar-group">
             <div className="isidebar-grouplabel">{group.label}</div>
             {group.items.map((item) => (
-              <NavItem key={item.href} {...item} badge={badges[item.href]} isActive={isActive(item.href)} />
+              <NavItem
+                key={item.href}
+                {...item}
+                badge={badges[item.href]}
+                isActive={isActive(item.href)}
+                bloqueado={Boolean(item.recurso && recursos && recursos[item.recurso] === false)}
+              />
             ))}
           </div>
         ))}

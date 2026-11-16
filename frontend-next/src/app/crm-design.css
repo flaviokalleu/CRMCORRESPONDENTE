@@ -664,3 +664,36 @@
 .crm-content .dashboard-no-print .dash-num input[type='number'] { width: 3.25rem !important; min-height: 0 !important; height: auto !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: transparent !important; text-align: right; font-size: var(--ix-text-sm) !important; font-weight: 600 !important; }
 .crm-content .dashboard-no-print .dash-num input[type='number']:focus-visible { box-shadow: none; }
 .dash-section-first { margin-top: 0; margin-bottom: 1.25rem; }
+
+/* ─── Assinatura (Minha assinatura, aviso de prazo, tela de bloqueio) ───
+   Semáforo com os tokens de cor do globals.css: verde = em dia,
+   âmbar = prazo correndo, vermelho = suspenso. */
+.ass-tom-ok      { --ass-bg: var(--green-100); --ass-ink: var(--green-800); }
+.ass-tom-alerta  { --ass-bg: var(--amber-100); --ass-ink: var(--amber-800); }
+.ass-tom-perigo  { --ass-bg: var(--red-100);   --ass-ink: var(--red-700); }
+.ass-tom-neutro  { --ass-bg: var(--slate-100); --ass-ink: var(--slate-700); }
+
+.ass-selo {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: var(--ix-radius-pill);
+  background: var(--ass-bg); color: var(--ass-ink);
+  font-size: 0.8125rem; font-weight: 700; white-space: nowrap;
+}
+.ass-faixa {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 2rem; background: var(--ass-bg); color: var(--ass-ink);
+  font-size: 0.9375rem; font-weight: 600;
+}
+.ass-faixa a, .ass-faixa-botao {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px;
+  border-radius: var(--ix-radius-md); background: var(--ass-ink); color: var(--white);
+  font-weight: 700; text-decoration: none; border: 0; cursor: pointer;
+}
+.ass-destaque {
+  border-left: 6px solid var(--ass-ink);
+}
+.ass-valor { font-size: 2.25rem; font-weight: 800; line-height: 1; color: var(--ink-heading); }
+.ass-plano[data-atual='true'] { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
+.ass-barra { height: 6px; margin-top: 6px; border-radius: var(--ix-radius-pill); background: var(--slate-100); overflow: hidden; }
+.ass-barra > span { display: block; height: 100%; background: var(--ass-ink); }
+.ass-tom-ok.ass-barra > span { background: var(--green-500); }

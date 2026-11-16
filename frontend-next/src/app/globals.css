@@ -711,6 +711,8 @@ select optgroup {
 .isidebar-link:focus-visible { outline: 2px solid var(--white); outline-offset: -2px; }
 .isidebar-icon { width: 1.15rem; height: 0.95rem; flex: 0 0 auto; }
 .isidebar-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.isidebar-locked { opacity: 0.72; }
+.isidebar-lock { flex: 0 0 auto; width: 12px; height: 12px; margin-left: auto; }
 .isidebar-badge { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5.6px; border-radius: 999px; background: var(--red-500); color: var(--white); font-size: 11px; font-weight: 700; line-height: 1; }
 /* "Scoop" do Rubick: o item ativo puxa um painel claro para fora do trilho. */
 .isidebar-link.is-active { background: var(--surface-page); color: var(--innlex-navy-700); font-weight: 600; margin-right: -1px; }
@@ -1206,12 +1208,15 @@ body :where(a.marketing-primary, a.marketing-secondary, a.marketing-outline, a.m
   --slate-100: #f1f5f9;
   --slate-050: #f8fafc;
   --white: #ffffff;
+  --green-800: #065f46; /* texto sobre --green-100 (contraste AA) */
   --green-600: #059669;
   --green-500: #10b981;
   --green-100: #d1fae5;
+  --red-700: #b91c1c;   /* texto sobre --red-100 (contraste AA) */
   --red-600: #dc2626;
   --red-500: #ef4444;
   --red-100: #fee2e2;
+  --amber-800: #92400e; /* texto sobre --amber-100 (contraste AA) */
   --amber-600: #d97706;
   --amber-500: #f59e0b;
   --amber-100: #fef3c7;

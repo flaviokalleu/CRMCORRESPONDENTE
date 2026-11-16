@@ -49,8 +49,26 @@ export async function getRefreshToken() {
   return store.get(REFRESH_COOKIE)?.value ?? null;
 }
 
+// "Entrar como" do superadmin: id da empresa que ele está vendo. O backend
+// só aceita o X-Tenant-Id vindo de superadmin, então o cookie sozinho não dá
+// acesso a nada para outros usuários.
+const VER_EMPRESA_COOKIE = "cri_ver_empresa";
+
+export async function getVerEmpresa() {
+  const store = await cookies();
+  const v = store.get(VER_EMPRESA_COOKIE)?.value;
+  return v && /^\d+$/.test(v) ? v : null;
+}
+
+export async function setVerEmpresa(id) {
+  const store = await cookies();
+  if (id) store.set(VER_EMPRESA_COOKIE, String(id), { ...baseCookieOpts, maxAge: 8 * 60 * 60 });
+  else store.delete(VER_EMPRESA_COOKIE);
+}
+
 export async function clearSession() {
   const store = await cookies();
+  store.delete(VER_EMPRESA_COOKIE);
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
   store.delete(REMEMBER_COOKIE);
